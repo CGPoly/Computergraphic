@@ -35,6 +35,10 @@ struct hit  {
     vec4 col;
 };
 
+object world[] = object[](
+    object(0, vec4(1,1,1,1)),
+    object(1, vec4(1,1,1,1))
+);
 
 //DE of the primitives is from https://iquilezles.org/articles/distfunctions/
 float dot2( in vec2 v ) { return dot(v,v); }
@@ -512,11 +516,27 @@ float sdWarpTunnel(vec3 pos){
     return -sdInfinteCylinder(pos, vec3(0,0,10));
 }
 
+float distObj(uint index, vec3 pos){
+    switch(index){
+        case 0:
+            return sdBox(pos, vec3(1,1,0.5));
+        case 1:
+            return sdEllipsoid(pos, vec3(1,1,1));
+        default:
+            return 1.0/0.0; // maximal float
+    }
+}
+
 float map(vec3 pos){
     pos = iTrans(pos, view);
+    float dist = 1.0/0.0; // maximal float
+    for (int i = 0; i < world.length(); ++i){
+        dist = min(dist, distObj(world[i].index, pos));
+    }
+    return dist;
 //    pos *= (pos.z-z_0)/(z_bild-z_0);
 //    return deMandelbulb(pos*0.5);
-    return sdEnterprise(pos);
+//    return sdEnterprise(pos);
 //    return bU(sdEnterprise(pos), sdWarpTunnel(pos));
 //    return bU(sdEllipsoid(pos, vec3(1,1,1)), sdPlane(pos, vec3(0,1,0), 3));
 //    return sbU(sbS(oBevel(sdBox(pos, vec3(2, 0.2, 0.2)), 0.2), sbU(oBevel(sdBox(pos, vec3(1,1,1)), 0.01), sdEllipsoid(pos, vec3(1.3,1.3,1.3)), 0.2), 0.01),
