@@ -1,0 +1,11 @@
+# Project exclude paths
+/cmake-build-debug/
+/build/
+/data/
+/.vs/
+/include/
+/models/
+/out/
+/vendor/
+/src/library/
+/src/vendor/
