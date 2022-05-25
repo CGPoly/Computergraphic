@@ -13,10 +13,10 @@ const float Bailout = 100;
 const vec3 Scale = vec3(0.5,0.5,0.5);
 const vec3 Offset = vec3(0,0,0);
 
-const float roughness = 0.37; // sigma
-const float refractionIndex = 0.289;
-const vec4 diffuse = vec4(0.7,0.7,0.7,1.0); // diffuse part as color
-const vec4 specular = vec4(1,1,1,1); // specular part as color
+//const float roughness = 0.37; // sigma
+//const float refractionIndex = 0.289;
+//const vec4 diffuse = vec4(0.7,0.7,0.7,1.0); // diffuse part as color
+//const vec4 specular = vec4(1,1,1,1); // specular part as color
 const float light_phi = 0.6;
 const float light_theta = 1.0;
 
@@ -27,17 +27,26 @@ const float z_bild = 0;
 
 struct object {
     uint index;
-    vec4 col;
+    mat3 rotation;
+    vec3 scaling;
+    vec3 position;
+    float roughness;
+    float refractionIndex;
+    vec4 diff_col;
+    vec4 spec_col;
 };
 
 struct hit  {
     bool hit;
-    vec4 col;
+    float dist;
+    uint steps;
+    uint index;
 };
 
 object world[] = object[](
-    object(0, vec4(1,1,1,1)),
-    object(1, vec4(1,1,1,1))
+    object(0, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,0.5), vec3(0,0,0), 0.1, 0.3, vec4(1,0,0,1), vec4(1,1,1,1)),
+    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), vec3(0,-1,0), 0.9, 0.3, vec4(0,1,0,1), vec4(1,1,1,1)),
+    object(3, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), vec3(5,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1))
 );
 
 //DE of the primitives is from https://iquilezles.org/articles/distfunctions/
@@ -437,12 +446,13 @@ vec3 iTrans(vec3 pos, mat4 transform){
     return vec3(tmp.x/tmp.w,tmp.y/tmp.w,tmp.z/tmp.w);
 }
 
-vec3 iScale(vec3 pos, float s){
+//scaling http://jamie-wong.com/2016/07/15/ray-marching-signed-distance-functions/#rotation-and-translation
+vec3 iScale(vec3 pos, vec3 s){
     return pos/s;
 }
 
-float oScale(float dist, float s){
-    return dist*s;
+float oScale(float dist, vec3 s){
+    return dist*min(s.x, min(s.y, s.z));
 }
 
 //mirroring (doesn't work for some reason)
@@ -519,21 +529,29 @@ float sdWarpTunnel(vec3 pos){
 float distObj(uint index, vec3 pos){
     switch(index){
         case 0:
-            return sdBox(pos, vec3(1,1,0.5));
+            return sdBox(pos, vec3(1,1,1));
         case 1:
             return sdEllipsoid(pos, vec3(1,1,1));
+        case 2:
+            return deMandelbulb(pos);
+        case 3:
+            return sdEnterprise(pos);
         default:
             return 1.0/0.0; // maximal float
     }
 }
 
-float map(vec3 pos){
+hit map(vec3 pos){
     pos = iTrans(pos, view);
-    float dist = 1.0/0.0; // maximal float
+    hit h = hit(false, 1.0/0.0, 0, 0);
     for (int i = 0; i < world.length(); ++i){
-        dist = min(dist, distObj(world[i].index, pos));
+        float dist = oScale(distObj(world[i].index, iScale(inverse(world[i].rotation)*pos, world[i].scaling)+world[i].position), world[i].scaling);
+        if (dist < h.dist){
+            h = hit(false, dist, 0, i);
+        }
+//        dist = min(dist, oScale(distObj(world[i].index, iScale(inverse(world[i].rotation)*pos, world[i].scaling)+world[i].position), world[i].scaling));
     }
-    return dist;
+    return h;
 //    pos *= (pos.z-z_0)/(z_bild-z_0);
 //    return deMandelbulb(pos*0.5);
 //    return sdEnterprise(pos);
@@ -545,16 +563,16 @@ float map(vec3 pos){
 
 vec3 numDiff(vec3 p){
     vec2 h = vec2(eps,0);
-    return normalize(vec3(map(p+h.xyy) - map(p-h.xyy), map(p+h.yxy) - map(p-h.yxy), map(p+h.yyx) - map(p-h.yyx)));
+    return normalize(vec3(map(p+h.xyy).dist - map(p-h.xyy).dist, map(p+h.yxy).dist - map(p-h.yxy).dist, map(p+h.yyx).dist - map(p-h.yyx).dist));
 }
 
 vec3 tetraNormUnfix(vec3 p){ // for function f(p){
     const float h = eps; // replace by an appropriate value
     const vec2 k = vec2(1,-1);
-    return normalize( k.xyy*map( p + k.xyy*h ) +
-    k.yyx*map( p + k.yyx*h ) +
-    k.yxy*map( p + k.yxy*h ) +
-    k.xxx*map( p + k.xxx*h ) );
+    return normalize( k.xyy*map( p + k.xyy*h ).dist +
+    k.yyx*map( p + k.yyx*h ).dist +
+    k.yxy*map( p + k.yxy*h ).dist +
+    k.xxx*map( p + k.xxx*h ).dist );
 }
 
 // more efficient and looks slightly better
@@ -566,7 +584,7 @@ vec3 tetraNorm(vec3 pos){
     vec3 n = vec3(0.0);
     for( int i=ZERO; i<4; i++) {
         vec3 e = 0.5773*(2.0*vec3((((i+3)>>1)&1),((i>>1)&1),(i&1))-1.0);
-        n += e*map(pos+e*h);//.x;
+        n += e*map(pos+e*h).dist;//.x;
     }
     return normalize(n);
 }
@@ -576,15 +594,23 @@ vec3 calcNormal(vec3 p){
     return tetraNorm(p);
 }
 
-vec2 ray(vec3 ro, vec3 rd){
-    float t = 0.;
+hit ray(vec3 ro, vec3 rd){
+    hit h = hit(false, 0., 0, 0);
     for (int i = 0; i < steps; ++i){
-        float d = map(ro+t*rd);
-        t += d;
-        if (d < eps) return vec2(t, i);
-        if (t > FAR_PLANE) return vec2(0, i);
+        h.steps = i;
+        hit d = map(ro+h.dist*rd);
+        h.dist += d.dist;
+        h.index = d.index;
+        if (d.dist < eps) {
+            h.hit = true;
+            return h;
+        }
+        if (h.dist > FAR_PLANE) {
+            return h;
+        }
     }
-    return vec2(t, steps);
+    h.hit = true; // aproximates object. Might be innacurate but as can be let in as long it doesnt cause problems
+    return h;
 }
 
 // Syntatic sugar. Make sure dot products only map to hemisphere
@@ -593,7 +619,7 @@ float cdot(vec3 a, vec3 b) {
 }
 
 // D
-float beckmannDistribution(float dotNH) {
+float beckmannDistribution(float dotNH, float roughness) {
     float sigma2 = roughness * roughness;
     float alpha = acos(dotNH);
 
@@ -616,7 +642,7 @@ float geometricAttenuation(float dotNH, float dotVN, float dotVH, float dotNL) {
     return min(1, min((2 * dotNH * dotVN) / (dotVH), (2 * dotNH * dotNL) / dotVH));
 }
 
-float cooktorranceTerm(vec3 n, vec3 l) {
+float cooktorranceTerm(vec3 n, vec3 l, float roughness, float refractionIndex) {
     vec3 v = vec3(0.0, 0.0, 1.0); // in eye space direction towards viewer simply is the Z axis
     vec3 h = normalize(l + v); // half-vector between V and L
 
@@ -626,7 +652,7 @@ float cooktorranceTerm(vec3 n, vec3 l) {
     float dotNH = cdot(n, h);
     float dotVH = cdot(v, h);
 
-    float D = beckmannDistribution(dotNH);
+    float D = beckmannDistribution(dotNH, roughness);
     float F = schlickApprox(dotVH, 1.0, refractionIndex);
     float G = geometricAttenuation(dotNH, dotVN, dotVH, dotNL);
 
@@ -637,7 +663,7 @@ vec3 projected(vec3 vec, vec3 normal) {
     return normalize(vec - dot(vec, normal) * normal);
 }
 
-float orennayarTerm(float lambert, vec3 n, vec3 l) {
+float orennayarTerm(float lambert, vec3 n, vec3 l, float roughness) {
     vec3 v = vec3(0.0, 0.0, 1.0);
     float sigma2 = roughness * roughness;
 
@@ -661,17 +687,29 @@ void main()
 
     vec3 col = vec3(.25,.25,.25);
 
-    vec2 r = ray(ro, rd);
-    float t = r.x;
-    if (t > 0){
+    hit r = ray(ro,rd);
+//    vec2 r = ray(ro, rd);
+    float t = r.dist;
+//    if (t > 0){
+    if (r.hit){
+        object obj = world[r.index];
         vec3 pos = ro + t*rd;
         vec3 nor = calcNormal(pos);
 
         float diffuseTerm = cdot(nor, interp_light_dir);
-        diffuseTerm = orennayarTerm(diffuseTerm, nor, interp_light_dir);
+        diffuseTerm = orennayarTerm(diffuseTerm, nor, interp_light_dir, obj.roughness);
         diffuseTerm = max(diffuseTerm, 0.1);
-        float specularTerm = cooktorranceTerm(nor, interp_light_dir);
-        col = vec3(clamp(diffuse * diffuseTerm + specular * specularTerm, 0.0, 1.0));
+        float specularTerm = cooktorranceTerm(nor, interp_light_dir, obj.roughness, obj.refractionIndex);
+        col = vec3(clamp(obj.diff_col * diffuseTerm + obj.spec_col * specularTerm, 0.0, 1.0));
+
+//        vec3 sun_dir = normalize(vec3(.8,.4,.2));
+//        float sun_dif = clamp(dot(nor,interp_light_dir),0.,1.);
+//        hit tmp = ray(pos+nor*eps, interp_light_dir);
+//        float TMP = (tmp.hit) ? tmp.dist : 0;
+//        float sun_sh = step(TMP,0.0);
+//        //sun_sh = 1.f;
+//        col = 0.18*r.col.xyz*sun_dif*sun_sh;
+//        col = pow(col, vec3(0.4545));
     }
     frag_color = vec4(col,1.0);
 }
