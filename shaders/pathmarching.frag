@@ -685,7 +685,7 @@ void main()
     vec3 ro = vec3(0.,0.5,2.);
     vec3 rd = normalize(vec3(p.xy,-2));
 
-    vec3 col = vec3(.25,.25,.25);
+    vec4 col = vec4(.25,.25,.25,1);
 
     hit r = ray(ro,rd);
 //    vec2 r = ray(ro, rd);
@@ -700,7 +700,7 @@ void main()
         diffuseTerm = orennayarTerm(diffuseTerm, nor, interp_light_dir, obj.roughness);
         diffuseTerm = max(diffuseTerm, 0.1);
         float specularTerm = cooktorranceTerm(nor, interp_light_dir, obj.roughness, obj.refractionIndex);
-        col = vec3(clamp(obj.diff_col * diffuseTerm + obj.spec_col * specularTerm, 0.0, 1.0));
+        col = clamp(obj.diff_col * diffuseTerm + obj.spec_col * specularTerm, 0.0, 1.0);
 
 //        vec3 sun_dir = normalize(vec3(.8,.4,.2));
 //        float sun_dif = clamp(dot(nor,interp_light_dir),0.,1.);
@@ -711,6 +711,6 @@ void main()
 //        col = 0.18*r.col.xyz*sun_dif*sun_sh;
 //        col = pow(col, vec3(0.4545));
     }
-    frag_color = vec4(col,1.0);
+    frag_color = col;
 }
 
