@@ -6,8 +6,8 @@ in mat4 view;
 uniform uvec2 uRes;
 uniform float uTime;
 
-const float eps = 0.001;
-const float steps = 1000;
+const float eps = 0.0001;
+const float steps = 10000;
 
 const int Iterations = 100;
 const float Bailout = 100;
@@ -537,8 +537,8 @@ float sdWarpTunnel(vec3 pos){
 float map(vec3 pos){
     pos = iTrans(pos, view);
 //    pos *= (pos.z-z_0)/(z_bild-z_0);
-//    return deMandelbulb(pos*0.5);
-    return sdEnterprise(pos);
+    return deMandelbulb(pos);
+//    return sdEnterprise(pos);
 //    return bU(sdEnterprise(pos), sdWarpTunnel(pos));
 //    return bU(oDisp(sdEllipsoid(pos, vec3(1,1,1)), noise(pos)), sdPlane(pos, vec3(0,1,0), 3));
 //    return bU(sdEllipsoid(pos, vec3(1,1,1)), sdPlane(pos, vec3(0,1,0), 3));

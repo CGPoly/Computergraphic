@@ -8,8 +8,8 @@ uniform float uTime;
 const float eps = 0.001;
 const float steps = 1000;
 
-const int Iterations = 100;
-const float Bailout = 100;
+const int Iterations = 500;
+const float Bailout = 1000;
 const vec3 Scale = vec3(0.5,0.5,0.5);
 const vec3 Offset = vec3(0,0,0);
 
@@ -43,10 +43,13 @@ struct hit  {
     uint index;
 };
 
+float rand(float seed){return fract(sin(seed*78.233) * 43758.5453);}
+
 object world[] = object[](
-    object(0, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,0.5), vec3(0,0,0), 0.1, 0.3, vec4(1,0,0,1), vec4(1,1,1,1)),
-    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), vec3(0,-1,0), 0.9, 0.3, vec4(0,1,0,1), vec4(1,1,1,1)),
-    object(3, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), vec3(5,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1))
+//    object(0, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,0.5), vec3(0,0,0), 0.1, 0.3, vec4(1,0,0,1), vec4(1,1,1,1)),
+//    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), vec3(0,-1,0), 0.9, 0.3, vec4(0,1,0,1), vec4(1,1,1,1)),
+//    object(3, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), vec3(5,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1))
+    object(2, mat3(1,0,0,0,1,0,0,0,1), vec3(2,2,2), vec3(0,0,0), 0.37, 0.289, vec4(0.7,0.7,0.7,1.0), vec4(1,1,1,1))
 );
 
 //DE of the primitives is from https://iquilezles.org/articles/distfunctions/
@@ -490,8 +493,8 @@ float deMandelbulb(vec3 pos) {
     float t = fract(0.01*(uTime+15));
     //    float y = 16.0*t*(1.0-t);
     float maxp = 8;
-    //    float Power = -2*maxp*abs(t-0.5)+maxp;
-    float Power = 8;
+//        float Power = -2*maxp*abs(t-0.5)+maxp;
+    float Power = 4;
     vec3 z = pos;
     float dr = 1.0;
     float r = 0.0;
@@ -549,16 +552,8 @@ hit map(vec3 pos){
         if (dist < h.dist){
             h = hit(false, dist, 0, i);
         }
-//        dist = min(dist, oScale(distObj(world[i].index, iScale(inverse(world[i].rotation)*pos, world[i].scaling)+world[i].position), world[i].scaling));
     }
     return h;
-//    pos *= (pos.z-z_0)/(z_bild-z_0);
-//    return deMandelbulb(pos*0.5);
-//    return sdEnterprise(pos);
-//    return bU(sdEnterprise(pos), sdWarpTunnel(pos));
-//    return bU(sdEllipsoid(pos, vec3(1,1,1)), sdPlane(pos, vec3(0,1,0), 3));
-//    return sbU(sbS(oBevel(sdBox(pos, vec3(2, 0.2, 0.2)), 0.2), sbU(oBevel(sdBox(pos, vec3(1,1,1)), 0.01), sdEllipsoid(pos, vec3(1.3,1.3,1.3)), 0.2), 0.01),
-//    sbD(sbU(oBevel(sdBox(pos, vec3(1,1,1)), 0.01), sdEllipsoid(pos, vec3(1.3,1.3,1.3)), 0.2),sbS(oBevel(sdBox(pos, vec3(2, 0.2, 0.2)), 0.2), sbU(oBevel(sdBox(pos, vec3(1,1,1)), 0.01), sdEllipsoid(pos, vec3(1.3,1.3,1.3)), 0.2), 0.01), 0.01), 0.1);
 }
 
 vec3 numDiff(vec3 p){
@@ -590,7 +585,6 @@ vec3 tetraNorm(vec3 pos){
 }
 
 vec3 calcNormal(vec3 p){
-    //    return numDiff(p);
     return tetraNorm(p);
 }
 
@@ -702,15 +696,11 @@ void main()
         float specularTerm = cooktorranceTerm(nor, interp_light_dir, obj.roughness, obj.refractionIndex);
         col = clamp(obj.diff_col * diffuseTerm + obj.spec_col * specularTerm, 0.0, 1.0);
 
-//        vec3 sun_dir = normalize(vec3(.8,.4,.2));
-//        float sun_dif = clamp(dot(nor,interp_light_dir),0.,1.);
-//        hit tmp = ray(pos+nor*eps, interp_light_dir);
-//        float TMP = (tmp.hit) ? tmp.dist : 0;
-//        float sun_sh = step(TMP,0.0);
-//        //sun_sh = 1.f;
-//        col = 0.18*r.col.xyz*sun_dif*sun_sh;
-//        col = pow(col, vec3(0.4545));
+        hit tmp = ray(pos+nor*eps*2, interp_light_dir);
+        float TMP = (tmp.hit) ? tmp.dist : 0;
+        float sun_sh = step(TMP,0.0);
+        vec4 shadow = vec4(1,1,1,1)*clamp(10*pow(0.18*sun_sh, 0.4545),0.4,1.);
+        col = col*shadow;
     }
     frag_color = col;
 }
-
