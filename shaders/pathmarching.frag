@@ -5,13 +5,13 @@ in mat4 view;
 uniform uvec2 uRes;
 uniform float uTime;
 
-const float eps = 0.001;
+const float eps = 0.005;
 const float steps = 1000;
 
-const int Iterations = 500;
-const float Bailout = 1000;
-const vec3 Scale = vec3(0.5,0.5,0.5);
-const vec3 Offset = vec3(0,0,0);
+const int Iterations = 40;
+const float Bailout = 10;
+//const vec3 Scale = vec3(0.5,0.5,0.5);
+//const vec3 Offset = vec3(0,0,0);
 
 //const float roughness = 0.37; // sigma
 //const float refractionIndex = 0.289;
@@ -26,7 +26,8 @@ const float z_0 = -10;
 const float z_bild = 0;
 
 struct object {
-    uint index;
+    uint obj_index;
+    uint col_index; // 0 uses diff_col, else using a colorfunction
     mat3 rotation;
     vec3 scaling;
     vec3 position;
@@ -49,7 +50,7 @@ object world[] = object[](
 //    object(0, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,0.5), vec3(0,0,0), 0.1, 0.3, vec4(1,0,0,1), vec4(1,1,1,1)),
 //    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), vec3(0,-1,0), 0.9, 0.3, vec4(0,1,0,1), vec4(1,1,1,1)),
 //    object(3, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), vec3(5,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1))
-    object(2, mat3(1,0,0,0,1,0,0,0,1), vec3(2,2,2), vec3(0,0,0), 0.37, 0.289, vec4(0.7,0.7,0.7,1.0), vec4(1,1,1,1))
+    object(4, 0, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), vec3(0,0,0), 0.37, 0.289, vec4(0.7,0.7,0.7,1.0), vec4(1,1,1,1))
 );
 
 //DE of the primitives is from https://iquilezles.org/articles/distfunctions/
@@ -391,6 +392,10 @@ float oOnion(float dist, float thickness){
     return abs(dist)-thickness;
 }
 
+float oMorph(float d1, float d2, float t){
+    return (1-t)*d1+t*d2;
+}
+
 // this extrudes the pos.xy distance of an 2d DE into 3d
 float oExtrusion(float dist, vec3 pos, float h){
     vec2 w = vec2(dist, abs(pos.z) - h );
@@ -493,8 +498,8 @@ float deMandelbulb(vec3 pos) {
     float t = fract(0.01*(uTime+15));
     //    float y = 16.0*t*(1.0-t);
     float maxp = 8;
-//        float Power = -2*maxp*abs(t-0.5)+maxp;
-    float Power = 4;
+        float Power = -2*maxp*abs(t-0.5)+maxp;
+//    float Power = 4;
     vec3 z = pos;
     float dr = 1.0;
     float r = 0.0;
@@ -514,6 +519,36 @@ float deMandelbulb(vec3 pos) {
     return 0.5*log(r)*r/dr;
 }
 
+float deJulia(vec3 p) {
+    vec3 c = vec3(0.4,-0.4,0.6);
+    float maxp = 8;
+    float t = fract(0.01*(uTime+15));
+    float power = -2*maxp*abs(t-0.5)+maxp;
+//    float power = 8;
+
+    vec3 orbit = p;
+    float dz = 1.0;
+
+    for (int i=0; i<Iterations; i++) {
+
+        float r = length(orbit);
+        float o = acos(orbit.z/r);
+        float p = atan(orbit.y/orbit.x);
+
+        dz = power*pow(r,power-1)*dz;
+
+        r = pow(r,power);
+        o = power*o;
+        p = power*p;
+
+        orbit = vec3( r*sin(o)*cos(p), r*sin(o)*sin(p), r*cos(o) ) + c;
+
+        if (dot(orbit,orbit) > Bailout) break;
+    }
+    float z = length(orbit);
+    return 0.5*z*log(z)/dz;
+}
+
 float sdEnterprise(vec3 pos){
     return sbU(sbU(sbU(sbU(sbU(sbU(sbU(oBevel(sdCappedCylinder(pos, 1, 0.04), 0.02),sdEllipsoid(pos, vec3(0.7,0.2, 0.7)), 0.1),
     sdCappedCylinder(iTrans(pos, mat4(0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1))+vec3(-0.8, -1.1, 0), 0.2, 0.8), 0.01),
@@ -529,6 +564,28 @@ float sdWarpTunnel(vec3 pos){
     return -sdInfinteCylinder(pos, vec3(0,0,10));
 }
 
+float test(vec3 pos){
+    float t = -2*abs(fract(0.1*(uTime+15))-0.5)+1;
+    return oMorph(deJulia(pos), deMandelbulb(pos), t);
+}
+
+float deKaliRemix(vec3 p) {
+    float Scale=1.2;
+    vec3 Julia=vec3(-2.2,-1.95,-.6);
+
+    p=p.zxy;  //more natural rotation
+    float alpha1 = 90;
+    float alpha2 = 30;
+    mat3 rot = mat3(cos(alpha1/180*3.14),-sin(alpha1/180*3.14),0,sin(alpha1/180*3.14),cos(alpha1/180*3.14),0,0,0,1)*mat3(cos(alpha2/180*3.14), 0, -sin(alpha2/180*3.14), 0, 1, 0, sin(alpha2/180*3.14), 0, cos(alpha2/180*3.14));
+
+    for (int i=0; i<Iterations; i++) {
+        p.xy=abs(p.xy);
+        p=p*Scale+Julia;
+        p*=rot;
+    }
+    return (length(p))*pow(Scale, -float(Iterations))*.9;
+}
+
 float distObj(uint index, vec3 pos){
     switch(index){
         case 0:
@@ -539,8 +596,19 @@ float distObj(uint index, vec3 pos){
             return deMandelbulb(pos);
         case 3:
             return sdEnterprise(pos);
+        case 4:
+            return deKaliRemix(pos);
         default:
             return 1.0/0.0; // maximal float
+    }
+}
+
+vec4 colObj(uint index, vec3 pos){
+    switch(index){
+//        case 4:
+//            return KaliColor(pos);
+        default:
+            return vec4(0,0,0,0);
     }
 }
 
@@ -548,11 +616,30 @@ hit map(vec3 pos){
     pos = iTrans(pos, view);
     hit h = hit(false, 1.0/0.0, 0, 0);
     for (int i = 0; i < world.length(); ++i){
-        float dist = oScale(distObj(world[i].index, iScale(inverse(world[i].rotation)*pos, world[i].scaling)+world[i].position), world[i].scaling);
+        float dist = oScale(distObj(world[i].obj_index, iScale(inverse(world[i].rotation)*pos, world[i].scaling)+world[i].position), world[i].scaling);
         if (dist < h.dist){
             h = hit(false, dist, 0, i);
         }
     }
+    return h;
+}
+
+hit ray(vec3 ro, vec3 rd){
+    hit h = hit(false, 0., 0, 0);
+    for (int i = 0; i < steps; ++i){
+        h.steps = i;
+        hit d = map(ro+h.dist*rd);
+        h.dist += d.dist;
+        h.index = d.index;
+        if (d.dist < eps) {
+            h.hit = true;
+            return h;
+        }
+        if (h.dist > FAR_PLANE) {
+            return h;
+        }
+    }
+    h.hit = true; // aproximates object. Might be innacurate but as can be let in as long it doesnt cause problems
     return h;
 }
 
@@ -573,8 +660,8 @@ vec3 tetraNormUnfix(vec3 p){ // for function f(p){
 // more efficient and looks slightly better
 // https://iquilezles.org/articles/normalsSDF/
 // calculates normals along an tetrahedron
-vec3 tetraNorm(vec3 pos){
-    const float h = eps;      // replace by an appropriate value
+vec3 tetraNorm(vec3 pos, float h){
+    //    const float h = eps;      // replace by an appropriate value
     int ZERO = min(int(uTime),0); // non-constant zero
     vec3 n = vec3(0.0);
     for( int i=ZERO; i<4; i++) {
@@ -585,26 +672,13 @@ vec3 tetraNorm(vec3 pos){
 }
 
 vec3 calcNormal(vec3 p){
-    return tetraNorm(p);
-}
-
-hit ray(vec3 ro, vec3 rd){
-    hit h = hit(false, 0., 0, 0);
-    for (int i = 0; i < steps; ++i){
-        h.steps = i;
-        hit d = map(ro+h.dist*rd);
-        h.dist += d.dist;
-        h.index = d.index;
-        if (d.dist < eps) {
-            h.hit = true;
-            return h;
-        }
-        if (h.dist > FAR_PLANE) {
-            return h;
-        }
-    }
-    h.hit = true; // aproximates object. Might be innacurate but as can be let in as long it doesnt cause problems
-    return h;
+    //    int n = 32;
+    //    vec3 nor = vec3(0,0,0);
+    //    for (int i=0; i< n; ++i){
+    //        nor += tetraNorm(p, eps*rand(i*2565));
+    //    }
+    //    return nor/n;
+    return tetraNorm(p,eps);
 }
 
 // Syntatic sugar. Make sure dot products only map to hemisphere
@@ -694,7 +768,12 @@ void main()
         diffuseTerm = orennayarTerm(diffuseTerm, nor, interp_light_dir, obj.roughness);
         diffuseTerm = max(diffuseTerm, 0.1);
         float specularTerm = cooktorranceTerm(nor, interp_light_dir, obj.roughness, obj.refractionIndex);
-        col = clamp(obj.diff_col * diffuseTerm + obj.spec_col * specularTerm, 0.0, 1.0);
+        if (obj.col_index == 0){
+            col = clamp(obj.diff_col * diffuseTerm + obj.spec_col * specularTerm, 0.0, 1.0);
+        }
+        else {
+            col = clamp(colObj(obj.col_index, pos) * diffuseTerm + obj.spec_col * specularTerm, 0.0, 1.0);
+        }
 
         hit tmp = ray(pos+nor*eps*2, interp_light_dir);
         float TMP = (tmp.hit) ? tmp.dist : 0;
