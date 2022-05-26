@@ -1,12 +1,12 @@
 #version 400 core
-#define FAR_PLANE 50.
+#define FAR_PLANE 500.
 out vec4 frag_color;
 in mat4 view;
 uniform uvec2 uRes;
 uniform float uTime;
 
-const float eps = 0.005;
-const float steps = 1000;
+const float eps = 0.0025;
+const float steps = 500;
 
 const int Iterations = 40;
 const float Bailout = 10;
@@ -37,20 +37,21 @@ struct object {
     vec4 spec_col;
 };
 
-struct hit  {
+struct hit {
     bool hit;
     float dist;
     uint steps;
     uint index;
 };
 
-float rand(float seed){return fract(sin(seed*78.233) * 43758.5453);}
+//float rand(float seed){return fract(sin(seed*78.233) * 43758.5453);}
 
 object world[] = object[](
-//    object(0, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,0.5), vec3(0,0,0), 0.1, 0.3, vec4(1,0,0,1), vec4(1,1,1,1)),
-//    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), vec3(0,-1,0), 0.9, 0.3, vec4(0,1,0,1), vec4(1,1,1,1)),
+//    object(0, 0, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,0.5), vec3(0,0,0), 0.1, 0.3, vec4(1,0,0,1), vec4(1,1,1,1))
+//    object(1, 0, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), vec3(0,0,0), 0.5, 0.3, vec4(0,1,0,1), vec4(1,1,1,1))
 //    object(3, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), vec3(5,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1))
-    object(4, 0, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), vec3(0,0,0), 0.37, 0.289, vec4(0.7,0.7,0.7,1.0), vec4(1,1,1,1))
+//    object(4, 0, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), vec3(0,0,0), 0.37, 0.289, vec4(0.7,0.7,0.7,1.0), vec4(1,1,1,1))
+    object(3, 0, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), vec3(0,0,0), 0.37, 0.289, vec4(0.7,0.7,0.7,1.0), vec4(1,1,1,1))
 );
 
 //DE of the primitives is from https://iquilezles.org/articles/distfunctions/
@@ -571,11 +572,11 @@ float test(vec3 pos){
 
 float deKaliRemix(vec3 p) {
     float Scale=1.2;
-    vec3 Julia=vec3(-2.2,-1.95,-.6);
+    vec3 Julia=vec3(-.2,-1.95,-.6);
 
     p=p.zxy;  //more natural rotation
-    float alpha1 = 90;
-    float alpha2 = 30;
+    float alpha1 = 20;
+    float alpha2 = 20;
     mat3 rot = mat3(cos(alpha1/180*3.14),-sin(alpha1/180*3.14),0,sin(alpha1/180*3.14),cos(alpha1/180*3.14),0,0,0,1)*mat3(cos(alpha2/180*3.14), 0, -sin(alpha2/180*3.14), 0, 1, 0, sin(alpha2/180*3.14), 0, cos(alpha2/180*3.14));
 
     for (int i=0; i<Iterations; i++) {
@@ -598,6 +599,8 @@ float distObj(uint index, vec3 pos){
             return sdEnterprise(pos);
         case 4:
             return deKaliRemix(pos);
+        case 5:
+            return deManySpheres(pos);
         default:
             return 1.0/0.0; // maximal float
     }
@@ -679,6 +682,7 @@ vec3 calcNormal(vec3 p){
     //    }
     //    return nor/n;
     return tetraNorm(p,eps);
+//    return numDiff(p);
 }
 
 // Syntatic sugar. Make sure dot products only map to hemisphere
