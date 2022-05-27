@@ -31,7 +31,7 @@ int main(int, char* argv[]) {
     start_time = std::chrono::system_clock::now();
 
     unsigned int vertexShader = compileShader("pathmarching.vert", GL_VERTEX_SHADER);
-    unsigned int fragmentShader = compileShader("pathmarching_normalp.frag", GL_FRAGMENT_SHADER);
+    unsigned int fragmentShader = compileShader("pathmarching_double.frag", GL_FRAGMENT_SHADER);
     unsigned int shaderProgram = linkProgram(vertexShader, fragmentShader);
     glDeleteShader(fragmentShader);
     glDeleteShader(vertexShader);
@@ -68,7 +68,7 @@ int main(int, char* argv[]) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
 
     auto vs = "../shaders/pathmarching.vert";
-    auto fs = "../shaders/pathmarching_normalp.frag";
+    auto fs = "../shaders/pathmarching_double.frag";
 
     auto dates = get_filetime(vs) + get_filetime(fs);
 
@@ -77,7 +77,7 @@ int main(int, char* argv[]) {
         if (new_dates != dates) {
             std::cout << "Recompiling shaders" << std::endl;
             vertexShader = compileShader("pathmarching.vert", GL_VERTEX_SHADER);
-            fragmentShader = compileShader("pathmarching_normalp.frag", GL_FRAGMENT_SHADER);
+            fragmentShader = compileShader("pathmarching_double.frag", GL_FRAGMENT_SHADER);
             shaderProgram = linkProgram(vertexShader, fragmentShader);
             glDeleteShader(fragmentShader);
             glDeleteShader(vertexShader);
