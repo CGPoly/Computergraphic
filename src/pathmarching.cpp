@@ -42,7 +42,6 @@ int main(int, char* argv[]) {
     int time = glGetUniformLocation(shaderProgram, "uTime");
     int view_mat_loc = glGetUniformLocation(shaderProgram, "view_mat");
 
-
     // rendering box
     float vertices[] = {
             -1.0f, -1.0f, 0.0f,
@@ -95,7 +94,6 @@ int main(int, char* argv[]) {
 
         glm::mat4 view_matrix = cam.view_matrix();
 //        std::cout << getTimeDelta() <<std::endl;
-//        std::cout << view_matrix << std::endl;
         glUniformMatrix4fv(view_mat_loc, 1, GL_FALSE, &view_matrix[0][0]);
 
         glUniform1f(time, getTimeDelta());

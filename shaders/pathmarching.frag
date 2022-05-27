@@ -5,30 +5,22 @@ in mat4 view;
 uniform uvec2 uRes;
 uniform float uTime;
 
-//const float eps = 0.01;
-//const float eps = 100000;
-//const float eps_skaling = pow(10, -8);
-const float steps = 100;
+const float steps = 300;
 
 const int Iterations = 30;
 const float Bailout = 10;
 
-const float light_phi = 0.6;
-const float light_theta = 1.0;
-
 const float pi = 3.14159265359;
 
-float size = 2*2*696340000.;
-float dist = 149597870700.;
-//float size = 2*3474000.;
-//float dist = 384400000;
-//float size = 200;
-//float dist = 10000;
+const float light_phi = pi/2;
+const float light_theta = 2*pi/5;
+
 struct object {
     uint obj_index;
     uint col_index; // 0 uses diff_col, else using a colorfunction
     mat3 rotation;
     vec3 scaling;
+    float scale;
     vec3 position;
     float roughness;
     float refractionIndex;
@@ -44,12 +36,16 @@ struct hit {
 };
 
 object world[] = object[](
-object(3, 0,  mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),
-object(1, 0,  mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), vec3(0,0,dist), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1))
+//object(1, 0, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1))
+object(3, 0,  mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),  //enterprise
+object(1, 0,  mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 6371009, vec3(0,408000+12756270/2,0), 0.3, 0.3, vec4(0,0,1,1), vec4(1,1,1,1)), //earth
+object(1, 0,  mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, vec3(397000000,408000+12756270/2,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),  //moon
+object(1, 0,  mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0,408000+12756270/2,151600000000.), 0.3, 0.3, vec4(1,0,0,1), vec4(1,0,0,1))  //sun
 );
 
 float eps(float t){
-    return (t > 140000000000.) ? 1000000 : ((t > 384400000.) ? 1000 : 0.01);
+//    return pow(20, ceil(log(t) / log(20))-4);
+    return (t > 140000000000.) ? 1000000 : ((t > 384400000.) ? 1000 : (t > 100000) ? 500 : 0.001);
 }
 
 //DE of the primitives is from https://iquilezles.org/articles/distfunctions/
@@ -585,12 +581,13 @@ float deKaliRemix(vec3 p) {
     return (length(p))*pow(Scale, -float(Iterations))*.9;
 }
 
-float distObj(uint index, vec3 pos){
-    switch(index){
+float distObj(object obj, vec3 pos){
+    switch(obj.obj_index){
         case 0:
         return sdBox(pos,  vec3(1,1,1));
         case 1:
-        return sdEllipsoid(pos,  vec3(size,size,size));
+//        return sdEllipsoid(pos,  vec3(obj.scale,obj.scale,obj.scale));
+        return sdSphere(pos,  obj.scale);
         case 2:
         return deJulia(pos);
         case 3:
@@ -621,7 +618,7 @@ hit map(vec3 pos){
     pos = iTrans(pos, view);
     hit h = hit(false, 1.0/0.0, 0, 0);
     for (int i = 0; i < world.length(); ++i){
-        float dist = oScale(distObj(world[i].obj_index, iScale(inverse(world[i].rotation)*pos, world[i].scaling)+world[i].position), world[i].scaling);
+        float dist = oScale(distObj(world[i], iScale(inverse(world[i].rotation)*pos, world[i].scaling)+world[i].position), world[i].scaling);
         if (dist < h.dist){
             h = hit(false, dist, 0, i);
         }
@@ -748,17 +745,29 @@ float orennayarTerm(float lambert, vec3 n, vec3 l, float roughness) {
     return lambert * (a + (b * cdot(projected(l, n), projected(v, n)) * sin(alpha) * tan(beta)));
 }
 
-
 void main(){
     vec3 light_dir = vec3(cos(light_phi)*sin(light_theta),cos(light_theta),sin(light_phi)*sin(light_theta));
     vec3 interp_light_dir = normalize((view * vec4(light_dir, 0.0)).xyz);
 
-    vec2 p = (2*gl_FragCoord.xy - vec2(uRes.xy) ) / float(uRes.y);
+    vec2 p = (2*gl_FragCoord.xy - vec2(uRes.xy) ); // / float(uRes.y);
+    p.x /= float(uRes.x);
+    p.y /= float(uRes.y);
+    float aspect = float(uRes.x)/float(uRes.y);
 
-    vec3 ro = vec3(0.,0.5,2.);
-    vec3 rd = normalize(vec3(p.xy,-2));
+    float focal_length = 50;
+    float sensor_width = 35; // sensor width is identic to Blender Camera
+    float FOV = 2 * atan(sensor_width/(2*focal_length));  // in rad
+    float renderWidth = 2;
+    float z0 = renderWidth / (2 * tan(FOV / 2));
+    vec3 ro = vec3(0.,0.,1.);
+    p.x *= aspect;
+    vec3 rd = normalize(vec3(p.xy,-z0));
 
-    vec4 col = vec4(.25,.25,.25,1);
+    //orthographic projection
+//    vec3 ro = vec3(p, 0);
+//    vec3 rd = vec3(0,0,-1);
+
+    vec4 col = vec4(.1,.1,.1,1);
 
     hit r = ray(ro,rd);
     float t = r.dist;
@@ -785,6 +794,7 @@ void main(){
         vec4 shadow = vec4(1,1,1,1)*clamp(10*pow(0.18*sun_sh, 0.4545),0.4,1.);
         col = col*shadow;
 
+//        col = world[r.index].diff_col;
 //        col = vec4(nor,1);
     }
     frag_color = col;

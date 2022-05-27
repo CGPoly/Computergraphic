@@ -12,7 +12,7 @@
 //#include <glm/glm.hpp>
 //#include <glm/gtx/io.hpp>
 
-const float FOV = 45.f;
+const float FOV = 45.f/180*3.14;
 const float NEAR_VALUE = 0.1f;
 const float FAR_VALUE = 100.f;
 
