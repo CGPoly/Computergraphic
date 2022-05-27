@@ -109,6 +109,11 @@ Plane intersect_triangle(Geometry object, Ray r, uint face) {
         + b1 * normalize(object.positions[i1] - uCenter)
         + b2 * normalize(object.positions[i2] - uCenter);
 
+
+//    isect.normal = normalize(object.positions[i0] - uCenter)
+//    + normalize(object.positions[i1] - uCenter)
+//    + normalize(object.positions[i2] - uCenter);
+
     // interpolate parameters
     float lum = max(dot(isect.normal, normalize(uLight - x)), 0.1f);
     isect.color = lum * b0 * uColor + lum * b1 * uColor + lum * b2 * uColor;

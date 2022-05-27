@@ -14,8 +14,6 @@
 
 const int WINDOW_WIDTH = 1280;
 const int WINDOW_HEIGHT = 720;
-const char *const frag = "shadertoy.frag";
-const int num = 2;
 
 std::chrono::time_point<std::chrono::system_clock> start_time;
 
@@ -32,16 +30,16 @@ int main(int, char* argv[]) {
     camera cam(window);
     start_time = std::chrono::system_clock::now();
 
-    unsigned int vertexShader = compileShader("shadertoy.vert", GL_VERTEX_SHADER);
-    unsigned int fragmentShader = compileShader(frag, GL_FRAGMENT_SHADER);
+    unsigned int vertexShader = compileShader("pathmarching.vert", GL_VERTEX_SHADER);
+    unsigned int fragmentShader = compileShader("pathmarching_normalp.frag", GL_FRAGMENT_SHADER);
     unsigned int shaderProgram = linkProgram(vertexShader, fragmentShader);
     glDeleteShader(fragmentShader);
     glDeleteShader(vertexShader);
 
     // Define uniform variables
     glUseProgram(shaderProgram);
-    int res = glGetUniformLocation(shaderProgram, "iResolution");
-    int time = glGetUniformLocation(shaderProgram, "iTime");
+    int res = glGetUniformLocation(shaderProgram, "uRes");
+    int time = glGetUniformLocation(shaderProgram, "uTime");
     int view_mat_loc = glGetUniformLocation(shaderProgram, "view_mat");
 
 
@@ -69,11 +67,8 @@ int main(int, char* argv[]) {
     unsigned int IBO = makeBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW, sizeof(indices), indices);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
 
-    auto vs = "../shaders/shadertoy.vert";
-    std::string fullPath = "../shaders/";
-    fullPath += frag;
-    const char *foo = fullPath.c_str();
-    auto fs = foo;
+    auto vs = "../shaders/pathmarching.vert";
+    auto fs = "../shaders/pathmarching_normalp.frag";
 
     auto dates = get_filetime(vs) + get_filetime(fs);
 
@@ -81,15 +76,15 @@ int main(int, char* argv[]) {
         auto new_dates = get_filetime(vs) + get_filetime(fs);
         if (new_dates != dates) {
             std::cout << "Recompiling shaders" << std::endl;
-            vertexShader = compileShader("shadertoy.vert", GL_VERTEX_SHADER);
-            fragmentShader = compileShader(frag, GL_FRAGMENT_SHADER);
+            vertexShader = compileShader("pathmarching.vert", GL_VERTEX_SHADER);
+            fragmentShader = compileShader("pathmarching_normalp.frag", GL_FRAGMENT_SHADER);
             shaderProgram = linkProgram(vertexShader, fragmentShader);
             glDeleteShader(fragmentShader);
             glDeleteShader(vertexShader);
 
             glUseProgram(shaderProgram);
-            res = glGetUniformLocation(shaderProgram, "iResolution");
-            time = glGetUniformLocation(shaderProgram, "iTime");
+            res = glGetUniformLocation(shaderProgram, "uRes");
+            time = glGetUniformLocation(shaderProgram, "uTime");
             view_mat_loc = glGetUniformLocation(shaderProgram, "view_mat");
 
             dates = new_dates;
