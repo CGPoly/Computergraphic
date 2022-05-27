@@ -1,5 +1,6 @@
 #version 400 core
-float FAR_PLANE = 149597870700.+696342000.*10000;
+const float world_scale = 1000;  //how big one unit in metern is (this is for easier camera control)
+float FAR_PLANE = 149597870700.+696342000.*10000/world_scale;
 out vec4 frag_color;
 in mat4 view;
 uniform uvec2 uRes;
@@ -18,6 +19,7 @@ const float light_theta = 2*pi/5;
 struct object {
     uint obj_index;
     uint col_index; // 0 uses diff_col, else using a colorfunction
+    float eps;
     mat3 rotation;
     vec3 scaling;
     float scale;
@@ -36,17 +38,18 @@ struct hit {
 };
 
 object world[] = object[](
-//object(1, 0, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1))
-object(3, 0,  mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),  //enterprise
-object(1, 0,  mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 6371009, vec3(0,408000+12756270/2,0), 0.3, 0.3, vec4(0,0,1,1), vec4(1,1,1,1)), //earth
-object(1, 0,  mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, vec3(397000000,408000+12756270/2,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),  //moon
-object(1, 0,  mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0,408000+12756270/2,151600000000.), 0.3, 0.3, vec4(1,0,0,1), vec4(1,0,0,1))  //sun
+    //object(1, 0, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1))
+    object(2, 0, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,2000), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),
+    object(3, 0, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 157, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),  //enterprise
+    object(1, 0, 1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 6371009, vec3(0,408000+12756270/2,0), 0.3, 0.3, vec4(0,0,1,1), vec4(1,1,1,1)), //earth
+    object(1, 0, 10, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, vec3(397000000,408000+12756270/2,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),  //moon
+    object(1, 0, 1000, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0,408000+12756270/2,151600000000.), 0.3, 0.3, vec4(1,0,0,1), vec4(1,0,0,1))  //sun
 );
 
-float eps(float t){
-//    return pow(20, ceil(log(t) / log(20))-4);
-    return (t > 140000000000.) ? 1000000 : ((t > 384400000.) ? 1000 : (t > 100000) ? 500 : 0.001);
-}
+//float eps(float t){
+////    return pow(20, ceil(log(t) / log(20))-4);
+//    return (t > 140000000000./world_scale) ? 1000 : ((t > 384400000./world_scale) ? 10 : (t > 300000/world_scale) ? 1 : 0.00001);
+//}
 
 //DE of the primitives is from https://iquilezles.org/articles/distfunctions/
 float dot2( in vec2 v ) { return dot(v,v); }
@@ -584,24 +587,24 @@ float deKaliRemix(vec3 p) {
 float distObj(object obj, vec3 pos){
     switch(obj.obj_index){
         case 0:
-        return sdBox(pos,  vec3(1,1,1));
+            return sdBox(pos,  vec3(1,1,1));
         case 1:
-//        return sdEllipsoid(pos,  vec3(obj.scale,obj.scale,obj.scale));
-        return sdSphere(pos,  obj.scale);
+//          return sdEllipsoid(pos,  vec3(obj.scale,obj.scale,obj.scale));
+            return sdSphere(pos,  obj.scale);
         case 2:
-        return deJulia(pos);
+            return deJulia(pos);
         case 3:
-        return sdEnterprise(pos);
+            return sdEnterprise(pos/obj.scale)*obj.scale;
         case 4:
-        return deKaliRemix(pos);
+            return deKaliRemix(pos);
         case 5:
-        return deManySpheres(pos);
+            return deManySpheres(pos);
         case 6:
-        return test(pos);
+            return test(pos);
         case 7:
-        return sbU(oBevel(sdBox(pos,  vec3(1,1,0.5)),0.01), sdEllipsoid(pos,  vec3(1,1,1)), 0.01);
+            return sbU(oBevel(sdBox(pos,  vec3(1,1,0.5)),0.01), sdEllipsoid(pos,  vec3(1,1,1)), 0.01);
         default:
-        return 1.0/0.0; // maximal highp float
+            return 1.0/0.0; // maximal highp float
     }
 }
 
@@ -633,7 +636,8 @@ hit ray(vec3 ro, vec3 rd){
         hit d = map(ro+h.dist*rd);
         h.dist += d.dist;
         h.index = d.index;
-        if (d.dist < eps(h.dist)) {
+//        if (d.dist < eps(h.dist)) {
+        if (d.dist < world[h.index].eps) {
             h.hit = true;
             return h;
         }
@@ -673,14 +677,16 @@ vec3 tetraNorm(vec3 pos, float h){
     return normalize(n);
 }
 
-vec3 calcNormal(vec3 p, float t){
+//vec3 calcNormal(vec3 p, float t){
+vec3 calcNormal(vec3 p, object obj){
     //    int n = 32;
     //    vec3 nor = vec3(0,0,0);
     //    for (int i=0; i< n; ++i){
     //        nor += tetraNorm(p, eps*rand(i*2565));
     //    }
     //    return nor/n;
-    return tetraNorm(p,eps(t));
+//    return tetraNorm(p,eps(t));
+    return tetraNorm(p,obj.eps);
     //    return numDiff(p);
 }
 
@@ -746,6 +752,11 @@ float orennayarTerm(float lambert, vec3 n, vec3 l, float roughness) {
 }
 
 void main(){
+    for (int i = 0; i < world.length; ++i){
+        world[i].scale /= world_scale;
+        world[i].position /= world_scale;
+    }
+
     vec3 light_dir = vec3(cos(light_phi)*sin(light_theta),cos(light_theta),sin(light_phi)*sin(light_theta));
     vec3 interp_light_dir = normalize((view * vec4(light_dir, 0.0)).xyz);
 
@@ -775,7 +786,7 @@ void main(){
     if (r.hit){
         object obj = world[r.index];
         vec3 pos = ro + t*rd;
-        vec3 nor = calcNormal(pos, t);
+        vec3 nor = calcNormal(pos, obj);
 
         float diffuseTerm = cdot(nor, interp_light_dir);
         diffuseTerm = orennayarTerm(diffuseTerm, nor, interp_light_dir, obj.roughness);
@@ -788,7 +799,8 @@ void main(){
             col = clamp(colObj(obj.col_index, pos) * diffuseTerm + obj.spec_col * specularTerm, 0.0, 1.0);
         }
 
-        hit tmp = ray(pos+nor*eps(t)*2, interp_light_dir);
+//        hit tmp = ray(pos+nor*eps(t)*2, interp_light_dir);
+        hit tmp = ray(pos+nor*obj.eps*2, interp_light_dir);
         float TMP = (tmp.hit) ? tmp.dist : 0;
         float sun_sh = step(TMP,0.0);
         vec4 shadow = vec4(1,1,1,1)*clamp(10*pow(0.18*sun_sh, 0.4545),0.4,1.);
