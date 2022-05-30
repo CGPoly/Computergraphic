@@ -2,7 +2,7 @@
 #include "shader.hpp"
 #include "camera.hpp"
 #include "buffer.hpp"
-#include <chrono>
+//#include <chrono>
 
 #include "helper.hpp"
 #include <iostream>
@@ -12,12 +12,15 @@
 //#include <glm/glm.hpp>
 //#include <glm/gtx/io.hpp>
 
-const int WINDOW_WIDTH = 1280;
-const int WINDOW_HEIGHT = 720;
+//const int WINDOW_WIDTH = 1280;
+//const int WINDOW_HEIGHT = 720;
 
-std::chrono::time_point<std::chrono::system_clock> start_time;
+const int WINDOW_WIDTH = 100;
+const int WINDOW_HEIGHT = 100;
 
-float getTimeDelta();
+//std::chrono::time_point<std::chrono::system_clock> start_time;
+
+//float getTimeDelta();
 
 glm::vec4 color;
 
@@ -28,7 +31,7 @@ int main(int, char* argv[]) {
     glfwSetFramebufferSizeCallback(window, resizeCallback);
 
     camera cam(window);
-    start_time = std::chrono::system_clock::now();
+//    start_time = std::chrono::system_clock::now();
 
     unsigned int vertexShader = compileShader("pathmarching.vert", GL_VERTEX_SHADER);
     unsigned int fragmentShader = compileShader("pathmarching.frag", GL_FRAGMENT_SHADER);
@@ -39,7 +42,7 @@ int main(int, char* argv[]) {
     // Define uniform variables
     glUseProgram(shaderProgram);
     int res = glGetUniformLocation(shaderProgram, "uRes");
-    int time = glGetUniformLocation(shaderProgram, "uTime");
+    int frame = glGetUniformLocation(shaderProgram, "uFrame");
     int view_mat_loc = glGetUniformLocation(shaderProgram, "view_mat");
 
     // rendering box
@@ -71,6 +74,8 @@ int main(int, char* argv[]) {
 
     auto dates = get_filetime(vs) + get_filetime(fs);
 
+
+    unsigned int curr_frame = 0;
     while (!glfwWindowShouldClose(window)) {
         auto new_dates = get_filetime(vs) + get_filetime(fs);
         if (new_dates != dates) {
@@ -83,7 +88,7 @@ int main(int, char* argv[]) {
 
             glUseProgram(shaderProgram);
             res = glGetUniformLocation(shaderProgram, "uRes");
-            time = glGetUniformLocation(shaderProgram, "uTime");
+            frame = glGetUniformLocation(shaderProgram, "uFrame");
             view_mat_loc = glGetUniformLocation(shaderProgram, "view_mat");
 
             dates = new_dates;
@@ -96,7 +101,7 @@ int main(int, char* argv[]) {
 //        std::cout << getTimeDelta() <<std::endl;
         glUniformMatrix4fv(view_mat_loc, 1, GL_FALSE, &view_matrix[0][0]);
 
-        glUniform1f(time, getTimeDelta());
+        glUniform1ui(frame, curr_frame);
         glUniform2ui(res, WINDOW_WIDTH, WINDOW_HEIGHT);
 
         glBindVertexArray(VAO);
@@ -104,13 +109,15 @@ int main(int, char* argv[]) {
 
         glfwSwapBuffers(window);
         glfwPollEvents();
+//        std::cout << curr_frame << std::endl;
+        ++curr_frame;
     }
     glfwTerminate();
 }
 
 void resizeCallback(GLFWwindow*, int width, int height){glViewport(0, 0, width, height);}
 
-float getTimeDelta() {
-    auto now = std::chrono::system_clock::now();
-    return static_cast<float>(float(std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count() % 500000) / 1000.f);
-}
+//float getTimeDelta() {
+//    auto now = std::chrono::system_clock::now();
+//    return static_cast<float>(float(std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count() % 500000) / 1000.f);
+//}

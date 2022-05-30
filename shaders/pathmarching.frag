@@ -1,12 +1,20 @@
 #version 400 core
-const float world_scale = 1000;  //how big one unit in metern is (this is for easier camera control)
-float FAR_PLANE = 149597870700.+696342000.*10000/world_scale;
+const float world_scale = 1;  //how big one unit in metern is (this is for easier camera control)
+//float FAR_PLANE = 149597870700.+696342000.*10000/world_scale;
+float FAR_PLANE = 40.;
 out vec4 frag_color;
 in mat4 view;
 uniform uvec2 uRes;
-uniform float uTime;
+uniform uint uFrame;
 
-const float steps = 300;
+const float steps = 40;
+
+const bool preview = false;
+const int max_bounce = 50;
+const int samples = 30;
+
+const float focal_length = 50;  // focal length in mm
+vec3 ro = vec3(0.,0.,1.); // render origin
 
 const int Iterations = 30;
 const float Bailout = 10;
@@ -18,7 +26,7 @@ const float light_theta = 2*pi/5;
 
 struct object {
     uint obj_index;
-    uint col_index; // 0 uses diff_col, else using a colorfunction
+    uint material; // 0 lambertian; 1 dialectic; 2 metal; 3 diffuseLight; 4 Volumetric
     float eps;
     mat3 rotation;
     vec3 scaling;
@@ -38,13 +46,175 @@ struct hit {
 };
 
 object world[] = object[](
-    //object(1, 0, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1))
-    object(2, 0, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,2000), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),
-    object(3, 0, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 157, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),  //enterprise
-    object(1, 0, 1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 6371009, vec3(0,408000+12756270/2,0), 0.3, 0.3, vec4(0,0,1,1), vec4(1,1,1,1)), //earth
-    object(1, 0, 10, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, vec3(397000000,408000+12756270/2,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),  //moon
-    object(1, 0, 1000, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0,408000+12756270/2,151600000000.), 0.3, 0.3, vec4(1,0,0,1), vec4(1,0,0,1))  //sun
+    object(1, 3, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),
+    object(8, 0, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1))
+//    object(2, 0, 0.01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,2000), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),
+//    object(3, 0, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 157, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1))  //enterprise
+//    object(1, 0, 1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 6371009, vec3(0,408000+12756270/2,0), 0.3, 0.3, vec4(0,0,1,1), vec4(1,1,1,1)), //earth
+//    object(1, 0, 10, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, vec3(397000000,408000+12756270/2,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),  //moon
+//    object(1, 0, 1000, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0,408000+12756270/2,151600000000.), 0.3, 0.3, vec4(1,0,0,1), vec4(1,0,0,1))  //sun
 );
+
+//random functions
+//uint seed = uint(dot(uvec2(gl_FragCoord.xy), uvec2((uFrame*210)%436,(uFrame*342)%247)));
+float rand_vec2seed(vec2 co){
+    return fract(sin(dot(co, vec2(12.9898, 78.233)))*43758.5453);
+}
+
+//uint seed = uint(dot(uvec2(gl_FragCoord.xy), uvec2((uFrame*210)%436,(uFrame*342)%247)));
+uint seed = uint(floor(rand_vec2seed(gl_FragCoord.xy)*1341*uFrame));
+
+//float rand(){
+////    ++seed;
+//    return fract(sin(float(++seed) * 12.9898) * 43758.5453);
+//}
+uint hash(){
+    uint x = ++seed;
+    x += (x << 10u);
+    x ^= (x >> 6u);
+    x += (x << 3u);
+    x ^= (x >> 11u);
+    x += (x << 15u);
+    return x;
+}
+
+float floatConstruct(uint m){
+    const uint ieeeMantissa = 0x007FFFFFu;
+    const uint ieeeOne = 0x3F800000u;
+    m &= ieeeMantissa;
+    m |= ieeeOne;
+    float f = uintBitsToFloat(m);
+    return f - 1.;
+}
+
+float rand(){return floatConstruct(hash());}
+
+
+
+float rand(vec2 co){ // https://stackoverflow.com/questions/4200224/random-noise-functions-for-glsl
+    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+}
+float rand(vec3 co){
+    return fract(sin(dot(co, vec3(12.9898, 78.233, 52.652))) * 43758.5453);
+}
+
+vec3 rand_in_unit_sphere(){
+    int i = 0;
+    vec3 p;
+    while (true){
+        p = vec3(2*rand()-1, 2*rand()-1, 2*rand()-1);
+        if (length(p) >= 1) {++i;continue;}
+        break;
+    }
+    return p;
+}
+vec3 rand_unit_sphere(){
+    return normalize(rand_in_unit_sphere());
+}
+
+
+//randoms from https://www.shadertoy.com/view/lssBD7
+//vec2 randState;
+//
+//float hash( const float n ){
+//    return fract(sin(n)*43758.54554213);
+//}
+//
+//float rand(){
+//    randState.x = fract(sin(dot(randState.xy, vec2(12.9898, 78.233))) * 43758.5453);
+//    randState.y = fract(sin(dot(randState.xy, vec2(56.789, 54.881))) * 85453.1435);;
+//
+//    return randState.x;
+//}
+//
+//
+//// random direction in unit sphere (for lambert brdf)
+//vec3 random_in_unit_sphere(){
+//    float phi = 2.0 * pi * rand();
+//    float cosTheta = 2.0 * rand() - 1.0;
+//    float u = rand();
+//
+//    float theta = acos(cosTheta);
+//    float r = pow(u, 1.0 / 3.0);
+//
+//    float x = r * sin(theta) * cos(phi);
+//    float y = r * sin(theta) * sin(phi);
+//    float z = r * cos(theta);
+//
+//    return vec3(x, y, z);
+//}
+
+//randoms from https://www.shadertoy.com/view/WlBSzG
+//struct random_state {
+//    uint z0;
+//    uint z1;
+//    uint z2;
+//    uint z3;
+//};
+//
+//
+//uint tst(in uint z, int S1, int S2, int S3, uint M) {
+//    uint b = (((z << S1) ^ z) >> S2);
+//    return (((z & M) << S3) ^ b);
+//}
+//
+//uint lcg(in uint z, uint A, uint C) {
+//    return (A*z+C);
+//}
+//
+//void update_random(inout random_state rs) {
+//    rs.z0 = tst(rs.z0, 13, 19, 12, 4294967294u);
+//    rs.z1 = tst(rs.z1,  2, 25, 4,  4294967288u);
+//    rs.z2 = tst(rs.z2, 3, 11, 17, 4294967280u);
+//    rs.z3 = lcg(rs.z3, 1664525u, 1013904223u);
+//    uint zt = rs.z3;
+//    rs.z3 ^= rs.z2;
+//    rs.z2 ^= rs.z1;
+//    rs.z1 ^= rs.z0;
+//    rs.z0 ^= zt;
+//}
+//
+//void init_random(vec2 fragCoord, float time, inout random_state rs) {
+//    rs.z0 = floatBitsToUint(fragCoord.y*0.1234567);
+//    rs.z1 = floatBitsToUint(fragCoord.x*0.1234567);
+//    rs.z2 = floatBitsToUint(time*0.1234567);
+//    rs.z3 = floatBitsToUint(0.1234567);
+//    // Mix up a bit
+//    update_random(rs);
+//    update_random(rs);
+//    update_random(rs);
+//    update_random(rs);
+//}
+//
+//float random0(in random_state rs) {
+//    return fract(0.00002328 * float(rs.z0));
+//}
+//float random1(in random_state rs) {
+//    return fract(0.00002328 * float(rs.z1));
+//}
+//float random2(in random_state rs) {
+//    return fract(0.00002328 * float(rs.z2));
+//}
+//
+//vec3 random_in_unit_disk(inout random_state rs) {
+//    update_random(rs);
+//    vec3 r,p;
+//    r.x = random0(rs);
+//    r.y = random1(rs);
+//    r.z = 0.0;
+//    p =2.0 * r - vec3(1.0,1.0,0.0);
+//    while (dot(p,p)>1.0) p *= 0.7;
+//    return p;
+//}
+//
+//vec3 random_in_unit_sphere(random_state rs) {
+//    update_random(rs);
+//    vec3 r = vec3(random0(rs),random1(rs),random2(rs));
+//    vec3 p;
+//    p = 2.0 * r - vec3(1.0);
+//    while (dot(p,p) > 1.0) p *= 0.7;
+//    return p;
+//}
 
 //float eps(float t){
 ////    return pow(20, ceil(log(t) / log(20))-4);
@@ -493,11 +663,11 @@ float deManySpheres(vec3 pos){
 }
 
 float deMandelbulb(vec3 pos) {
-    float t = fract(0.01*(uTime+15));
+//    float t = fract(0.01*(uTime+15));
     //    float y = 16.0*t*(1.0-t);
-    float maxp = 8;
-    float Power = -2*maxp*abs(t-0.5)+maxp;
-    //    float Power = 4;
+//    float maxp = 8;
+//    float Power = -2*maxp*abs(t-0.5)+maxp;
+        float Power = 4;
     vec3 z = pos;
     float dr = 1.0;
     float r = 0.0;
@@ -563,8 +733,8 @@ float sdWarpTunnel(vec3 pos){
 }
 
 float test(vec3 pos){
-    float t = -2*abs(fract(0.1*(uTime+15))-0.5)+1;
-    return oMorph(deJulia(pos), deMandelbulb(pos), t);
+//    float t = -2*abs(fract(0.1*(uTime+15))-0.5)+1;
+    return oMorph(deJulia(pos), deMandelbulb(pos), 0.5);
 }
 
 float deKaliRemix(vec3 p) {
@@ -603,17 +773,10 @@ float distObj(object obj, vec3 pos){
             return test(pos);
         case 7:
             return sbU(oBevel(sdBox(pos,  vec3(1,1,0.5)),0.01), sdEllipsoid(pos,  vec3(1,1,1)), 0.01);
+        case 8:
+            return sdPlane(pos, vec3(0,1,0),1);
         default:
             return 1.0/0.0; // maximal highp float
-    }
-}
-
-vec4 colObj(uint index, vec3 pos){
-    switch(index){
-//        case 4:
-//            return KaliColor(pos);
-        default:
-        return vec4(0,0,0,0);
     }
 }
 
@@ -629,14 +792,48 @@ hit map(vec3 pos){
     return h;
 }
 
+hit map(vec3 pos, uint index){
+    pos = iTrans(pos, view);
+    hit h = hit(false, 1.0/0.0, 0, 0);
+    for (int i = 0; i < world.length(); ++i){
+        float dist = oScale(distObj(world[i], iScale(inverse(world[i].rotation)*pos, world[i].scaling)+world[i].position), world[i].scaling);
+        if (i == index) dist *= -1;
+        if (dist < h.dist){
+            h = hit(false, dist, 0, i);
+        }
+    }
+    return h;
+}
+
 hit ray(vec3 ro, vec3 rd){
-    hit h = hit(false, 0., 0, 0);
+    hit h = hit(false, 0., 0, -1);
     for (int i = 0; i < steps; ++i){
         h.steps = i;
         hit d = map(ro+h.dist*rd);
         h.dist += d.dist;
         h.index = d.index;
 //        if (d.dist < eps(h.dist)) {
+        if (d.dist < world[h.index].eps) {
+            h.hit = true;
+            return h;
+        }
+        if (h.dist > FAR_PLANE) {
+            return h;
+        }
+    }
+    h.hit = false; // aproximates object. Might be innacurate but as can be let in as long it doesnt cause problems
+    return h;
+}
+
+//TODO: allow for multiple indexs for intersecting objects.
+hit ray(vec3 ro, vec3 rd, uint index){ // to march a ray through an object
+    hit h = hit(false, 0., 0, -1);
+    for (int i = 0; i < steps; ++i){
+        h.steps = i;
+        hit d = map(ro+h.dist*rd, index);
+        h.dist += d.dist;
+        h.index = d.index;
+        //        if (d.dist < eps(h.dist)) {
         if (d.dist < world[h.index].eps) {
             h.hit = true;
             return h;
@@ -668,7 +865,7 @@ vec3 tetraNormUnfix(vec3 p, float h){ // for function f(p){
 // calculates normals along an tetrahedron
 vec3 tetraNorm(vec3 pos, float h){
     //    const float h = eps;      // replace by an appropriate value
-    int ZERO = min(int(uTime),0); // non-constant zero
+    int ZERO = min(int(uFrame),0); // non-constant zero
     vec3 n = vec3(0.0);
     for( int i=ZERO; i<4; i++) {
         vec3 e = 0.5773*(2.0*vec3((((i+3)>>1)&1),((i>>1)&1),(i&1))-1.0);
@@ -751,6 +948,42 @@ float orennayarTerm(float lambert, vec3 n, vec3 l, float roughness) {
     return lambert * (a + (b * cdot(projected(l, n), projected(v, n)) * sin(alpha) * tan(beta)));
 }
 
+vec4 pathtracing(vec3 origin, vec3 direction){
+    vec4 col = vec4(0);
+    for (int i = 0; i < max_bounce; ++i){
+        hit r = ray(origin, direction);
+        if (r.hit){
+            object obj = world[r.index];
+            vec3 p = origin + r.dist*direction;
+            vec3 normal = calcNormal(p, obj);
+            vec3 target = p + normal + rand_unit_sphere();
+            direction = normalize(target-p);
+            origin = p+2*obj.eps*direction;
+//            return 0.5*pathtracing(p, target-p);
+        }
+        else {
+            float t = 0.5*(direction.y + 1.0);
+            vec4 sky = (1.0-t)*vec4(1.0, 1.0, 1.0,1) + t*vec4(0.5, 0.7, 1.0,1);
+//            vec4 sky = vec4(1);
+            return pow(0.5, i)*sky;
+        }
+    }
+    return vec4(0,0,0,1);
+
+//    float t = 0.5*(direction.y + 1.0);
+//    return (1.0-t)*vec4(1.0, 1.0, 1.0,1) + t*vec4(0.5, 0.7, 1.0,1);
+//    return col;
+}
+
+vec3 getRayDir(vec2 p, float aspect){
+    float sensor_width = 35; // sensor width is identic to Blender Camera
+    float FOV = 2 * atan(sensor_width/(2*focal_length));  // in rad
+    float renderWidth = 2;
+    float z0 = renderWidth / (2 * tan(FOV / 2));
+    p.x *= aspect;
+    return normalize(vec3(p.xy,-z0));
+}
+
 void main(){
     for (int i = 0; i < world.length; ++i){
         world[i].scale /= world_scale;
@@ -764,50 +997,47 @@ void main(){
     p.x /= float(uRes.x);
     p.y /= float(uRes.y);
     float aspect = float(uRes.x)/float(uRes.y);
-
-    float focal_length = 50;
-    float sensor_width = 35; // sensor width is identic to Blender Camera
-    float FOV = 2 * atan(sensor_width/(2*focal_length));  // in rad
-    float renderWidth = 2;
-    float z0 = renderWidth / (2 * tan(FOV / 2));
-    vec3 ro = vec3(0.,0.,1.);
-    p.x *= aspect;
-    vec3 rd = normalize(vec3(p.xy,-z0));
-
     //orthographic projection
 //    vec3 ro = vec3(p, 0);
 //    vec3 rd = vec3(0,0,-1);
 
     vec4 col = vec4(.1,.1,.1,1);
 
-    hit r = ray(ro,rd);
-    float t = r.dist;
-//    col = float(r.steps)/float(steps)*vec4(1,1,1,1);
-    if (r.hit){
-        object obj = world[r.index];
-        vec3 pos = ro + t*rd;
-        vec3 nor = calcNormal(pos, obj);
-
-        float diffuseTerm = cdot(nor, interp_light_dir);
-        diffuseTerm = orennayarTerm(diffuseTerm, nor, interp_light_dir, obj.roughness);
-        diffuseTerm = max(diffuseTerm, 0.1);
-        float specularTerm = cooktorranceTerm(nor, interp_light_dir, obj.roughness, obj.refractionIndex);
-        if (obj.col_index == 0){
+    if (preview) {
+        vec3 rd = getRayDir(p, aspect);
+        hit r = ray(ro, rd);
+        float t = r.dist;
+        //    col = float(r.steps)/float(steps)*vec4(1,1,1,1);
+        if (r.hit){
+            object obj = world[r.index];
+            vec3 pos = ro + t*rd;
+            vec3 nor = calcNormal(pos, obj);
+            float diffuseTerm = cdot(nor, interp_light_dir);
+            diffuseTerm = orennayarTerm(diffuseTerm, nor, interp_light_dir, obj.roughness);
+            diffuseTerm = max(diffuseTerm, 0.1);
+            float specularTerm = cooktorranceTerm(nor, interp_light_dir, obj.roughness, obj.refractionIndex);
             col = clamp(obj.diff_col * diffuseTerm + obj.spec_col * specularTerm, 0.0, 1.0);
-        }
-        else {
-            col = clamp(colObj(obj.col_index, pos) * diffuseTerm + obj.spec_col * specularTerm, 0.0, 1.0);
-        }
 
-//        hit tmp = ray(pos+nor*eps(t)*2, interp_light_dir);
-        hit tmp = ray(pos+nor*obj.eps*2, interp_light_dir);
-        float TMP = (tmp.hit) ? tmp.dist : 0;
-        float sun_sh = step(TMP,0.0);
-        vec4 shadow = vec4(1,1,1,1)*clamp(10*pow(0.18*sun_sh, 0.4545),0.4,1.);
-        col = col*shadow;
+            //        hit tmp = ray(pos+nor*eps(t)*2, interp_light_dir);
+            hit tmp = ray(pos+nor*obj.eps*2, interp_light_dir);
+            float TMP = (tmp.hit) ? tmp.dist : 0;
+            float sun_sh = step(TMP, 0.0);
+            vec4 shadow = vec4(1, 1, 1, 1)*clamp(10*pow(0.18*sun_sh, 0.4545), 0.4, 1.);
+            col = col*shadow;
 
-//        col = world[r.index].diff_col;
-//        col = vec4(nor,1);
+            //        col = world[r.index].diff_col;
+            //        col = vec4(nor,1);
+        }
+    }
+    else {
+        vec3 rd = getRayDir(p,aspect);
+//        col = vec4(float(uFrame));
+        for (int i = 0; i < samples; ++i){
+            col += pathtracing(ro, rd);
+        }
+        col = pathtracing(ro,rd);
+//        col.xyz = pow(col.xyz/float(samples), vec3(1/2));
+//        col.xyz = sqrt(col.xyz/float(samples));  //gamma correction
     }
     frag_color = col;
 }

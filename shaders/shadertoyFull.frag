@@ -2,11 +2,12 @@
 #define FAR_PLANE 20.
 out vec4 frag_color;
 uniform uvec2 iResolution;
-uniform uint uFrame;
+uniform float iTime;
 const vec2 iMouse = vec2(0,0);
 
 
-#define SAMPLES 500
+#define SAMPLES 100 // Bigger GPUs
+//#define SAMPLES 3 // Smaller GPUs, noisier
 
 const float M_PI = 3.141592653589793;
 
@@ -73,6 +74,8 @@ vec3 random_in_unit_disk(inout random_state rs) {
 }
 
 const uint Lambertian = 0u;
+const uint Metal = 1u;
+const uint Dielectric = 2u;
 const uint DiffuseLight = 3u;
 
 struct sphere {
@@ -81,19 +84,48 @@ struct sphere {
     float radiusi;
     uint mat_type;
     vec3 albedo;
+    vec3 albedo2;
+    float fuzz;
+    float ref_idx;
 };
 
 const sphere world[] = sphere[](
-sphere(vec3(0.0,0.0,0), 1.0*1.0, 1.0/1.0, Lambertian, vec3(0.5,0.5,0.5)),
-sphere(vec3(.0,.0,2), 1.0*1.0, 1.0/1.0, DiffuseLight, vec3(10,5,5)),
-sphere(vec3(0.0,-1001.0,0.0), 1000.0*1000.0, 1.0/1000.0, Lambertian, vec3(0.2,0.2,0.2))
+sphere(vec3(0.0,-0.5,0.0), 0.5*0.5, 1.0/0.5, Dielectric, vec3(1.0,1.0,1.0),vec3(1.0,1.0,1.0),0.0,1.7),
+sphere(vec3(0.0,-0.5,0.0), 0.4*0.4, -1.0/0.4, Dielectric, vec3(1.0,1.0,1.0),vec3(1.0,1.0,1.0),0.0,1.7),
+//
+sphere(vec3(2.0,0.0,0), 1.0*1.0, 1.0/1.0, Lambertian, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),0.0,0.0),
+sphere(vec3(-2.0,0.0,0), 1.0*1.0, 1.0/1.0, Metal, vec3(1.0,1.0,1.0),vec3(1.0,1.0,1.0),0.1,0.0),
+sphere(vec3(0.0,0.0,2.0), 1.0*1.0, 1.0/1.0, Dielectric, vec3(1.0,1.0,1.0),vec3(1.0,1.0,1.0),0.0,1.5),
+sphere(vec3(0.0,0.0,-2.0), 1.0*1.0, 1.0/1.0, Metal, vec3(1.0,0.25,0.25),vec3(1.0,0.25,0.25),0.01,0.0),
+//
+sphere(vec3(4.0,-0.5,2.0), 0.5*0.5, 1.0/0.5, Lambertian, vec3(1.0,0.0,0.0),vec3(1.0,0.0,0.0),0.0,0.0),
+sphere(vec3(2.0,-0.5,-4.0), 0.5*0.5, 1.0/0.5, Lambertian, vec3(0.0,1.0,0.0),vec3(0.0,1.0,0.0),0.0,0.0),
+sphere(vec3(4.0,-0.5,4.0), 0.5*0.5, 1.0/0.5, Lambertian, vec3(0.0,0.0,1.0),vec3(0.0,0.0,1.0),0.0,0.0),
+sphere(vec3(-4.0,-0.5,-2.0), 0.5*0.5, 1.0/0.5, Metal, vec3(1.0,1.0,0.0),vec3(1.0,1.0,0.0),0.0,0.0),
+sphere(vec3(-2.0,-0.5,4.0), 0.5*0.5, 1.0/0.5, Lambertian, vec3(0.0,1.0,1.0),vec3(0.0,1.0,1.0),0.0,0.0),
+sphere(vec3(-4.0,-0.5,-4.0), 0.5*0.5, 1.0/0.5, Lambertian, vec3(1.0,0.0,1.0),vec3(1.0,0.0,1.0),0.0,0.0),
+sphere(vec3(-4.0,-0.5,2.0), 0.5*0.5, 1.0/0.5, Metal, vec3(1.0,0.5,0.5),vec3(1.0,0.5,0.5),0.0,0.0),
+sphere(vec3(-2.0,-0.5,-4.0), 0.5*0.5, 1.0/0.5, Lambertian, vec3(0.5,1.0,0.5),vec3(0.5,1.0,0.5),0.0,0.0),
+sphere(vec3(-4.0,-0.5,4.0), 0.5*0.5, 1.0/0.5, Lambertian, vec3(0.5,0.5,1.0),vec3(0.5,0.5,1.0),0.0,0.0),
+sphere(vec3(4.0,-0.5,-2.0), 0.5*0.5, 1.0/0.5, Metal, vec3(1.0,1.0,0.5),vec3(1.0,1.0,0.5),0.0,0.0),
+sphere(vec3(2.0,-0.5,4.0), 0.5*0.5, 1.0/0.5, Lambertian, vec3(0.5,1.0,1.0),vec3(0.5,1.0,1.0),0.0,0.0),
+sphere(vec3(4.0,-0.5,-4.0), 0.5*0.5, 1.0/0.5, Lambertian, vec3(1.0,0.5,1.0),vec3(1.0,0.5,1.0),0.0,0.0),
+
+sphere(vec3(0.0,-1001.0,0.0), 1000.0*1000.0, 1.0/1000.0, Metal, vec3(0.2,0.2,0.2),vec3(0.2,0.4,0.2),0.05,0.0)
 );
+
+void get_sphere_uv(vec3 p, inout float u, inout float v) {
+    u = p.x;
+    v = p.z;
+}
 
 struct hit_record {
     float t;
     vec3 p;
     vec3 normal;
     vec3 objcent;
+    float u;
+    float v;
     int objidx;
 };
 
@@ -114,6 +146,7 @@ bool sphere_hit(int i, vec3 ro, vec3 rd, float a, float ooa, float t_min, float 
             rec.objcent = cen;
             rec.normal = (rec.p - rec.objcent) * world[i].radiusi;
             rec.objidx = i;
+            get_sphere_uv(rec.p, rec.u, rec.v);
             return true;
         }
         temp = (-b +sqdisc)*ooa;
@@ -123,6 +156,7 @@ bool sphere_hit(int i, vec3 ro, vec3 rd, float a, float ooa, float t_min, float 
             rec.objcent = cen;
             rec.normal = (rec.p - rec.objcent) * world[i].radiusi;
             rec.objidx = i;
+            get_sphere_uv(rec.p, rec.u, rec.v);
             return true;
         }
     }
@@ -152,7 +186,13 @@ bool list_hit(vec3 ro, vec3 rd, float t_min, float t_max, inout hit_record rec) 
 }
 
 vec3 shade(hit_record rec) {
-    return world[rec.objidx].albedo;
+    bool wu = fract(rec.u*0.5)>0.5;
+    bool wv = fract(rec.v*0.5)>0.5;
+    if (wu^^wv) {
+        return world[rec.objidx].albedo;
+    } else {
+        return world[rec.objidx].albedo2;
+    }
 }
 
 vec3 random_in_unit_sphere(vec3 r) {
@@ -160,6 +200,25 @@ vec3 random_in_unit_sphere(vec3 r) {
     p = 2.0 * r - vec3(1.0);
     while (dot(p,p) > 1.0) p *= 0.7;
     return p;
+}
+
+
+bool refract2(vec3 v, vec3 n, float ni_over_nt, inout vec3 refracted) {
+    vec3 uv = normalize(v);
+    float dt = dot(uv, n);
+    float disc = 1.0 - ni_over_nt * ni_over_nt * (1.0-dt*dt);
+    if (disc > 0.0) {
+        refracted = ni_over_nt * (uv - n*dt) - n*sqrt(disc);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+float schlick(float csn, float idx) {
+    float r0 = (1.0-idx) / (1.0+idx);
+    r0 = r0*r0;
+    return r0 + (1.0-r0)*pow(1.0-csn,5.0);
 }
 
 bool scatter(hit_record rec, vec3 ro, vec3 rd, inout vec3 attenuation, inout vec3 scro, inout vec3 scrd, inout random_state rs) {
@@ -175,6 +234,41 @@ bool scatter(hit_record rec, vec3 ro, vec3 rd, inout vec3 attenuation, inout vec
         vec3 target = normalize(rec.normal + random_in_unit_sphere(r));
         scro = rec.p;
         scrd = target;
+        return true;
+    } else if (mt == Metal) {
+        vec3 rius = random_in_unit_sphere(r);
+        scro = rec.p;
+        float fuzz = world[rec.objidx].fuzz;
+        scrd = ((1.0-fuzz)*reflected + fuzz*rius) + fuzz*(rec.normal + rius);
+        return dot(scrd,rec.normal) > 0.0;
+    } else if (mt == Dielectric) {
+        vec3 outward_normal;
+        float ni_over_nt;
+        vec3 refracted;
+        float reflect_prob = 1.0;
+        float csn;
+        float il = 1.0/length(rd);
+        float drdnor = dot(rd, rec.normal);
+        float idx = world[rec.objidx].ref_idx;
+        if (drdnor > 0.0) {
+            outward_normal = -rec.normal;
+            ni_over_nt = idx;
+            csn = ni_over_nt * drdnor * il;
+        } else {
+            outward_normal = rec.normal;
+            ni_over_nt = 1.0/idx;
+            csn = -drdnor * il;
+        }
+        if (refract2(rd, outward_normal, ni_over_nt, refracted)) {
+            reflect_prob = schlick(csn, idx);
+        }
+        if (r.x < reflect_prob) {
+            scro = rec.p;
+            scrd = reflected;
+        } else {
+            scro = rec.p;
+            scrd = refracted;
+        }
         return true;
     } else if (mt == DiffuseLight) {
         return false;
@@ -204,16 +298,19 @@ vec3 color(vec3 ro, vec3 rd, inout random_state rs) {
                 done = true;
             }
         } else {
-            albedo = vec3(0.2);
+            vec3 unit_direction = normalize(rd);
+            float t = 0.5 * (unit_direction.y + 1.0);
+            albedo = ((1.0-t)*vec3(1.0) + t*vec3(0.25,0.5,1.0));
             emit_accum += attenuation_accum * albedo * 0.7;
             done = true;
         }
     }
 
-    return emit_accum;
+    return emit_accum; //vec3(random0(rs), random1(rs), 0.0);
 }
 
-void mainImage( out vec4 fragColor, in vec2 fragCoord ){
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
     // Initialize pseudo random number gen
     random_state rs;
     float time = iTime;

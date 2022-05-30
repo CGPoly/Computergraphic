@@ -10,8 +10,8 @@ const vec2 iMouse = vec2(0,0);
 // Created by Christopher Wallis
 #define PI 3.14
 
-#define NUM_LIGHTS 3
-#define NUM_LIGHT_COLORS 3
+#define NUM_LIGHTS 4
+#define NUM_LIGHT_COLORS 4
 
 #define CHECKER_FLOOR_MATERIAL_ID 0
 #define LIGHT_BASE_MATERIAL_ID 1
@@ -21,7 +21,7 @@ const vec2 iMouse = vec2(0,0);
 
 #define INVALID_MATERIAL_ID int(-1)
 #define LARGE_NUMBER 1e20
-#define EPSILON 0.001
+#define EPSILON 0.0001
 #define MAX_SDF_SPHERE_STEPS 15
 #define ABSORPTION_COEFFICIENT 0.5
 #define CAST_VOLUME_SHADOW_ON_OPAQUES 1
@@ -34,8 +34,8 @@ const vec2 iMouse = vec2(0,0);
 //#define LIGHT_ATTENUATION_FACTOR 2.0
 //#define MAX_OPAQUE_SHADOW_MARCH_STEPS 10
 //#else
-#define MAX_VOLUME_MARCH_STEPS 50
-#define MAX_VOLUME_LIGHT_MARCH_STEPS 25
+#define MAX_VOLUME_MARCH_STEPS 100
+#define MAX_VOLUME_LIGHT_MARCH_STEPS 250
 #define ABSORPTION_CUTOFF 0.01
 #define MARCH_MULTIPLIER 1.0
 #define LIGHT_ATTENUATION_FACTOR 1.65
@@ -62,8 +62,8 @@ struct OrbLightDescription
 };
 
 CameraDescription Camera = CameraDescription(
-vec3(0, 50, -105),
-vec3(20, 0, 20),
+vec3(0, 70, -165),
+vec3(0, 5, 0),
 2.0,
 7.0
 );
@@ -197,7 +197,7 @@ float sdSphere( vec3 p, vec3 origin, float s )
     return length(p)-s;
 }
 
-#define MATERIAL_IS_LIGHT_SOURCE 0x1
+    #define MATERIAL_IS_LIGHT_SOURCE 0x1
 struct Material
 {
     vec3 albedo;
@@ -248,18 +248,18 @@ Material GetMaterial(int materialID, vec3 position)
 }
 
 // https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-plane-and-ray-disk-intersection
-//float PlaneIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 planeOrigin, vec3 planeNormal, out vec3 normal)
-//{
-//    float t = -1.0f;
-//    normal = planeNormal;
-//    float denom = dot(-planeNormal, rayDirection);
-//    if (denom > EPSILON) {
-//        vec3 rayToPlane = planeOrigin - rayOrigin;
-//        return dot(rayToPlane, -planeNormal) / denom;
-//    }
-//
-//    return t;
-//}
+float PlaneIntersection(vec3 rayOrigin, vec3 rayDirection, vec3 planeOrigin, vec3 planeNormal, out vec3 normal)
+{
+    float t = -1.0f;
+    normal = planeNormal;
+    float denom = dot(-planeNormal, rayDirection);
+    if (denom > EPSILON) {
+        vec3 rayToPlane = planeOrigin - rayOrigin;
+        return dot(rayToPlane, -planeNormal) / denom;
+    }
+
+    return t;
+}
 
 float SphereIntersection(
 in vec3 rayOrigin,
@@ -325,13 +325,13 @@ float IntersectOpaqueScene(in vec3 rayOrigin, in vec3 rayDirection, out int mate
     }
 
 
-//    UpdateIfIntersected(
-//    t,
-//    PlaneIntersection(rayOrigin, rayDirection, vec3(0, 0, 0), vec3(0, 1, 0), intersectionNormal),
-//    intersectionNormal,
-//    CHECKER_FLOOR_MATERIAL_ID,
-//    normal,
-//    materialID);
+    UpdateIfIntersected(
+    t,
+    PlaneIntersection(rayOrigin, rayDirection, vec3(0, 0, 0), vec3(0, 1, 0), intersectionNormal),
+    intersectionNormal,
+    CHECKER_FLOOR_MATERIAL_ID,
+    normal,
+    materialID);
 
 
     return t;
@@ -342,13 +342,12 @@ float QueryVolumetricDistanceField( in vec3 pos)
     // Fuse a bunch of spheres, slap on some fbm noise,
     // merge it with ground plane to get some ground fog
     // and viola! Big cloudy thingy!
-//    vec3 fbmCoord = (pos + 2.0 * vec3(iTime, 0.0, iTime)) / 1.5f;
-//    float sdfValue = sdSphere(pos, vec3(-8.0, 2.0 + 20.0 * sin(iTime), -1), 5.6);
-//    sdfValue = sdSmoothUnion(sdfValue,sdSphere(pos, vec3(8.0, 8.0 + 12.0 * cos(iTime), 3), 5.6), 3.0f);
-//    sdfValue = sdSmoothUnion(sdfValue, sdSphere(pos, vec3(5.0 * sin(iTime), 3.0, 0), 8.0), 3.0) + 7.0 * fbm_4(fbmCoord / 3.2);
-//    sdfValue = sdSmoothUnion(sdfValue, sdPlane(pos + vec3(0, 0.4, 0)), 22.0);
-//    return sdfValue;
-    return length(pos)-20;
+    vec3 fbmCoord = (pos + 2.0 * vec3(iTime, 0.0, iTime)) / 1.5f;
+    float sdfValue = sdSphere(pos, vec3(-8.0, 2.0 + 20.0 * sin(iTime), -1), 5.6);
+    sdfValue = sdSmoothUnion(sdfValue,sdSphere(pos, vec3(8.0, 8.0 + 12.0 * cos(iTime), 3), 5.6), 3.0f);
+    sdfValue = sdSmoothUnion(sdfValue, sdSphere(pos, vec3(5.0 * sin(iTime), 3.0, 0), 8.0), 3.0) + 7.0 * fbm_4(fbmCoord / 3.2);
+    sdfValue = sdSmoothUnion(sdfValue, sdPlane(pos + vec3(0, 0.4, 0)), 22.0);
+    return sdfValue;
 }
 
 float IntersectVolumetric(in vec3 rayOrigin, in vec3 rayDirection, float maxT)
@@ -539,10 +538,19 @@ mat3 GetViewMatrix(float xRotationFactor)
     -sin(xRotation),0.0, cos(xRotation));
 }
 
+float GetCameraPositionYOffset()
+{
+    return 100.0 * (iMouse.y / iResolution.y);
+}
+
+float GetRotationFactor()
+{
+    return iMouse.x / iResolution.x;
+}
+
 vec3 GammaCorrect(vec3 color)
 {
     return pow(color, vec3(1.0/2.2));
-//    return color;
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
@@ -552,7 +560,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     float aspectRatio = iResolution.x /  iResolution.y;
     float lensWidth = Camera.LensHeight * aspectRatio;
 
-    vec3 CameraPosition = Camera.Position;
+    vec3 CameraPosition = Camera.Position + GetCameraPositionYOffset();
 
     vec3 NonNormalizedCameraView = Camera.LookAt - CameraPosition;
     float ViewLength = length(NonNormalizedCameraView);
@@ -562,7 +570,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     // Pivot the camera around the look at point
     {
-        mat3 viewMatrix = GetViewMatrix(0);
+        float rotationFactor = GetRotationFactor();
+        mat3 viewMatrix = GetViewMatrix(rotationFactor);
         CameraView = CameraView * viewMatrix;
         lensPoint = Camera.LookAt - CameraView * ViewLength;
     }
