@@ -1,16 +1,16 @@
 #version 400 core
-const float world_scale = 1;  //how big one unit in metern is (this is for easier camera control)
-//float FAR_PLANE = 149597870700.+696342000.*10000/world_scale;
-float FAR_PLANE = 40.;
+const float world_scale = 1000;  //how big one unit in metern is (this is for easier camera control)
+float FAR_PLANE = 149597870700.+696342000.*10000/world_scale;
+//float FAR_PLANE = 40.;
 out vec4 frag_color;
 in mat4 view;
 uniform uvec2 uRes;
 uniform uint uFrame;
 
-const float steps = 40;
+const float steps = 300;
 
-const bool preview = false;
-const int max_bounce = 50;
+const bool preview = true;
+const int max_bounce = 30;
 const int samples = 30;
 
 const float focal_length = 50;  // focal length in mm
@@ -46,13 +46,13 @@ struct hit {
 };
 
 object world[] = object[](
-    object(1, 3, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),
-    object(8, 0, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1))
+//    object(1, 3, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),
+//    object(8, 0, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1))
 //    object(2, 0, 0.01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,2000), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),
-//    object(3, 0, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 157, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1))  //enterprise
-//    object(1, 0, 1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 6371009, vec3(0,408000+12756270/2,0), 0.3, 0.3, vec4(0,0,1,1), vec4(1,1,1,1)), //earth
-//    object(1, 0, 10, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, vec3(397000000,408000+12756270/2,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),  //moon
-//    object(1, 0, 1000, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0,408000+12756270/2,151600000000.), 0.3, 0.3, vec4(1,0,0,1), vec4(1,0,0,1))  //sun
+    object(3, 0, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 157, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),  //enterprise
+    object(1, 0, 1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 6371009, vec3(0,408000+12756270/2,0), 0.3, 0.3, vec4(0,0,1,1), vec4(1,1,1,1)), //earth
+    object(1, 0, 10, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, vec3(397000000,408000+12756270/2,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),  //moon
+    object(1, 0, 1000, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0,408000+12756270/2,151600000000.), 0.3, 0.3, vec4(1,0,0,1), vec4(1,0,0,1))  //sun
 );
 
 //random functions
