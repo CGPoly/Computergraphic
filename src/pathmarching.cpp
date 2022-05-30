@@ -12,11 +12,11 @@
 //#include <glm/glm.hpp>
 //#include <glm/gtx/io.hpp>
 
-//const int WINDOW_WIDTH = 1280;
-//const int WINDOW_HEIGHT = 720;
+const int WINDOW_WIDTH = 1280;
+const int WINDOW_HEIGHT = 720;
 
-const int WINDOW_WIDTH = 100;
-const int WINDOW_HEIGHT = 100;
+//const int WINDOW_WIDTH = 100;
+//const int WINDOW_HEIGHT = 100;
 
 //std::chrono::time_point<std::chrono::system_clock> start_time;
 
