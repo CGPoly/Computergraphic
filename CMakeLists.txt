@@ -34,8 +34,11 @@ include_directories(
         vendor/stb/
 )
 
-file(GLOB VENDORS_SOURCES vendor/glad/src/glad.c src/vendor/*.cpp)
-file(GLOB VENDORS_HEADERS src/vendor/*.hpp)
+file(GLOB VENDORS_SOURCES
+        vendor/glad/src/glad.c
+        vendor/imgui/*.cpp)
+file(GLOB VENDORS_HEADERS
+        vendor/imgui/*.h)
 file(GLOB LIBRARY_SOURCES src/library/*.cpp)
 file(GLOB LIBRARY_HEADERS src/library/*.hpp)
 file(GLOB PROJECT_SOURCES src/*.cpp)
