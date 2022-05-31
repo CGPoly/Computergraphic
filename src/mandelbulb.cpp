@@ -1,7 +1,7 @@
-#include "common.hpp"
-#include "shader.hpp"
-#include "camera.hpp"
-#include "buffer.hpp"
+#include "library/common.hpp"
+#include "library/shader.hpp"
+#include "library/camera.hpp"
+#include "library/buffer.hpp"
 #include <chrono>
 
 //for printing of glm stuff
