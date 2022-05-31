@@ -1,14 +1,17 @@
 #include "library/common.hpp"
 #include "library/shader.hpp"
-#include "library/camera.hpp"
+#include "library/Camera.h"
 #include "library/buffer.hpp"
-//#include <chrono>
-
 #include "library/helper.hpp"
+
+#include "../vendor/imgui/imgui.h"
+#include "../vendor/imgui/imgui_impl_glfw.h"
+#include "../vendor/imgui/imgui_impl_opengl3.h"
+
+//#include <chrono>
 #include <iostream>
 
 //for printing of glm stuff
-//#include <iostream>
 //#include <glm/glm.hpp>
 //#include <glm/gtx/io.hpp>
 
@@ -22,13 +25,50 @@ const int WINDOW_HEIGHT = 720;
 
 //float getTimeDelta();
 
+static Camera camera;
+
 void resizeCallback(GLFWwindow* window, int width, int height);
 
 int main(int, char* argv[]) {
     GLFWwindow* window = initOpenGL(WINDOW_WIDTH, WINDOW_HEIGHT, argv[0]);
     glfwSetFramebufferSizeCallback(window, resizeCallback);
 
-    camera cam(window);
+    glfwSetMouseButtonCallback(window, [] (GLFWwindow*, int button, int action, int mods) { camera.mouse(button, action, mods); });
+    glfwSetCursorPosCallback(window, [] (GLFWwindow*, double x, double y) { camera.motion(static_cast<int>(x), static_cast<int>(y)); });
+    glfwSetScrollCallback(window, [] (GLFWwindow*, double , double delta) { camera.scroll(static_cast<int>(-delta)); });
+
+	ImGui::CreateContext();
+
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	ImGui_ImplOpenGL3_Init("#version 400 core");
+
+	//HDR Framebuffer
+	unsigned int hdrFbo;
+	glGenFramebuffers(1, &hdrFbo);
+
+	unsigned int hdrColorBuffer;
+	glGenTextures(1, &hdrColorBuffer);
+	glBindTexture(GL_TEXTURE_2D, hdrColorBuffer);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WINDOW_WIDTH, WINDOW_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, hdrFbo);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, hdrColorBuffer, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	unsigned int toneMapVertexShader = compileShader("tonemap.vert", GL_VERTEX_SHADER);
+	unsigned int toneMapFragmentShader = compileShader("tonemap.frag", GL_FRAGMENT_SHADER);
+	unsigned int toneMapShader = linkProgram(toneMapVertexShader, toneMapFragmentShader);
+	glDeleteShader(toneMapVertexShader);
+	glDeleteShader(toneMapFragmentShader);
+
+	// Define uniform variables
+	glUseProgram(toneMapShader);
+	int toneMapResolutionLoc = glGetUniformLocation(toneMapShader, "resolution");
+	int toneMapExposureLoc = glGetUniformLocation(toneMapShader, "exposure");
+	int toneMapGammaCorrectionLoc = glGetUniformLocation(toneMapShader, "gammaCorrection");
+
 //    start_time = std::chrono::system_clock::now();
 
     unsigned int vertexShader = compileShader("pathmarching.vert", GL_VERTEX_SHADER);
@@ -72,9 +112,17 @@ int main(int, char* argv[]) {
 
     auto dates = get_filetime(vs) + get_filetime(fs);
 
+	float exposure = 1;
+	bool gammaCorrection = true;
 
     unsigned int curr_frame = 0;
     while (!glfwWindowShouldClose(window)) {
+	    glfwPollEvents();
+
+	    ImGui_ImplOpenGL3_NewFrame();
+	    ImGui_ImplGlfw_NewFrame();
+	    ImGui::NewFrame();
+
         auto new_dates = get_filetime(vs) + get_filetime(fs);
         if (new_dates != dates) {
             std::cout << "Recompiling shaders" << std::endl;
@@ -92,23 +140,64 @@ int main(int, char* argv[]) {
             dates = new_dates;
         }
 
-        glClearColor(0.f, 0.f, 0.f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        glm::mat4 view_matrix = cam.view_matrix();
 //        std::cout << getTimeDelta() <<std::endl;
-        glUniformMatrix4fv(viewMatLoc, 1, GL_FALSE, &view_matrix[0][0]);
-        glUniform1ui(frameLoc, curr_frame);
-        glUniform2ui(resLoc, WINDOW_WIDTH, WINDOW_HEIGHT);
 
-        glBindVertexArray(vao);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)nullptr);
+	    glClearColor(0.f, 0.f, 0.f, 1.0f);
+
+		// ---- Render to hdr buffer
+		glBindFramebuffer(GL_FRAMEBUFFER, hdrFbo);
+	    glClearColor(0.f, 1.f, 0.f, 1.0f);
+	    glClear(GL_COLOR_BUFFER_BIT);
+
+	    glUseProgram(shaderProgram);
+
+	    glm::mat4 view_matrix = camera.view_matrix();
+	    glUniformMatrix4fv(viewMatLoc, 1, GL_FALSE, &view_matrix[0][0]);
+	    glUniform1ui(frameLoc, curr_frame);
+	    glUniform2ui(resLoc, WINDOW_WIDTH, WINDOW_HEIGHT);
+
+	    glBindVertexArray(vao);
+	    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)nullptr);
+	    // ---- End render to hdr buffer
+
+
+	    ImGui::Begin("HDR");
+	    ImGui::SliderFloat("Exposure", &exposure, 0, 10, "%.3f", ImGuiSliderFlags_Logarithmic);
+	    if (ImGui::Button("Reset"))
+		   exposure = 1;
+		ImGui::Checkbox("Do Gamma Correction", &gammaCorrection);
+	    ImGui::End();
+
+		// ---- Render to default buffer
+	    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	    glClearColor(0.f, 0.f, 0.f, 1.0f);
+	    glClear(GL_COLOR_BUFFER_BIT);
+
+	    glUseProgram(toneMapShader);
+	    glUniform2ui(toneMapResolutionLoc, WINDOW_WIDTH, WINDOW_HEIGHT);
+		glUniform1f(toneMapExposureLoc, exposure);
+		glUniform1i(toneMapGammaCorrectionLoc, gammaCorrection);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, hdrColorBuffer);
+
+	    glBindVertexArray(vao);
+	    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)nullptr);
+	    // ---- End render to default buffer
+
+	    ImGui::Render();
+	    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         glfwSwapBuffers(window);
-        glfwPollEvents();
 //        std::cout << curr_frame << std::endl;
         ++curr_frame;
     }
+
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+
+	glfwDestroyWindow(window);
     glfwTerminate();
 }
 
