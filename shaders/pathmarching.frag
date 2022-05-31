@@ -1,11 +1,14 @@
 #version 400 core
-const float world_scale = 1000;  //how big one unit in metern is (this is for easier camera control)
-float FAR_PLANE = 149597870700.+696342000.*10000/world_scale;
-//float FAR_PLANE = 40.;
-out vec4 frag_color;
-in mat4 view;
+
 uniform uvec2 uRes;
 uniform uint uFrame;
+uniform mat4 viewMat;
+
+out vec4 frag_color;
+
+const float world_scale = 1000;  //how big one unit in metern is (this is for easier camera control)
+const float FAR_PLANE = 149597870700.+696342000.*10000/world_scale;
+//float FAR_PLANE = 40.;
 
 const float steps = 300;
 
@@ -14,7 +17,7 @@ const int max_bounce = 30;
 const int samples = 30;
 
 const float focal_length = 50;  // focal length in mm
-vec3 ro = vec3(0.,0.,1.); // render origin
+const vec3 ro = vec3(0.,0.,1.); // render origin
 
 const int Iterations = 30;
 const float Bailout = 10;
@@ -781,7 +784,7 @@ float distObj(object obj, vec3 pos){
 }
 
 hit map(vec3 pos){
-    pos = iTrans(pos, view);
+    pos = iTrans(pos, viewMat);
     hit h = hit(false, 1.0/0.0, 0, 0);
     for (int i = 0; i < world.length(); ++i){
         float dist = oScale(distObj(world[i], iScale(inverse(world[i].rotation)*pos, world[i].scaling)+world[i].position), world[i].scaling);
@@ -793,7 +796,7 @@ hit map(vec3 pos){
 }
 
 hit map(vec3 pos, uint index){
-    pos = iTrans(pos, view);
+    pos = iTrans(pos, viewMat);
     hit h = hit(false, 1.0/0.0, 0, 0);
     for (int i = 0; i < world.length(); ++i){
         float dist = oScale(distObj(world[i], iScale(inverse(world[i].rotation)*pos, world[i].scaling)+world[i].position), world[i].scaling);
@@ -991,7 +994,7 @@ void main(){
     }
 
     vec3 light_dir = vec3(cos(light_phi)*sin(light_theta),cos(light_theta),sin(light_phi)*sin(light_theta));
-    vec3 interp_light_dir = normalize((view * vec4(light_dir, 0.0)).xyz);
+    vec3 interp_light_dir = normalize((viewMat * vec4(light_dir, 0.0)).xyz);
 
     vec2 p = (2*gl_FragCoord.xy - vec2(uRes.xy) ); // / float(uRes.y);
     p.x /= float(uRes.x);

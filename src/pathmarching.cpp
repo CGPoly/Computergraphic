@@ -22,8 +22,6 @@ const int WINDOW_HEIGHT = 720;
 
 //float getTimeDelta();
 
-glm::vec4 color;
-
 void resizeCallback(GLFWwindow* window, int width, int height);
 
 int main(int, char* argv[]) {
@@ -41,9 +39,9 @@ int main(int, char* argv[]) {
 
     // Define uniform variables
     glUseProgram(shaderProgram);
-    int res = glGetUniformLocation(shaderProgram, "uRes");
-    int frame = glGetUniformLocation(shaderProgram, "uFrame");
-    int view_mat_loc = glGetUniformLocation(shaderProgram, "view_mat");
+    int resLoc = glGetUniformLocation(shaderProgram, "uRes");
+    int frameLoc = glGetUniformLocation(shaderProgram, "uFrame");
+    int viewMatLoc = glGetUniformLocation(shaderProgram, "viewMat");
 
     // rendering box
     float vertices[] = {
@@ -57,17 +55,17 @@ int main(int, char* argv[]) {
             0, 1, 2, 1, 2, 3
     };
 
-    unsigned int VAO;
-    glGenVertexArrays(1, &VAO);
-    glBindVertexArray(VAO);
+    unsigned int vao;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
 
-    unsigned int VBO = makeBuffer(GL_ARRAY_BUFFER, GL_STATIC_DRAW, sizeof(vertices), vertices);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    unsigned int quadVbo = makeBuffer(GL_ARRAY_BUFFER, GL_STATIC_DRAW, sizeof(vertices), vertices);
+    glBindBuffer(GL_ARRAY_BUFFER, quadVbo);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)nullptr);
     glEnableVertexAttribArray(0);
 
-    unsigned int IBO = makeBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW, sizeof(indices), indices);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
+    unsigned int quadIbo = makeBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW, sizeof(indices), indices);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, quadIbo);
 
     auto vs = "../shaders/pathmarching.vert";
     auto fs = "../shaders/pathmarching.frag";
@@ -87,9 +85,9 @@ int main(int, char* argv[]) {
             glDeleteShader(vertexShader);
 
             glUseProgram(shaderProgram);
-            res = glGetUniformLocation(shaderProgram, "uRes");
-            frame = glGetUniformLocation(shaderProgram, "uFrame");
-            view_mat_loc = glGetUniformLocation(shaderProgram, "view_mat");
+	        resLoc = glGetUniformLocation(shaderProgram, "uRes");
+	        frameLoc = glGetUniformLocation(shaderProgram, "uFrame");
+	        viewMatLoc = glGetUniformLocation(shaderProgram, "viewMat");
 
             dates = new_dates;
         }
@@ -99,12 +97,11 @@ int main(int, char* argv[]) {
 
         glm::mat4 view_matrix = cam.view_matrix();
 //        std::cout << getTimeDelta() <<std::endl;
-        glUniformMatrix4fv(view_mat_loc, 1, GL_FALSE, &view_matrix[0][0]);
+        glUniformMatrix4fv(viewMatLoc, 1, GL_FALSE, &view_matrix[0][0]);
+        glUniform1ui(frameLoc, curr_frame);
+        glUniform2ui(resLoc, WINDOW_WIDTH, WINDOW_HEIGHT);
 
-        glUniform1ui(frame, curr_frame);
-        glUniform2ui(res, WINDOW_WIDTH, WINDOW_HEIGHT);
-
-        glBindVertexArray(VAO);
+        glBindVertexArray(vao);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)nullptr);
 
         glfwSwapBuffers(window);
@@ -115,7 +112,9 @@ int main(int, char* argv[]) {
     glfwTerminate();
 }
 
-void resizeCallback(GLFWwindow*, int width, int height){glViewport(0, 0, width, height);}
+void resizeCallback(GLFWwindow*, int width, int height) {
+	glViewport(0, 0, width, height);
+}
 
 //float getTimeDelta() {
 //    auto now = std::chrono::system_clock::now();
