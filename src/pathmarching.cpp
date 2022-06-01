@@ -146,7 +146,7 @@ int main(int, char* argv[]) {
 
 		// ---- Render to hdr buffer
 		glBindFramebuffer(GL_FRAMEBUFFER, hdrFbo);
-	    glClearColor(0.f, 1.f, 0.f, 1.0f);
+	    glClearColor(0.f, 0.f, 0.f, 1.0f);
 	    glClear(GL_COLOR_BUFFER_BIT);
 
 	    glUseProgram(shaderProgram);
