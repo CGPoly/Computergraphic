@@ -15,15 +15,33 @@
 //#include <glm/glm.hpp>
 //#include <glm/gtx/io.hpp>
 
-const int WINDOW_WIDTH = 1280;
-const int WINDOW_HEIGHT = 720;
-
-//const int WINDOW_WIDTH = 100;
-//const int WINDOW_HEIGHT = 100;
+int windowWidth = 1280;
+int windowHeight = 720;
 
 //std::chrono::time_point<std::chrono::system_clock> start_time;
 
 //float getTimeDelta();
+
+
+// tone mapping
+float exposure = 1;
+bool gammaCorrection = true;
+
+// constants - THESE NEED TO BE IDENTICAL TO THE ONES DEFINED IN pathmarching.comp
+const glm::uvec2 workGroupSize(32);
+const glm::uvec2 workGroupCount(4);
+
+// path marching state
+glm::uvec2 currentRenderingTile(0);
+unsigned int currentSample = 0;
+
+const unsigned int minFrameTimeTarget = 1;
+const unsigned int maxFrameTimeTarget = 1000;
+unsigned int frameTimeTarget = 10; // in milliseconds
+
+unsigned int minSamplesPerFrame = 1;
+unsigned int maxSamplesPerFrame = 100;
+unsigned int samplesPerFrame = 1;
 
 static Camera camera;
 
@@ -51,6 +69,10 @@ void compilePathMarchingShader() {
 	pathMarchingCompute.lastModification = newLastModification;
 };
 
+unsigned int hdrColorBuffer;
+void initHdrColorBuffer(GLsizei width, GLsizei height);
+void resizeHdrColorBuffer(GLsizei width, GLsizei height);
+
 void resizeCallback(GLFWwindow* window, int width, int height);
 
 unsigned int divCeil(unsigned int a, unsigned int b) {
@@ -58,7 +80,7 @@ unsigned int divCeil(unsigned int a, unsigned int b) {
 }
 
 int main(int, char* argv[]) {
-    GLFWwindow* window = initOpenGL(WINDOW_WIDTH, WINDOW_HEIGHT, argv[0]);
+    GLFWwindow* window = initOpenGL(windowWidth, windowHeight, argv[0]);
     glfwSetFramebufferSizeCallback(window, resizeCallback);
 
     glfwSetMouseButtonCallback(window, [] (GLFWwindow*, int button, int action, int mods) { camera.mouse(button, action, mods); });
@@ -70,12 +92,7 @@ int main(int, char* argv[]) {
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 400 core");
 
-	unsigned int hdrColorBuffer;
-	glGenTextures(1, &hdrColorBuffer);
-	glBindTexture(GL_TEXTURE_2D, hdrColorBuffer);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, WINDOW_WIDTH, WINDOW_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	initHdrColorBuffer(windowWidth, windowHeight);
 
 	unsigned int toneMapVertexShader = compileShader("tonemap.vert", GL_VERTEX_SHADER);
 	unsigned int toneMapFragmentShader = compileShader("tonemap.frag", GL_FRAGMENT_SHADER);
@@ -122,26 +139,6 @@ int main(int, char* argv[]) {
 //	for (int i = 0; i < 3; ++i) {
 //		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, i, &maxComputeWorkGroupCount[i]);
 //	}
-
-	// tone mapping
-	float exposure = 1;
-	bool gammaCorrection = true;
-
-	// constants - THESE NEED TO BE IDENTICAL TO THE ONES DEFINED IN pathmarching.comp
-	const glm::uvec2 workGroupSize(32);
-	const glm::uvec2 workGroupCount(4);
-
-	// path marching state
-	glm::uvec2 currentRenderingTile(0);
-	unsigned int currentSample = 0;
-
-	const unsigned int minFrameTimeTarget = 1;
-	const unsigned int maxFrameTimeTarget = 1000;
-	unsigned int frameTimeTarget = 10; // in milliseconds
-
-	unsigned int minSamplesPerFrame = 1;
-	unsigned int maxSamplesPerFrame = 100;
-	unsigned int samplesPerFrame = 1;
 
     unsigned int curr_frame = 0;
     while (!glfwWindowShouldClose(window)) {
@@ -197,8 +194,8 @@ int main(int, char* argv[]) {
 		    while (true) {
 			    glUniform1ui(pathMarchingCompute.currentSampleLoc, currentSample);
 
-			    while (currentRenderingTile.y < divCeil(WINDOW_HEIGHT, workGroupSize.y * workGroupCount.y)) {
-				    while (currentRenderingTile.x < divCeil(WINDOW_WIDTH, workGroupSize.x * workGroupCount.x)) {
+			    while (currentRenderingTile.y < divCeil(windowHeight, workGroupSize.y * workGroupCount.y)) {
+				    while (currentRenderingTile.x < divCeil(windowWidth, workGroupSize.x * workGroupCount.x)) {
 					    auto nowTime = std::chrono::system_clock::now();
 					    auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(nowTime - renderingStartTime).count();
 					    if (elapsedTime >= frameTimeTarget)
@@ -236,7 +233,7 @@ int main(int, char* argv[]) {
 		    glClear(GL_COLOR_BUFFER_BIT);
 
 		    glUseProgram(toneMapShader);
-		    glUniform2ui(toneMapResolutionLoc, WINDOW_WIDTH, WINDOW_HEIGHT);
+		    glUniform2ui(toneMapResolutionLoc, windowWidth, windowHeight);
 		    glUniform1f(toneMapExposureLoc, exposure);
 		    glUniform1i(toneMapGammaCorrectionLoc, gammaCorrection);
 
@@ -264,8 +261,26 @@ int main(int, char* argv[]) {
     glfwTerminate();
 }
 
+void initHdrColorBuffer(GLsizei width, GLsizei height) {
+	glGenTextures(1, &hdrColorBuffer);
+	glBindTexture(GL_TEXTURE_2D, hdrColorBuffer);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+}
+
+void resizeHdrColorBuffer(GLsizei width, GLsizei height) {
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+}
+
 void resizeCallback(GLFWwindow*, int width, int height) {
 	glViewport(0, 0, width, height);
+	windowWidth = width;
+	windowHeight = height;
+
+	resizeHdrColorBuffer(width, height);
+	currentSample = 0;
+	currentRenderingTile = glm::uvec2(0);
 }
 
 //float getTimeDelta() {
