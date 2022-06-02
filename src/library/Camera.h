@@ -24,6 +24,8 @@ private:
 	float radius;
 	glm::mat4 view_mat{};
 
+	bool hasChanged;
+
 	void click_left(int x, int y);
 	void click_right(int x, int y);
 	void click_middle(int x, int y);
@@ -42,4 +44,6 @@ public:
 	void mouse(int button, int action, int);
 	void motion(int x, int y);
 	void scroll(int delta);
+
+	bool pollChanged();
 };

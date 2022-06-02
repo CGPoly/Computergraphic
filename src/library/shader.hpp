@@ -12,3 +12,5 @@ compileShader(const char* filename, unsigned int type);
 
 unsigned int
 linkProgram(unsigned int vertexShader, unsigned int fragmentShader);
+
+unsigned int compileComputeShaderProgram(const char *filename);

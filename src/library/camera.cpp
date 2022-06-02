@@ -164,4 +164,11 @@ void Camera::update() {
 	rot_phi[2][2] = rot_phi[0][0];
 
 	this->view_mat = trans_radius * rot_theta * rot_phi * trans_center;
+	this->hasChanged = true;
+}
+
+bool Camera::pollChanged() {
+	bool changed = this->hasChanged;
+	this->hasChanged = false;
+	return changed;
 }

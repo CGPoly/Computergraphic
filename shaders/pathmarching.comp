@@ -1,10 +1,19 @@
-#version 400 core
+#version 430 core
 
-uniform uvec2 uRes;
+//THESE NEED TO BE IDENTICAL TO THE ONES DEFINED IN pathmarching.cpp
+const uvec2 workGroupSize = uvec2(32, 32);
+const uvec2 workGroupCount = uvec2(4, 4);
+
+layout(local_size_x = 32, local_size_y = 32) in;
+layout(rgba32f, binding = 0) uniform image2D hdrOut;
+
+uniform uvec2 tileOffset;
+uniform uint currentSample;
+uniform uint samplesPerPass;
+
 uniform uint uFrame;
 uniform mat4 viewMat;
 
-out vec4 frag_color;
 
 const float world_scale = 1000;  //how big one unit in metern is (this is for easier camera control)
 const float FAR_PLANE = 149597870700.+696342000.*10000/world_scale;
@@ -12,9 +21,8 @@ const float FAR_PLANE = 149597870700.+696342000.*10000/world_scale;
 
 const float steps = 300;
 
-const bool preview = true;
+const bool preview = false;
 const int max_bounce = 30;
-const int samples = 30;
 
 const float focal_length = 50;  // focal length in mm
 const vec3 ro = vec3(0.,0.,1.); // render origin
@@ -52,20 +60,20 @@ object world[] = object[](
 //    object(1, 3, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),
 //    object(8, 0, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1))
 //    object(2, 0, 0.01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,2000), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),
-    object(3, 0, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 157, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),  //enterprise
-    object(1, 0, 1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 6371009, vec3(0,408000+12756270/2,0), 0.3, 0.3, vec4(0,0,1,1), vec4(1,1,1,1)), //earth
-    object(1, 0, 10, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, vec3(397000000,408000+12756270/2,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),  //moon
-    object(1, 0, 1000, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0,408000+12756270/2,151600000000.), 0.3, 0.3, vec4(1,0,0,1), vec4(1,0,0,1))  //sun
+object(3, 0, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 157, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),  //enterprise
+object(1, 0, 1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 6371009, vec3(0,408000+12756270/2,0), 0.3, 0.3, vec4(0,0,1,1), vec4(1,1,1,1)), //earth
+object(1, 0, 10, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, vec3(397000000,408000+12756270/2,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),  //moon
+object(1, 0, 1000, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0,408000+12756270/2,151600000000.), 0.3, 0.3, vec4(1,0,0,1), vec4(1,0,0,1))  //sun
 );
 
 //random functions
-//uint seed = uint(dot(uvec2(gl_FragCoord.xy), uvec2((uFrame*210)%436,(uFrame*342)%247)));
+//uint seed = uint(dot(uvec2(gl_GlobalInvocationID.xy), uvec2((uFrame*210)%436,(uFrame*342)%247)));
 float rand_vec2seed(vec2 co){
     return fract(sin(dot(co, vec2(12.9898, 78.233)))*43758.5453);
 }
 
-//uint seed = uint(dot(uvec2(gl_FragCoord.xy), uvec2((uFrame*210)%436,(uFrame*342)%247)));
-uint seed = uint(floor(rand_vec2seed(gl_FragCoord.xy)*1341*uFrame));
+//uint seed = uint(dot(uvec2(gl_GlobalInvocationID.xy), uvec2((uFrame*210)%436,(uFrame*342)%247)));
+uint seed = uint(floor(rand_vec2seed(gl_GlobalInvocationID.xy)*1341*uFrame));
 
 //float rand(){
 ////    ++seed;
@@ -988,6 +996,12 @@ vec3 getRayDir(vec2 p, float aspect){
 }
 
 void main(){
+    uvec2 texelCoord = ivec2(tileOffset * workGroupSize * workGroupCount + gl_GlobalInvocationID.xy);
+    ivec2 resolution = imageSize(hdrOut);
+
+    if (texelCoord.x >= resolution.x || texelCoord.y >= resolution.y)
+        return;
+
     for (int i = 0; i < world.length; ++i){
         world[i].scale /= world_scale;
         world[i].position /= world_scale;
@@ -996,13 +1010,13 @@ void main(){
     vec3 light_dir = vec3(cos(light_phi)*sin(light_theta),cos(light_theta),sin(light_phi)*sin(light_theta));
     vec3 interp_light_dir = normalize((viewMat * vec4(light_dir, 0.0)).xyz);
 
-    vec2 p = (2*gl_FragCoord.xy - vec2(uRes.xy) ); // / float(uRes.y);
-    p.x /= float(uRes.x);
-    p.y /= float(uRes.y);
-    float aspect = float(uRes.x)/float(uRes.y);
+    vec2 p = (2*texelCoord - vec2(resolution.xy) ); // / float(resolution.y);
+    p.x /= float(resolution.x);
+    p.y /= float(resolution.y);
+    float aspect = float(resolution.x)/float(resolution.y);
     //orthographic projection
-//    vec3 ro = vec3(p, 0);
-//    vec3 rd = vec3(0,0,-1);
+    //    vec3 ro = vec3(p, 0);
+    //    vec3 rd = vec3(0,0,-1);
 
     vec4 col = vec4(.1,.1,.1,1);
 
@@ -1034,13 +1048,15 @@ void main(){
     }
     else {
         vec3 rd = getRayDir(p,aspect);
-//        col = vec4(float(uFrame));
-        for (int i = 0; i < samples; ++i){
-            col += pathtracing(ro, rd);
+
+        vec4 pathTraceCol = vec4(0);
+        for (int i = 0; i < samplesPerPass; i++) {
+            pathTraceCol += pathtracing(ro, rd);
         }
-        col = pathtracing(ro,rd);
-//        col.xyz = pow(col.xyz/float(samples), vec3(1/2));
-//        col.xyz = sqrt(col.xyz/float(samples));  //gamma correction
+
+        col = imageLoad(hdrOut, ivec2(texelCoord));
+        col = (currentSample * col + pathTraceCol) / (currentSample + samplesPerPass);
     }
-    frag_color = col;
+
+    imageStore(hdrOut, ivec2(texelCoord), col);
 }
