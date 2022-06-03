@@ -73,7 +73,7 @@ float rand_vec2seed(vec2 co){
 }
 
 //uint seed = uint(dot(uvec2(gl_GlobalInvocationID.xy), uvec2((uFrame*210)%436,(uFrame*342)%247)));
-uint seed = uint(floor(rand_vec2seed(gl_GlobalInvocationID.xy)*1341*uFrame));
+uint seed = uint(floor(rand_vec2seed(ivec2(tileOffset) + gl_GlobalInvocationID.xy)*1341*uFrame));
 
 //float rand(){
 ////    ++seed;
