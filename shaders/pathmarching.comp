@@ -1055,7 +1055,7 @@ void main(){
         }
 
         col = imageLoad(hdrOut, ivec2(texelCoord));
-        col = (currentSample * col + pathTraceCol) / (currentSample + samplesPerPass);
+        col = (float(currentSample) / (currentSample + samplesPerPass)) * col + pathTraceCol / (currentSample + samplesPerPass);
     }
 
     imageStore(hdrOut, ivec2(texelCoord), col);
