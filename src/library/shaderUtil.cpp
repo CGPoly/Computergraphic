@@ -1,9 +1,8 @@
-#include "shader.hpp"
+#include "shaderUtil.hpp"
 
 #include <fstream>
 
-const char*
-loadShaderFile(const char* filename) {
+const char* loadShaderFile(const char* filename) {
     std::string actualFile = SHADER_ROOT + filename;
     std::ifstream in(actualFile.c_str());
     std::string str((std::istreambuf_iterator<char>(in)),
@@ -14,12 +13,11 @@ loadShaderFile(const char* filename) {
     return code;
 }
 
-unsigned int
-compileShader(const char* filename, unsigned int type) {
+GLuint compileShader(const char* filename, GLenum type) {
     const char* shaderSource = loadShaderFile(filename);
 
     // create shader object
-    unsigned int shader = glCreateShader(type);
+    GLuint shader = glCreateShader(type);
     glShaderSource(shader, 1, &shaderSource, NULL);
     // try to compile
     glCompileShader(shader);
@@ -39,14 +37,14 @@ compileShader(const char* filename, unsigned int type) {
     return shader;
 }
 
-unsigned int
-linkProgram(unsigned int vertexShader, unsigned int fragmentShader) {
-    unsigned int shaderProgram;
+GLuint linkProgram(GLuint vertexShader, GLuint fragmentShader) {
+	GLuint shaderProgram;
     shaderProgram = glCreateProgram();
     glAttachShader(shaderProgram, vertexShader);
     glAttachShader(shaderProgram, fragmentShader);
     glLinkProgram(shaderProgram);
-    int success;
+
+    GLint success;
     char infoLog[512];
     glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
     if(!success) {
@@ -56,24 +54,4 @@ linkProgram(unsigned int vertexShader, unsigned int fragmentShader) {
     }
 
     return shaderProgram;
-}
-
-unsigned int compileComputeShaderProgram(const char *filename)
-{
-	unsigned int computeShader = compileShader(filename, GL_COMPUTE_SHADER);
-	unsigned int computeProgram = glCreateProgram();
-	glAttachShader(computeProgram, computeShader);
-	glLinkProgram(computeProgram);
-	glDeleteShader(computeShader);
-
-	int success;
-	char infoLog[512];
-	glGetProgramiv(computeProgram, GL_LINK_STATUS, &success);
-	if(!success) {
-		glGetProgramInfoLog(computeProgram, 512, NULL, infoLog);
-		std::cerr << "Linking program failed\n" << infoLog << std::endl;
-		return 0;
-	}
-
-	return computeProgram;
 }

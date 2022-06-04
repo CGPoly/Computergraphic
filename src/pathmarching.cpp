@@ -1,5 +1,5 @@
 #include "library/common.hpp"
-#include "library/shader.hpp"
+#include "library/shaderUtil.hpp"
 #include "library/Camera.h"
 #include "library/buffer.hpp"
 #include "library/helper.hpp"
@@ -7,6 +7,7 @@
 #include "../vendor/imgui/imgui.h"
 #include "../vendor/imgui/imgui_impl_glfw.h"
 #include "../vendor/imgui/imgui_impl_opengl3.h"
+#include "library/ShaderProgram.h"
 
 #include <chrono>
 #include <iostream>
@@ -45,30 +46,6 @@ unsigned int samplesPerFrame = 1;
 
 static Camera camera;
 
-struct PathMarchingCompute {
-	GLuint shader;
-	GLint tileOffsetLoc;
-	GLint currentSampleLoc;
-	GLint samplesPerPass;
-	GLint frameLoc;
-	GLint viewMatLoc;
-	time_t lastModification;
-} pathMarchingCompute;
-
-void compilePathMarchingShader() {
-	time_t newLastModification = get_filetime(SHADER_ROOT + "pathmarching.comp");
-	if (pathMarchingCompute.lastModification == newLastModification)
-		return;
-
-	pathMarchingCompute.shader = compileComputeShaderProgram("pathmarching.comp");
-	pathMarchingCompute.tileOffsetLoc = glGetUniformLocation(pathMarchingCompute.shader, "tileOffset");
-	pathMarchingCompute.currentSampleLoc = glGetUniformLocation(pathMarchingCompute.shader, "currentSample");
-	pathMarchingCompute.samplesPerPass = glGetUniformLocation(pathMarchingCompute.shader, "samplesPerPass");
-	pathMarchingCompute.frameLoc = glGetUniformLocation(pathMarchingCompute.shader, "uFrame");
-	pathMarchingCompute.viewMatLoc = glGetUniformLocation(pathMarchingCompute.shader, "viewMat");
-	pathMarchingCompute.lastModification = newLastModification;
-};
-
 unsigned int hdrColorBuffer;
 void initHdrColorBuffer(GLsizei width, GLsizei height);
 void resizeHdrColorBuffer(GLsizei width, GLsizei height);
@@ -94,21 +71,18 @@ int main(int, char* argv[]) {
 
 	initHdrColorBuffer(windowWidth, windowHeight);
 
-	unsigned int toneMapVertexShader = compileShader("tonemap.vert", GL_VERTEX_SHADER);
-	unsigned int toneMapFragmentShader = compileShader("tonemap.frag", GL_FRAGMENT_SHADER);
-	unsigned int toneMapShader = linkProgram(toneMapVertexShader, toneMapFragmentShader);
-	glDeleteShader(toneMapVertexShader);
-	glDeleteShader(toneMapFragmentShader);
-
-	// Define uniform variables
-	glUseProgram(toneMapShader);
-	int toneMapResolutionLoc = glGetUniformLocation(toneMapShader, "resolution");
-	int toneMapExposureLoc = glGetUniformLocation(toneMapShader, "exposure");
-	int toneMapGammaCorrectionLoc = glGetUniformLocation(toneMapShader, "gammaCorrection");
+	ShaderProgram toneMapProgram({
+		{ "tonemap.vert", GL_VERTEX_SHADER },
+		{ "tonemap.frag", GL_FRAGMENT_SHADER }
+	});
+	toneMapProgram.compile();
 
 //    start_time = std::chrono::system_clock::now();
 
-	compilePathMarchingShader();
+	ShaderProgram pathMarchingProgram({
+		{ "pathmarching.comp", GL_COMPUTE_SHADER }
+	});
+	pathMarchingProgram.compile();
 
     // rendering box
     float vertices[] = {
@@ -144,11 +118,13 @@ int main(int, char* argv[]) {
     while (!glfwWindowShouldClose(window)) {
 	    glfwPollEvents();
 
+		// Recompile shaders if modifications happened
+	    pathMarchingProgram.compile();
+	    toneMapProgram.compile();
+
 	    ImGui_ImplOpenGL3_NewFrame();
 	    ImGui_ImplGlfw_NewFrame();
 	    ImGui::NewFrame();
-
-	    compilePathMarchingShader();
 
 	    ImGui::Begin("Rendering");
 	    ImGui::SliderScalar(
@@ -183,16 +159,16 @@ int main(int, char* argv[]) {
 
 		// ---- Render to hdr buffer
 	    {
-		    glUseProgram(pathMarchingCompute.shader);
-		    glUniformMatrix4fv(pathMarchingCompute.viewMatLoc, 1, GL_FALSE, &camera.view_matrix()[0][0]);
-		    glUniform1ui(pathMarchingCompute.frameLoc, curr_frame);
-		    glUniform1ui(pathMarchingCompute.samplesPerPass, samplesPerFrame);
+		    pathMarchingProgram.use();
+		    pathMarchingProgram.setMatrix4f("viewMat", camera.view_matrix());
+		    pathMarchingProgram.set1ui("uFrame", curr_frame);
+			pathMarchingProgram.set1ui("samplesPerPass", samplesPerFrame);
 
 		    glBindImageTexture(0, hdrColorBuffer, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
 		    auto renderingStartTime = std::chrono::system_clock::now();
 		    while (true) {
-			    glUniform1ui(pathMarchingCompute.currentSampleLoc, currentSample);
+			    pathMarchingProgram.set1ui("currentSample", currentSample);
 
 			    while (currentRenderingTile.y < divCeil(windowHeight, workGroupSize.y * workGroupCount.y)) {
 				    while (currentRenderingTile.x < divCeil(windowWidth, workGroupSize.x * workGroupCount.x)) {
@@ -201,7 +177,7 @@ int main(int, char* argv[]) {
 					    if (elapsedTime >= frameTimeTarget)
 						    goto endDispatchLoop;
 
-						glUniform2ui(pathMarchingCompute.tileOffsetLoc, currentRenderingTile.x, currentRenderingTile.y);
+					    pathMarchingProgram.set2ui("tileOffset", currentRenderingTile.x, currentRenderingTile.y);
 					    glDispatchCompute(workGroupCount.x, workGroupCount.y, 1);
 						glFinish();
 
@@ -232,10 +208,10 @@ int main(int, char* argv[]) {
 		    glClearColor(0.f, 0.f, 0.f, 1.0f);
 		    glClear(GL_COLOR_BUFFER_BIT);
 
-		    glUseProgram(toneMapShader);
-		    glUniform2ui(toneMapResolutionLoc, windowWidth, windowHeight);
-		    glUniform1f(toneMapExposureLoc, exposure);
-		    glUniform1i(toneMapGammaCorrectionLoc, gammaCorrection);
+		    toneMapProgram.use();
+		    toneMapProgram.set2ui("resolution", windowWidth, windowHeight);
+		    toneMapProgram.set1f("exposure", exposure);
+		    toneMapProgram.set1i("gammaCorrection", gammaCorrection);
 
 		    glActiveTexture(GL_TEXTURE0);
 		    glBindTexture(GL_TEXTURE_2D, hdrColorBuffer);

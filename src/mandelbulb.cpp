@@ -1,5 +1,5 @@
 #include "library/common.hpp"
-#include "library/shader.hpp"
+#include "library/shaderUtil.hpp"
 #include "library/camera.hpp"
 #include "library/buffer.hpp"
 #include <chrono>
