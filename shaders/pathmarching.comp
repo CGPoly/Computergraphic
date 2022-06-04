@@ -1002,7 +1002,7 @@ void main(){
     if (texelCoord.x >= resolution.x || texelCoord.y >= resolution.y)
         return;
 
-    for (int i = 0; i < world.length; ++i){
+    for (int i = 0; i < world.length(); ++i){
         world[i].scale /= world_scale;
         world[i].position /= world_scale;
     }
