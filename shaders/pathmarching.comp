@@ -887,10 +887,8 @@ void main(){
     vec3 light_dir = vec3(cos(light_phi)*sin(light_theta),cos(light_theta),sin(light_phi)*sin(light_theta));
     vec3 interp_light_dir = normalize((viewMat * vec4(light_dir, 0.0)).xyz);
 
-    vec2 p = (2*texelCoord - vec2(resolution.xy) ); // / float(resolution.y);
-    p.x /= float(resolution.x);
-    p.y /= float(resolution.y);
-    float aspect = float(resolution.x)/float(resolution.y);
+    vec2 p = (vec2(texelCoord) / resolution) * 2 - 1;
+    float aspect = float(resolution.x) / float(resolution.y);
 
     vec4 col = vec4(.1,.1,.1,1);
 
