@@ -1,6 +1,5 @@
 #include "library/common.hpp"
 #include "library/shaderUtil.hpp"
-#include "library/camera.hpp"
 #include "library/buffer.hpp"
 #include <chrono>
 
@@ -29,7 +28,7 @@ int main(int, char* argv[]) {
     GLFWwindow* window = initOpenGL(WINDOW_WIDTH, WINDOW_HEIGHT, argv[0]);
     glfwSetFramebufferSizeCallback(window, resizeCallback);
 
-    camera cam(window);
+//    camera cam(window);
     start_time = std::chrono::system_clock::now();
 
     unsigned int vertexShader = compileShader("shadertoy.vert", GL_VERTEX_SHADER);
@@ -97,11 +96,6 @@ int main(int, char* argv[]) {
 
         glClearColor(0.f, 0.f, 0.f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-
-        glm::mat4 view_matrix = cam.view_matrix();
-//        std::cout << getTimeDelta() <<std::endl;
-//        std::cout << view_matrix << std::endl;
-        glUniformMatrix4fv(view_mat_loc, 1, GL_FALSE, &view_matrix[0][0]);
 
         glUniform1f(time, getTimeDelta());
         glUniform2ui(res, WINDOW_WIDTH, WINDOW_HEIGHT);

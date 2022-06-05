@@ -16,8 +16,8 @@ uniform mat4 viewMat;
 
 
 const float world_scale = 1000;  //how big one unit in metern is (this is for easier camera control)
-const float FAR_PLANE = 149597870700.+696342000.*10000/world_scale;
-//float FAR_PLANE = 40.;
+//const float FAR_PLANE = 149597870700.+696342000.*10000/world_scale;
+float FAR_PLANE = 40.;
 
 const float steps = 300;
 
@@ -57,13 +57,14 @@ struct hit {
 };
 
 object world[] = object[](
-//    object(1, 3, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),
-//    object(8, 0, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1))
+    object(2, 0, 0.0001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),
+//    object(1, 3, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),
+    object(8, 0, 0.01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1))
 //    object(2, 0, 0.01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,2000), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),
-object(3, 0, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 157, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),  //enterprise
-object(1, 0, 1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 6371009, vec3(0,408000+12756270/2,0), 0.3, 0.3, vec4(0,0,1,1), vec4(1,1,1,1)), //earth
-object(1, 0, 10, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, vec3(397000000,408000+12756270/2,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),  //moon
-object(1, 0, 1000, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0,408000+12756270/2,151600000000.), 0.3, 0.3, vec4(1,0,0,1), vec4(1,0,0,1))  //sun
+//object(3, 0, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 157, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1))  //enterprise
+//object(1, 0, 1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 6371009, vec3(0,408000+12756270/2,0), 0.3, 0.3, vec4(0,0,1,1), vec4(1,1,1,1)), //earth
+//object(1, 0, 10, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, vec3(397000000,408000+12756270/2,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),  //moon
+//object(1, 0, 1000, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0,408000+12756270/2,151600000000.), 0.3, 0.3, vec4(1,0,0,1), vec4(1,0,0,1))  //sun
 );
 
 //random functions
@@ -121,6 +122,12 @@ vec3 rand_in_unit_sphere(){
 }
 vec3 rand_unit_sphere(){
     return normalize(rand_in_unit_sphere());
+}
+
+vec3 rand_in_hemisphere(vec3 nor){
+    vec3 in_unit_sphere = rand_in_unit_sphere();
+    if (dot(in_unit_sphere, nor) > 0.) return in_unit_sphere;
+    return -in_unit_sphere;
 }
 
 
@@ -803,18 +810,18 @@ hit map(vec3 pos){
     return h;
 }
 
-hit map(vec3 pos, uint index){
-    pos = iTrans(pos, viewMat);
-    hit h = hit(false, 1.0/0.0, 0, 0);
-    for (int i = 0; i < world.length(); ++i){
-        float dist = oScale(distObj(world[i], iScale(inverse(world[i].rotation)*pos, world[i].scaling)+world[i].position), world[i].scaling);
-        if (i == index) dist *= -1;
-        if (dist < h.dist){
-            h = hit(false, dist, 0, i);
-        }
-    }
-    return h;
-}
+//hit map(vec3 pos, uint index){
+//    pos = iTrans(pos, viewMat);
+//    hit h = hit(false, 1.0/0.0, 0, 0);
+//    for (int i = 0; i < world.length(); ++i){
+//        float dist = oScale(distObj(world[i], iScale(inverse(world[i].rotation)*pos, world[i].scaling)+world[i].position), world[i].scaling);
+//        if (i == index) dist *= -1;
+//        if (dist < h.dist){
+//            h = hit(false, dist, 0, i);
+//        }
+//    }
+//    return h;
+//}
 
 hit ray(vec3 ro, vec3 rd){
     hit h = hit(false, 0., 0, -1);
@@ -832,30 +839,29 @@ hit ray(vec3 ro, vec3 rd){
             return h;
         }
     }
-    h.hit = false; // aproximates object. Might be innacurate but as can be let in as long it doesnt cause problems
+    h.hit = true; // aproximates object. Might be innacurate but as can be let in as long it doesnt cause problems
     return h;
 }
 
-//TODO: allow for multiple indexs for intersecting objects.
-hit ray(vec3 ro, vec3 rd, uint index){ // to march a ray through an object
-    hit h = hit(false, 0., 0, -1);
-    for (int i = 0; i < steps; ++i){
-        h.steps = i;
-        hit d = map(ro+h.dist*rd, index);
-        h.dist += d.dist;
-        h.index = d.index;
-        //        if (d.dist < eps(h.dist)) {
-        if (d.dist < world[h.index].eps) {
-            h.hit = true;
-            return h;
-        }
-        if (h.dist > FAR_PLANE) {
-            return h;
-        }
-    }
-    h.hit = false; // aproximates object. Might be innacurate but as can be let in as long it doesnt cause problems
-    return h;
-}
+//hit ray(vec3 ro, vec3 rd, uint index){ // to march a ray through an object
+//    hit h = hit(false, 0., 0, -1);
+//    for (int i = 0; i < steps; ++i){
+//        h.steps = i;
+//        hit d = map(ro+h.dist*rd, index);
+//        h.dist += d.dist;
+//        h.index = d.index;
+//        //        if (d.dist < eps(h.dist)) {
+//        if (d.dist < world[h.index].eps) {
+//            h.hit = true;
+//            return h;
+//        }
+//        if (h.dist > FAR_PLANE) {
+//            return h;
+//        }
+//    }
+//    h.hit = false; // aproximates object. Might be innacurate but as can be let in as long it doesnt cause problems
+//    return h;
+//}
 
 vec3 numDiff(vec3 p, float e){
     vec2 h = vec2(e,0);
@@ -898,12 +904,9 @@ vec3 calcNormal(vec3 p, object obj){
     //    return numDiff(p);
 }
 
-// Syntatic sugar. Make sure dot products only map to hemisphere
 float cdot(vec3 a, vec3 b) {
     return clamp(dot(a,b), 0.0, 1.0);
 }
-
-// D
 float beckmannDistribution(float dotNH, float roughness) {
     float sigma2 = roughness * roughness;
     float alpha = acos(dotNH);
@@ -911,8 +914,6 @@ float beckmannDistribution(float dotNH, float roughness) {
     // TASK: Compute d-term
     return (exp(-((tan(alpha) / sigma2) * (tan(alpha) / sigma2))) / (pi * sigma2 * pow(cos(alpha), 4)));
 }
-
-// F
 float schlickApprox(float dotVH, float n1, float n2) {
     float r0 = (n1 - n2) / (n1 + n2);
     float r0squared = r0 * r0;
@@ -920,13 +921,10 @@ float schlickApprox(float dotVH, float n1, float n2) {
     // TASK: Compute f-term
     return r0squared + (1 - r0squared) * pow(1 - dotVH, 5);
 }
-
-// G
 float geometricAttenuation(float dotNH, float dotVN, float dotVH, float dotNL) {
     // TASK: Compute g-term
     return min(1, min((2 * dotNH * dotVN) / (dotVH), (2 * dotNH * dotNL) / dotVH));
 }
-
 float cooktorranceTerm(vec3 n, vec3 l, float roughness, float refractionIndex) {
     vec3 v = vec3(0.0, 0.0, 1.0); // in eye space direction towards viewer simply is the Z axis
     vec3 h = normalize(l + v); // half-vector between V and L
@@ -943,11 +941,9 @@ float cooktorranceTerm(vec3 n, vec3 l, float roughness, float refractionIndex) {
 
     return max(D * F * G / (4.0 * dotVN * dotNL), 0.0);
 }
-
 vec3 projected(vec3 vec, vec3 normal) {
     return normalize(vec - dot(vec, normal) * normal);
 }
-
 float orennayarTerm(float lambert, vec3 n, vec3 l, float roughness) {
     vec3 v = vec3(0.0, 0.0, 1.0);
     float sigma2 = roughness * roughness;
@@ -960,30 +956,25 @@ float orennayarTerm(float lambert, vec3 n, vec3 l, float roughness) {
 }
 
 vec4 pathtracing(vec3 origin, vec3 direction){
-    vec4 col = vec4(0);
     for (int i = 0; i < max_bounce; ++i){
         hit r = ray(origin, direction);
         if (r.hit){
             object obj = world[r.index];
             vec3 p = origin + r.dist*direction;
             vec3 normal = calcNormal(p, obj);
-            vec3 target = p + normal + rand_unit_sphere();
+            vec3 target = p + normal + rand_in_hemisphere(normal);
             direction = normalize(target-p);
             origin = p+2*obj.eps*direction;
-//            return 0.5*pathtracing(p, target-p);
         }
         else {
             float t = 0.5*(direction.y + 1.0);
             vec4 sky = (1.0-t)*vec4(1.0, 1.0, 1.0,1) + t*vec4(0.5, 0.7, 1.0,1);
-//            vec4 sky = vec4(1);
-            return pow(0.5, i)*sky;
+//            vec4 sky = vec4(iTrans(direction, viewMat),1); //vec4(1, 1, 1, 1);
+//            vec4 sky = vec4(0.8);
+            return vec4(pow(vec3(0.5,0.5,0.5), vec3(i)),1)*sky;
         }
     }
     return vec4(0,0,0,1);
-
-//    float t = 0.5*(direction.y + 1.0);
-//    return (1.0-t)*vec4(1.0, 1.0, 1.0,1) + t*vec4(0.5, 0.7, 1.0,1);
-//    return col;
 }
 
 vec3 getRayDir(vec2 p, float aspect){
@@ -1047,10 +1038,9 @@ void main(){
         }
     }
     else {
-        vec3 rd = getRayDir(p,aspect);
-
         vec4 pathTraceCol = vec4(0);
         for (int i = 0; i < samplesPerPass; i++) {
+            vec3 rd = getRayDir(p+vec2(2.*rand()-1.,2.*rand()-1.)/resolution.y,aspect);
             pathTraceCol += pathtracing(ro, rd);
         }
 

@@ -2,7 +2,7 @@
 #define FAR_PLANE 20.
 out vec4 frag_color;
 uniform uvec2 iResolution;
-uniform uint uFrame;
+uniform float iTime;
 const vec2 iMouse = vec2(0,0);
 
 
@@ -85,7 +85,7 @@ struct sphere {
 
 const sphere world[] = sphere[](
 sphere(vec3(0.0,0.0,0), 1.0*1.0, 1.0/1.0, Lambertian, vec3(0.5,0.5,0.5)),
-sphere(vec3(.0,.0,2), 1.0*1.0, 1.0/1.0, DiffuseLight, vec3(10,5,5)),
+sphere(vec3(.0,.0,2), 1.0*1.0, 1.0/1.0, DiffuseLight, vec3(20,1.,1.)),
 sphere(vec3(0.0,-1001.0,0.0), 1000.0*1000.0, 1.0/1000.0, Lambertian, vec3(0.2,0.2,0.2))
 );
 
@@ -204,7 +204,7 @@ vec3 color(vec3 ro, vec3 rd, inout random_state rs) {
                 done = true;
             }
         } else {
-            albedo = vec3(0.2);
+            albedo = vec3(0.1);
             emit_accum += attenuation_accum * albedo * 0.7;
             done = true;
         }
