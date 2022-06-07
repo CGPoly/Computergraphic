@@ -893,7 +893,7 @@ void main(){
             pathTraceCol += pathtracing(ro, rd);
         }
 
-        vec4 pcol = vec4(pathTraceCol, 1);
+        vec4 pcol = vec4(pathTraceCol,1);
         col = imageLoad(hdrOut, ivec2(texelCoord));
         col.xyz = (float(currentSample) / float(currentSample + samplesPerPass)) * col.xyz + pcol.xyz / float(currentSample + samplesPerPass);
     }
