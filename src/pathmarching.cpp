@@ -122,6 +122,9 @@ int main(int, char* argv[]) {
 	    pathMarchingProgram.compile();
 	    toneMapProgram.compile();
 
+		if (!pathMarchingProgram.isValid() || !toneMapProgram.isValid())
+			continue;
+
 	    ImGui_ImplOpenGL3_NewFrame();
 	    ImGui_ImplGlfw_NewFrame();
 	    ImGui::NewFrame();
