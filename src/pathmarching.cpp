@@ -8,6 +8,7 @@
 #include "../vendor/imgui/imgui_impl_glfw.h"
 #include "../vendor/imgui/imgui_impl_opengl3.h"
 #include "library/ShaderProgram.h"
+#include "library/mathUtil.h"
 
 #include <chrono>
 #include <iostream>
@@ -51,10 +52,6 @@ void initHdrColorBuffer(GLsizei width, GLsizei height);
 void resizeHdrColorBuffer(GLsizei width, GLsizei height);
 
 void resizeCallback(GLFWwindow* window, int width, int height);
-
-unsigned int divCeil(unsigned int a, unsigned int b) {
-	return (a + b - 1) / b;
-}
 
 int main(int, char* argv[]) {
     GLFWwindow* window = initOpenGL(windowWidth, windowHeight, argv[0]);
