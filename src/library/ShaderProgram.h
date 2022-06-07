@@ -16,6 +16,7 @@ private:
     };
 
     GLuint id = 0;
+	bool valid = false;
     std::map<std::string const, ShaderInfo> shaders;
 	std::map<std::string const, GLint const> uniformLocationCache;
 
@@ -29,7 +30,8 @@ public:
     ~ShaderProgram();
 
     void use() const;
-    bool compile();
+    void compile();
+	bool isValid() const;
 
 	void setMatrix4f(std::string const&, glm::mat<4, 4, float> const& mat);
 	void set1i(std::string const& uniformName, int value);

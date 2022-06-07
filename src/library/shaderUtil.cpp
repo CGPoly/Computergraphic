@@ -26,15 +26,9 @@ GLuint compileShader(const char* filename, GLenum type) {
 
     // check if compilation succeeded
     int  success;
-    char infoLog[512];
     glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if(!success) {
-        glGetShaderInfoLog(shader, 512, NULL, infoLog);
-        std::cerr << "Shader compilation failed\n" << infoLog << std::endl;
-        return 0;
-    }
 
-    return shader;
+	return !success ? 0 : shader;
 }
 
 GLuint linkProgram(GLuint vertexShader, GLuint fragmentShader) {
