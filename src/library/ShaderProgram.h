@@ -31,7 +31,7 @@ public:
 
     void use() const;
     void compile();
-	bool isValid() const;
+	[[nodiscard]] bool isValid() const;
 
 	void setMatrix4f(std::string const&, glm::mat<4, 4, float> const& mat);
 	void set1i(std::string const& uniformName, int value);
