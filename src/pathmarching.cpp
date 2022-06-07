@@ -42,7 +42,7 @@ unsigned int frameTimeTarget = 10; // in milliseconds
 
 unsigned int minSamplesPerFrame = 1;
 unsigned int maxSamplesPerFrame = 100;
-unsigned int samplesPerFrame = 1;
+unsigned int samplesPerFrame = 10;
 
 static Camera camera;
 
