@@ -14,17 +14,8 @@
 #include <chrono>
 #include <iostream>
 
-//for printing of glm stuff
-//#include <glm/glm.hpp>
-//#include <glm/gtx/io.hpp>
-
 int windowWidth = 1280;
 int windowHeight = 720;
-
-//std::chrono::time_point<std::chrono::system_clock> start_time;
-
-//float getTimeDelta();
-
 
 // tone mapping
 float exposure = 1;
@@ -88,8 +79,6 @@ int main(int, char* argv[]) {
 	});
 	toneMapProgram.compile();
 
-//    start_time = std::chrono::system_clock::now();
-
 	ShaderProgram pathMarchingProgram({
 		{ "pathmarching.comp", GL_COMPUTE_SHADER }
 	});
@@ -118,12 +107,6 @@ int main(int, char* argv[]) {
 
     unsigned int quadIbo = makeBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW, sizeof(indices), indices);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, quadIbo);
-
-	// not needed because we don't exceed opengl minimums
-//	GLint maxComputeWorkGroupCount[3];
-//	for (int i = 0; i < 3; ++i) {
-//		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, i, &maxComputeWorkGroupCount[i]);
-//	}
 
     unsigned int curr_frame = 0;
     while (!glfwWindowShouldClose(window)) {
@@ -169,8 +152,6 @@ int main(int, char* argv[]) {
 			glClearTexImage(hdrColorBuffer, 0, GL_RGBA, GL_FLOAT, NULL);
 		}
 
-//        std::cout << getTimeDelta() <<std::endl;
-
 		// ---- Render to hdr buffer
 	    {
 		    pathMarchingProgram.use();
@@ -207,7 +188,6 @@ int main(int, char* argv[]) {
 		    endDispatchLoop:;
 		}
 	    // ---- End render to hdr buffer
-
 
 		// ---- Bloom
 
@@ -260,7 +240,6 @@ int main(int, char* argv[]) {
 	    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         glfwSwapBuffers(window);
-//        std::cout << curr_frame << std::endl;
         ++curr_frame;
     }
 
@@ -296,8 +275,3 @@ void resizeCallback(GLFWwindow*, int width, int height) {
 	currentSample = 0;
 	currentRenderingTile = glm::uvec2(0);
 }
-
-//float getTimeDelta() {
-//    auto now = std::chrono::system_clock::now();
-//    return static_cast<float>(float(std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count() % 500000) / 1000.f);
-//}
