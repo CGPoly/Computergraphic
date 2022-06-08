@@ -16,12 +16,12 @@ vec3 acesFilm(vec3 x) {
 }
 
 void main() {
-    vec3 hdrColor = texture(hdrBuffer, gl_FragCoord.xy / resolution).rgb;
+    vec3 hdrColor = max(texture(hdrBuffer, gl_FragCoord.xy / resolution).rgb, vec3(0));
     vec3 linearColor = acesFilm(hdrColor * exposure);
-//    if (gammaCorrection)
-//        fragColor = vec4(pow(linearColor, vec3(1.0f / 2.2f)), 1);
-//    else
-//        fragColor = vec4(linearColor, 1);
-    if (gammaCorrection) fragColor = vec4(pow(clamp(hdrColor*exposure, 0, 1), vec3(1.0f / 2.2f)),1);
-    else fragColor = vec4(clamp(hdrColor*exposure, 0, 1),1);
+    //vec3 linearColor = clamp(hdrColor * exposure, 0, 1);
+
+    if (gammaCorrection)
+        fragColor = vec4(pow(linearColor, vec3(1.0f / 2.2f)), 1);
+    else
+        fragColor = vec4(linearColor, 1);
 }
