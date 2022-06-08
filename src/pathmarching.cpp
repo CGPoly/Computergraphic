@@ -9,6 +9,7 @@
 #include "../vendor/imgui/imgui_impl_opengl3.h"
 #include "library/ShaderProgram.h"
 #include "library/mathUtil.h"
+#include "library/BloomProcessor.h"
 
 #include <chrono>
 #include <iostream>
@@ -43,9 +44,21 @@ unsigned int frameTimeTarget = 10; // in milliseconds
 
 unsigned int minSamplesPerFrame = 1;
 unsigned int maxSamplesPerFrame = 100;
-unsigned int samplesPerFrame = 10;
+unsigned int samplesPerFrame = 1;
+
+bool bloomEnabled = true;
+
+unsigned int minBloomPasses = 1;
+unsigned int maxBloomPasses = 15;
+unsigned int bloomPasses = 6;
+
+float bloomThreshold = 1;
+float bloomRadius = 1;
+float bloomIntensity = 1;
 
 static Camera camera;
+
+std::optional<BloomProcessor> bloomProcessor;
 
 unsigned int hdrColorBuffer;
 void initHdrColorBuffer(GLsizei width, GLsizei height);
@@ -67,6 +80,7 @@ int main(int, char* argv[]) {
 	ImGui_ImplOpenGL3_Init("#version 400 core");
 
 	initHdrColorBuffer(windowWidth, windowHeight);
+	bloomProcessor = BloomProcessor(windowWidth, windowHeight);
 
 	ShaderProgram toneMapProgram({
 		{ "tonemap.vert", GL_VERTEX_SHADER },
@@ -195,6 +209,23 @@ int main(int, char* argv[]) {
 	    // ---- End render to hdr buffer
 
 
+		// ---- Bloom
+
+		ImGui::Begin("Bloom");
+		ImGui::Checkbox("Enabled", &bloomEnabled);
+	    ImGui::SliderScalar("Passes", ImGuiDataType_U32, &bloomPasses, &minBloomPasses, &maxBloomPasses);
+		ImGui::SliderFloat("Threshold", &bloomThreshold, 0, 10, "%.3f", ImGuiSliderFlags_Logarithmic);
+		ImGui::SliderFloat("Radius", &bloomRadius, 0, 100, "%.3f", ImGuiSliderFlags_Logarithmic);
+		ImGui::SliderFloat("Intensity", &bloomIntensity, 0, 10, "%.3f", ImGuiSliderFlags_Logarithmic);
+		ImGui::End();
+
+	    if (bloomEnabled) {
+		    (*bloomProcessor).process(hdrColorBuffer, windowWidth, windowHeight,
+		                              bloomPasses, bloomThreshold / exposure, bloomRadius, bloomIntensity);
+	    }
+
+		// ---- End Bloom
+
 	    ImGui::Begin("HDR");
 	    ImGui::SliderFloat("Exposure", &exposure, 0, 10, "%.3f", ImGuiSliderFlags_Logarithmic);
 	    if (ImGui::Button("Reset"))
@@ -211,10 +242,14 @@ int main(int, char* argv[]) {
 		    toneMapProgram.use();
 		    toneMapProgram.set2ui("resolution", windowWidth, windowHeight);
 		    toneMapProgram.set1f("exposure", exposure);
-		    toneMapProgram.set1i("gammaCorrection", gammaCorrection);
+		    toneMapProgram.set1i("doGammaCorrection", gammaCorrection);
+			toneMapProgram.set1i("doBloom", bloomEnabled);
 
 		    glActiveTexture(GL_TEXTURE0);
 		    glBindTexture(GL_TEXTURE_2D, hdrColorBuffer);
+
+		    glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, (*bloomProcessor).getBloomTexture());
 
 		    glBindVertexArray(vao);
 		    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)nullptr);
@@ -246,6 +281,7 @@ void initHdrColorBuffer(GLsizei width, GLsizei height) {
 }
 
 void resizeHdrColorBuffer(GLsizei width, GLsizei height) {
+	glBindTexture(GL_TEXTURE_2D, hdrColorBuffer);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
 }
 
@@ -255,6 +291,8 @@ void resizeCallback(GLFWwindow*, int width, int height) {
 	windowHeight = height;
 
 	resizeHdrColorBuffer(width, height);
+	(*bloomProcessor).resize(width, height);
+
 	currentSample = 0;
 	currentRenderingTile = glm::uvec2(0);
 }

@@ -1,0 +1,42 @@
+#version 430 core
+
+layout(local_size_x = 32, local_size_y = 32) in;
+layout(binding = 0) uniform sampler2D src;
+layout(rgba32f, binding = 1) uniform image2D dst;
+
+uniform float radius;
+uniform float intensity;
+
+uniform bool lastPass;
+uniform uint passes;
+
+void main() {
+    vec2 texelCoord = vec2(gl_GlobalInvocationID.xy + 0.5) / imageSize(dst);
+    vec2 texelSize = vec2(1) / imageSize(dst);
+
+    vec4 color = vec4(0);
+
+    color += textureLod(src, texelCoord + texelSize * radius * vec2(-1, -1), -1);
+    color += textureLod(src, texelCoord + texelSize * radius * vec2( 0, -1), -1) * 2;
+    color += textureLod(src, texelCoord + texelSize * radius * vec2( 1, -1), -1);
+
+    color += textureLod(src, texelCoord + texelSize * radius * vec2(-1,  0), -1) * 2;
+    color += textureLod(src, texelCoord + texelSize * radius * vec2( 0,  0), -1) * 4;
+    color += textureLod(src, texelCoord + texelSize * radius * vec2( 1,  0), -1) * 2;
+
+    color += textureLod(src, texelCoord + texelSize * radius * vec2(-1,  1), -1);
+    color += textureLod(src, texelCoord + texelSize * radius * vec2( 0,  1), -1) * 2;
+    color += textureLod(src, texelCoord + texelSize * radius * vec2( 1,  1), -1);
+
+    color *= 1.0 / 16;
+
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    vec4 resultColor;
+    if (lastPass) {
+        resultColor = (color * intensity) / passes;
+    } else {
+        vec4 previousColor = imageLoad(dst, pixelCoord);
+        resultColor = previousColor + color * intensity;
+    }
+    imageStore(dst, pixelCoord, resultColor);
+}
