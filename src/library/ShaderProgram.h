@@ -11,23 +11,26 @@ class ShaderProgram {
 private:
 	struct ShaderInfo {
 	    std::optional<GLuint> id;
-		GLenum type{};
-	    time_t lastModification{};
+		GLenum type;
+		time_t lastModification;
     };
 
     GLuint id = 0;
 	bool valid = false;
-    std::map<std::string const, ShaderInfo> shaders;
-	std::map<std::string const, GLint const> uniformLocationCache;
+	std::map<std::string const, ShaderInfo> shaders{};
+	std::map<std::string const, GLint const> uniformLocationCache{};
 
 	std::optional<GLint> uniformLocation(std::string const& uniformName);
 	void setGeneric(std::string const& uniformName, std::function<void(GLint)> const& glCall);
 
 public:
-	explicit ShaderProgram(const std::map<std::string, GLenum>& shaders);
+	explicit ShaderProgram(std::map<std::string const, GLenum const> const& shaders);
     ShaderProgram(ShaderProgram const&) = delete;
-    ShaderProgram& operator=(ShaderProgram const&) = delete;
+	ShaderProgram(ShaderProgram&&) noexcept;
     ~ShaderProgram();
+
+	ShaderProgram& operator=(ShaderProgram const&) = delete;
+	ShaderProgram& operator=(ShaderProgram&&) = default;
 
     void use() const;
     void compile();

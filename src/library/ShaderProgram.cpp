@@ -5,7 +5,7 @@
 
 #include <algorithm>
 
-ShaderProgram::ShaderProgram(const std::map<std::string, GLenum>& shaders) {
+ShaderProgram::ShaderProgram(std::map<std::string const, GLenum const> const& shaders) {
 	this->id = glCreateProgram();
 
 	for (const auto& [fileName, type]: shaders) {
@@ -16,6 +16,12 @@ ShaderProgram::ShaderProgram(const std::map<std::string, GLenum>& shaders) {
 		};
 	}
 }
+
+ShaderProgram::ShaderProgram(ShaderProgram&& other) noexcept:
+		id(std::exchange(other.id, 0)),
+		valid(other.valid),
+		shaders(std::move(other.shaders)),
+		uniformLocationCache(std::move(other.uniformLocationCache)) {}
 
 ShaderProgram::~ShaderProgram() {
 	glDeleteProgram(this->id);
