@@ -108,7 +108,7 @@ int main(int, char* argv[]) {
     unsigned int quadIbo = makeBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW, sizeof(indices), indices);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, quadIbo);
 
-    unsigned int curr_frame = 0;
+    unsigned int frame = 0;
     while (!glfwWindowShouldClose(window)) {
 	    glfwPollEvents();
 
@@ -156,7 +156,7 @@ int main(int, char* argv[]) {
 	    {
 		    pathMarchingProgram.use();
 		    pathMarchingProgram.setMatrix4f("viewMat", camera.view_matrix());
-		    pathMarchingProgram.set1ui("uFrame", curr_frame);
+		    pathMarchingProgram.set1ui("uFrame", frame);
 			pathMarchingProgram.set1ui("samplesPerPass", samplesPerFrame);
 
 		    glBindImageTexture(0, hdrColorBuffer, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
@@ -240,7 +240,7 @@ int main(int, char* argv[]) {
 	    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         glfwSwapBuffers(window);
-        ++curr_frame;
+        ++frame;
     }
 
 	ImGui_ImplOpenGL3_Shutdown();
