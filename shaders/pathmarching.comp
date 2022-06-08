@@ -16,8 +16,8 @@ uniform mat4 viewMat;
 
 
 const float world_scale = 1000;  //how big one unit in metern is (this is for easier camera control)
-//const float FAR_PLANE = 149597870700.+696342000.*10000/world_scale;
-float FAR_PLANE = 30.;
+const float FAR_PLANE = 149597870700.+696342000.*10000/world_scale;
+//float FAR_PLANE = 100.;
 
 const float steps = 300;
 
@@ -34,7 +34,7 @@ const float light_theta = 2*pi/5;
 
 
 struct mat {
-    uint type; // 0 lambertian; 1 dialectic; 2 metal; 3 pure Emmiter; 3 material Emmiter; 4 Volumetric
+    uint type; // 0 lambertian; 1 metal; 2 pure Emmiter; 3 Volumetric
     vec3 albedo;
     float fuzz;
     vec3 emmission;
@@ -45,8 +45,9 @@ struct mat {
     vec3 spec_col;
 };
 
-mat lambertian(vec3 col){return mat(0, col, 0, vec3(0), 0, 0, col, vec3(0));}
-mat metal(vec3 col, float fuzz){return mat(1, col, fuzz, vec3(0), 0, 0, col, vec3(0));}
+mat lambertian(vec3 col){return mat(0, col, 0, vec3(0), 0.3, 0.3, col, vec3(1));}
+mat metal(vec3 col, float fuzz){return mat(1, col, fuzz, vec3(0), 0.1, fuzz, col, col);}
+mat emitter(vec3 col){return mat(2, vec3(0), 0, col, 0, 0, col, vec3(0));}
 
 struct object {
     uint obj_index;
@@ -65,17 +66,20 @@ struct hit {
     uint index;
 };
 
-//TODO: alle test szenen auf material anpassen
 object world[] = object[](
-//    object(2, 0.00001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), mat(0, 0.3, 0.3, vec3(1,1,1), vec3(1,1,1))),
-    object(1, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), lambertian(vec3(.7,.3,.3))),
-    object(1, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(2000,0,0), metal(vec3(.722,.451,.20), 0.3)),
-    object(8, 0.01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), lambertian(vec3(.8,.8,0.)))
+//    object(2, 0.00001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), mat(0, lambertian(vec3(1,1,1))),
+//    object(1, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,-1000,0), lambertian(vec3(.8,.8,.8))),
+//    object(8, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), lambertian(vec3(.8,.8,.8))),
+//    object(1, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,-1000,3000), emitter(vec3(100,1.,1.)))
+//    object(1, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), lambertian(vec3(.7,.3,.3))),
+//    object(1, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(2000,0,0), metal(vec3(.722,.451,.20), 0.3)),
+//    object(1, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,2000), emitter(vec3(8,4,4))),
+//    object(8, 0.01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), lambertian(vec3(.8,.8,0.)))
 //    object(2, 0, 0.01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,2000), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),
-//object(3, 0, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 157, vec3(0,0,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1))  //enterprise
-//object(1, 0, 1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 6371009, vec3(0,408000+12756270/2,0), 0.3, 0.3, vec4(0,0,1,1), vec4(1,1,1,1)), //earth
-//object(1, 0, 10, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, vec3(397000000,408000+12756270/2,0), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),  //moon
-//object(1, 0, 1000, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0,408000+12756270/2,151600000000.), 0.3, 0.3, vec4(1,0,0,1), vec4(1,0,0,1))  //sun
+    object(3, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 157, vec3(0,0,0), lambertian(vec3(.8))),  //enterprise
+    object(1, 1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 6371009, vec3(0,408000+12756270/2,0), lambertian(vec3(0,0,1))), //earth
+    object(1, 10, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, vec3(397000000,408000+12756270/2,0), lambertian(vec3(.8))),  //moon
+    object(1, 1000, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0,408000+12756270/2,151600000000.), emitter(vec3(10000)))  //sun
 );
 
 //random functions
@@ -83,7 +87,8 @@ float rand_vec2seed(vec2 co){
     return fract(sin(dot(co, vec2(12.9898, 78.233)))*43758.5453);
 }
 
-uint seed = uint(floor(rand_vec2seed(ivec2(tileOffset) + gl_GlobalInvocationID.xy)*1341*uFrame));
+//TODO: Aktueller Zufallsgenerator nur für große uFrame zuverlässig zufällig.
+uint seed = uint(floor(rand_vec2seed(ivec2(tileOffset * workGroupSize * workGroupCount + gl_GlobalInvocationID.xy))*1341*(uFrame+100)));
 
 uint hash(){
     uint x = ++seed;
@@ -104,7 +109,6 @@ float floatConstruct(uint m){
     return f - 1.;
 }
 
-//TODO: Test if uniform
 float rand(){return floatConstruct(hash());}
 
 
@@ -649,17 +653,42 @@ hit map(vec3 pos){
     }
     return h;
 }
+
+//bool in_intersection(vec3 pos){
+//    pos = iTrans(pos, viewMat);
+//    bool first_hit = false;
+//    for (int i = 0; i < world.length(); ++i){
+//        float dist = oScale(distObj(world[i], iScale(inverse(world[i].rotation)*pos, world[i].scaling)+world[i].position), world[i].scaling);
+//        if (dist < world[i].eps) {
+//            if (first_hit) return true;
+//            first_hit = true;
+//        }
+//    }
+//    return false;
+//}
+//
+//vec3 intersection_emmission(vec3 pos){
+//    pos = iTrans(pos, viewMat);
+//    vec3 emmission = vec3(0);
+//    for (int i = 0; i < world.length(); ++i){
+//        float dist = oScale(distObj(world[i], iScale(inverse(world[i].rotation)*pos, world[i].scaling)+world[i].position), world[i].scaling);
+//        if (dist < world[i].eps) {
+//            emmission += world[i].material.emmission;
+//        }
+//    }
+//    return emmission;
+//}
+
 hit ray(vec3 ro, vec3 rd){
     hit h = hit(false, 0., 0, -1);
-    for (int i = 0; i < steps; ++i){
-        h.steps = i;
+    for (; h.steps < steps; ++h.steps){
         hit d = map(ro+h.dist*rd);
-        h.dist += d.dist;
-        h.index = d.index;
-        if (d.dist < world[h.index].eps) {
+        if (d.dist < world[d.index].eps) {
             h.hit = true;
             return h;
         }
+        h.dist += d.dist;
+        h.index = d.index;
         if (h.dist > FAR_PLANE) {
             return h;
         }
@@ -758,15 +787,12 @@ float brdf(mat material, vec3 normal, vec3 dir_in, vec3 dir_out){
 //    return cdot(normal, dir_in);
 }
 
-vec3 emmission(mat material) {
-    return material.emmission;
-}
-
 vec3 sky(vec3 direction){
-    float t = 0.5*(direction.y + 1.0);
-    return vec3(1.-t) + t*vec3(0.5, 0.7, 1.0);
+//    float t = 0.5*(direction.y + 1.0);
+//    return vec3(1.-t) + t*vec3(0.5, 0.7, 1.0);
 //    return iTrans(direction, viewMat);
 //    return vec3(1);
+    return vec3(0.);
 }
 
 struct path {
@@ -776,56 +802,64 @@ struct path {
     vec3 emmission;
 };
 
+path add(path old, path new){
+    return path(old.stop||new.stop,old.attenuation*new.attenuation,new.direction,old.emmission+new.emmission*old.attenuation);
+}
+
 vec3 reflect(vec3 v, vec3 n) {
     return v - 2*dot(v,n)*n;
 }
 
 path scatter(mat material, vec3 p, vec3 normal, vec3 dir_in){
     if(material.type == 0) {  //lambertian
-        vec3 target = p + normal + rand_in_hemisphere(normal);
-        vec3 new_direction = target-p;
-        if (abs(new_direction.x) < 1e-8 && abs(new_direction.y) < 1e-8 && abs(new_direction.z) < 1e-8) new_direction = normal;
-        new_direction = normalize(new_direction);
+//        vec3 target = p + normal + rand_in_hemisphere(normal);
+//        vec3 new_direction = target-p;
+//        vec3 new_direction = rand_in_hemisphere(normal);
+//        if (abs(new_direction.x) < 1e-8 && abs(new_direction.y) < 1e-8 && abs(new_direction.z) < 1e-8) new_direction = normal;
+//        new_direction = normalize(new_direction);
+        vec3 new_direction = normal + rand_unit_sphere();
         return path(false, material.albedo, new_direction, vec3(0));
     }
     if (material.type == 1){ //metal
         vec3 new_direction = normalize(reflect(dir_in, normal)) + material.fuzz*rand_in_hemisphere(normal);
         return path(dot(new_direction, normal) <= 0, material.albedo, new_direction, vec3(0));
     }
-    return path(true, vec3(0),vec3(0),vec3(0));
+    if (material.type == 2){ //emmission
+        return path(true, vec3(1), vec3(0), material.emmission);
+    }
+    return path(true, vec3(1),vec3(0),vec3(0));
 }
 
 vec3 pathtracing(vec3 origin, vec3 direction){
-    float refl = 1;
-    path trace = path(false, vec3(0), direction, vec3(0));
-    vec3 attenuation = vec3(1);
-//    scattered = vec3(0);
+//    vec3 emit_accum = vec3(0.0);
+//    vec3 attenuation_accum = vec3(1.0);
+    path trace = path(false, vec3(1), direction, vec3(0));
     for (int i = 0; i < max_bounce; ++i){
-//        hit r = ray(origin, direction);
         hit r = ray(origin, trace.direction);
         if (r.hit){
             object obj = world[r.index];
-//            vec3 p = origin + r.dist*direction;
             vec3 p = origin + r.dist*trace.direction;
+//            if (in_intersection(p)) return trace.emmission+intersection_emmission(p);
             vec3 normal = calcNormal(p, obj);
-//            vec3 old_dir = trace.direction;
-            trace = scatter(obj.material, p, normal, trace.direction);
-//            vec3 target = p + normal + rand_in_hemisphere(normal);
-//            vec3 new_direction = target-p;
-//            if (abs(new_direction.x) < 1e-8 && abs(new_direction.y) < 1e-8 && abs(new_direction.z) < 1e-8) new_direction = normal;
-//            new_direction = normalize(new_direction);
-//            refl *= brdf(obj.material, normal, -trace.direction, old_dir);
-            attenuation *= trace.attenuation;
-            origin = p+2*obj.eps*trace.direction;
+//            path tmp = scatter(obj.material, p, normal, trace.direction);
+            trace = add(trace, scatter(obj.material, p, normal, trace.direction));
+//            emit_accum += tmp.emmission*attenuation_accum;
+//            attenuation_accum *= tmp.attenuation;
+            origin = p+2*obj.eps*normalize(trace.direction+normal);
+//            origin = p;
+//            if (map(origin).dist < obj.eps) return vec3(0,1,0);
+//            if (map(origin, trace.direction) < obj.eps) origin += 2*obj.eps*normal;
         }
         else {
 //            vec3 col = refl*sky(iTrans(trace.direction, inverse(viewMat)));
-            vec3 col = attenuation*sky(iTrans(trace.direction, inverse(viewMat)));
+            vec3 col = trace.emmission + trace.attenuation*sky(iTrans(trace.direction, inverse(viewMat)));
             return col;
+//            emit_accum += attenuation_accum*sky(iTrans(trace.direction, inverse(viewMat)));
+//            return emit_accum;
         }
-        if (trace.stop) break;
+        if (trace.stop) return trace.emmission;
     }
-    return vec3(0,0,0);
+    return vec3(0);
 }
 
 vec3 getRayDir(vec2 p, float aspect){
@@ -838,6 +872,7 @@ vec3 getRayDir(vec2 p, float aspect){
 }
 
 void main(){
+
     uvec2 texelCoord = ivec2(tileOffset * workGroupSize * workGroupCount + gl_GlobalInvocationID.xy);
     ivec2 resolution = imageSize(hdrOut);
 
@@ -858,6 +893,15 @@ void main(){
     float aspect = float(resolution.x)/float(resolution.y);
 
     vec4 col = vec4(.1,.1,.1,1);
+
+    // for noise testing
+//    col = vec4(0,0,0,1);
+//    for (int i = 0; i <10; ++i){
+//        col.xyz += vec3(rand());
+//    }
+//    col.xyz /= 10.;
+//    imageStore(hdrOut, ivec2(texelCoord), col);
+//    return;
 
     if (preview) {
         col = vec4(float(currentSample) + float(samplesPerPass) - float(currentSample) - float(samplesPerPass) + 0.1);
@@ -892,7 +936,6 @@ void main(){
             vec3 rd = getRayDir(p+vec2(2.*rand()-1.,2.*rand()-1.)/resolution.y,aspect);
             pathTraceCol += pathtracing(ro, rd);
         }
-
         vec4 pcol = vec4(pathTraceCol,1);
         col = imageLoad(hdrOut, ivec2(texelCoord));
         col.xyz = (float(currentSample) / float(currentSample + samplesPerPass)) * col.xyz + pcol.xyz / float(currentSample + samplesPerPass);

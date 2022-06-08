@@ -72,6 +72,88 @@ vec3 random_in_unit_disk(inout random_state rs) {
     return p;
 }
 
+float rand_vec2seed(vec2 co){
+    return fract(sin(dot(co, vec2(12.9898, 78.233)))*43758.5453);
+}
+
+uint seed = uint(floor(rand_vec2seed(gl_FragCoord.xy)*1341*(iTime+100)));
+
+uint hash(){
+    uint x = ++seed;
+    x += (x << 10u);
+    x ^= (x >> 6u);
+    x += (x << 3u);
+    x ^= (x >> 11u);
+    x += (x << 15u);
+    return x;
+}
+
+float floatConstruct(uint m){
+//    const uint ieeeMantissa = 0x007FFFFFu;
+//    const uint ieeeOne = 0x3F800000u;
+//    m &= ieeeMantissa;
+//    m |= ieeeOne;
+//    float f = uintBitsToFloat(m);
+//    return f - 1.;
+    return fract(0.0000341*float(m));
+}
+
+float rand(){return floatConstruct(hash());}
+
+
+
+float rand(vec2 co){ // https://stackoverflow.com/questions/4200224/random-noise-functions-for-glsl
+    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+}
+float rand(vec3 co){
+    return fract(sin(dot(co, vec3(12.9898, 78.233, 52.652))) * 43758.5453);
+}
+
+vec3 random_in_unit_disk() {
+    while (true) {
+        vec3 p = vec3(2*rand()-1, 2*rand()-1, 0);
+        if (length(p) >= 1) continue;
+        return p;
+    }
+    return vec3(0);
+}
+
+vec3 rand_in_unit_sphere(){
+//    vec3 p;
+//    p = 2.0 * r - vec3(1.0);
+//    while (dot(p,p) > 1.0) p *= 0.7;
+//    return p;
+//    bool t = false;
+
+    vec3 p;
+//    vec3 r;
+    while (true){
+//        update_random(rs);
+//        r.x = random0(rs);
+//        r.y = random1(rs);
+//        r.z = random2(rs);
+//        r = 2.*r - vec3(1);
+
+        p = vec3(2*rand()-1, 2*rand()-1, 2*rand()-1);
+        if ((length(p) >= 1)) {continue;}
+//        if (length(r) >= 1) {continue;}
+        break;
+//        if ((length(p) <= 1 && t) || (length(r) <= 1 && !t)) break;
+    }
+//    return (t) ? p : r;
+    return p;
+//    return r;
+}
+vec3 rand_unit_sphere(){
+    return normalize(rand_in_unit_sphere());
+}
+
+vec3 rand_in_hemisphere(vec3 nor){
+    vec3 in_unit_sphere = rand_in_unit_sphere();
+    if (dot(in_unit_sphere, nor) > 0.) return in_unit_sphere;
+    return -in_unit_sphere;
+}
+
 const uint Lambertian = 0u;
 const uint DiffuseLight = 3u;
 
@@ -84,9 +166,9 @@ struct sphere {
 };
 
 const sphere world[] = sphere[](
-sphere(vec3(0.0,0.0,0), 1.0*1.0, 1.0/1.0, Lambertian, vec3(0.5,0.5,0.5)),
-sphere(vec3(.0,.0,2), 1.0*1.0, 1.0/1.0, DiffuseLight, vec3(20,1.,1.)),
-sphere(vec3(0.0,-1001.0,0.0), 1000.0*1000.0, 1.0/1000.0, Lambertian, vec3(0.2,0.2,0.2))
+sphere(vec3(0.0,0.0,0), 1.0*1.0, 1.0/1.0, Lambertian, vec3(0.8,0.8,0.8)),
+sphere(vec3(.0,.0,2), 1.0*1.0, 1.0/1.0, DiffuseLight, vec3(100,1.,1.)),
+sphere(vec3(0.0,-10001.0,0.0), 10000.0*10000.0, 1.0/10000.0, Lambertian, vec3(0.8,0.8,0.8))
 );
 
 struct hit_record {
@@ -172,7 +254,12 @@ bool scatter(hit_record rec, vec3 ro, vec3 rd, inout vec3 attenuation, inout vec
     attenuation = shade(rec);
     uint mt = world[rec.objidx].mat_type;
     if (mt == Lambertian) {
-        vec3 target = normalize(rec.normal + random_in_unit_sphere(r));
+//        vec3 target = normalize(rec.normal + random_in_unit_sphere(r));
+//        vec3 target = normalize(rec.normal + rand_in_unit_sphere(rs));
+//        vec3 target = normalize(rec.normal + rand_in_unit_sphere());
+//        vec3 target = normalize(rec.normal + rand_unit_sphere());
+//        vec3 target = normalize(rec.normal + rand_in_hemisphere(rec.normal));
+        vec3 target = normalize(rand_in_hemisphere(rec.normal));
         scro = rec.p;
         scrd = target;
         return true;
@@ -204,8 +291,9 @@ vec3 color(vec3 ro, vec3 rd, inout random_state rs) {
                 done = true;
             }
         } else {
-            albedo = vec3(0.1);
-            emit_accum += attenuation_accum * albedo * 0.7;
+            albedo = vec3(0.);
+//            emit_accum += attenuation_accum * albedo * 0.7;
+            emit_accum += attenuation_accum * albedo;
             done = true;
         }
     }
@@ -261,5 +349,26 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
 
 void main(){
     vec2 p = (2*gl_FragCoord.xy - vec2(iResolution.xy) ) / float(iResolution.y)*iResolution.y;
+
+//    vec3 col = vec3(0);
+//    random_state rs;
+//    float time = iTime;
+//    init_random(p, time, rs);
+//    update_random(rs);
+////    for (int i = 0; i <100; ++i){
+////        update_random(rs);
+//////        col += vec3(random0(rs),random1(rs),random2(rs));
+////        col += vec3(rand(),rand(),rand());
+//////        col.xyz += vec3(rand());
+//////        col.xyz += vec3(1);
+////    }
+////    col.xyz /= 100.;
+//
+//    col = vec3(random0(rs));
+////    col = vec3(rand());
+////    col = vec3(random0(rs),random1(rs),random2(rs));
+////    col = vec3(rand(),rand(),rand());
+//    frag_color = vec4(col,1);
+//    return;
     mainImage(frag_color, p);
 }
