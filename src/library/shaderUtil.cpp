@@ -1,6 +1,7 @@
 #include "shaderUtil.hpp"
 
 #include <fstream>
+#include <vector>
 
 const char* loadShaderFile(const char* filename) {
     std::string actualFile = SHADER_ROOT + filename;
