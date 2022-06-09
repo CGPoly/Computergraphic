@@ -38,7 +38,7 @@ struct mat {
     vec3 albedo;
     float fuzz;
     vec3 emmission;
-    //preview:
+//preview:
     float roughness;
     float refractionIndex;
     vec3 diff_col;
@@ -71,7 +71,7 @@ object world[] = object[](
 //    object(1, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,-1000,0), lambertian(vec3(.8,.8,.8))),
 //    object(8, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), lambertian(vec3(.8,.8,.8))),
 //    object(1, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,-1000,3000), emitter(vec3(100,1.,1.)))
-    object(1, 0.0001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), lambertian(vec3(.7,.3,.3)))
+object(1, 0.0001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), lambertian(vec3(.7,.3,.3)))
 //    object(1, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(2000,0,0), metal(vec3(.722,.451,.20), 0.3)),
 //    object(1, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,2000), emitter(vec3(8,4,4))),
 //    object(8, 0.01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), lambertian(vec3(.8,.8,0.)))
@@ -534,11 +534,11 @@ float deManySpheres(vec3 pos){
     return length(pos)-0.4;
 }
 float deMandelbulb(vec3 pos, int Iterations, float Bailout) {
-//    float t = fract(0.01*(uTime+15));
+    //    float t = fract(0.01*(uTime+15));
     //    float y = 16.0*t*(1.0-t);
-//    float maxp = 8;
-//    float Power = -2*maxp*abs(t-0.5)+maxp;
-        float Power = 4;
+    //    float maxp = 8;
+    //    float Power = -2*maxp*abs(t-0.5)+maxp;
+    float Power = 4;
     vec3 z = pos;
     float dr = 1.0;
     float r = 0.0;
@@ -559,10 +559,10 @@ float deMandelbulb(vec3 pos, int Iterations, float Bailout) {
 }
 float deJulia(vec3 p, int Iterations, float Bailout) {
     vec3 c = vec3(0.4,-0.4,0.6);
-//    float maxp = 8;
-//    float t = fract(0.01*(uTime+15));
-//    float power = -2*maxp*abs(t-0.5)+maxp;
-        float power = 8;
+    //    float maxp = 8;
+    //    float t = fract(0.01*(uTime+15));
+    //    float power = -2*maxp*abs(t-0.5)+maxp;
+    float power = 8;
 
     vec3 orbit = p;
     float dz = 1.0;
@@ -600,7 +600,7 @@ float sdWarpTunnel(vec3 pos){
     return -sdInfinteCylinder(pos, vec3(0,0,10));
 }
 float test(vec3 pos){
-//    float t = -2*abs(fract(0.1*(uTime+15))-0.5)+1;
+    //    float t = -2*abs(fract(0.1*(uTime+15))-0.5)+1;
     return oMorph(sdBox(pos,  vec3(1,1,1)), sdSphere(pos, 1), 0.5);
 }
 float deKaliRemix(vec3 p, int Iterations) {
@@ -623,26 +623,26 @@ float deKaliRemix(vec3 p, int Iterations) {
 float distObj(object obj, vec3 pos){
     switch(obj.obj_index){
         case 0:
-            return sdBox(pos,  vec3(1,1,1));
+        return sdBox(pos,  vec3(1,1,1));
         case 1:
-//          return sdEllipsoid(pos,  vec3(obj.scale,obj.scale,obj.scale));
-            return sdSphere(pos,  obj.scale);
+        //          return sdEllipsoid(pos,  vec3(obj.scale,obj.scale,obj.scale));
+        return sdSphere(pos,  obj.scale);
         case 2:
-            return deJulia(pos, 30, 10);
+        return deJulia(pos, 30, 10);
         case 3:
-            return sdEnterprise(pos/obj.scale)*obj.scale;
+        return sdEnterprise(pos/obj.scale)*obj.scale;
         case 4:
-            return deKaliRemix(pos, 10);
+        return deKaliRemix(pos, 10);
         case 5:
-            return deManySpheres(pos);
+        return deManySpheres(pos);
         case 6:
-            return test(pos);
+        return test(pos);
         case 7:
-            return sbU(oBevel(sdBox(pos,  vec3(1,1,0.5)),0.01), sdEllipsoid(pos,  vec3(1,1,1)), 0.01);
+        return sbU(oBevel(sdBox(pos,  vec3(1,1,0.5)),0.01), sdEllipsoid(pos,  vec3(1,1,1)), 0.01);
         case 8:
-            return sdPlane(pos, vec3(0,1,0),1);
+        return sdPlane(pos, vec3(0,1,0),1);
         default:
-            return 1.0/0.0; // maximal highp float
+        return 1.0/0.0; // maximal highp float
     }
 }
 
@@ -706,7 +706,7 @@ vec3 numDiff(vec3 p, float e){
     return normalize(vec3(map(p+h.xyy).dist - map(p-h.xyy).dist, map(p+h.yxy).dist - map(p-h.yxy).dist, map(p+h.yyx).dist - map(p-h.yyx).dist));
 }
 vec3 tetraNormUnfix(vec3 p, float h){ // for function f(p){
-//    const float h = eps; // replace by an appropriate value
+    //    const float h = eps; // replace by an appropriate value
     const vec2 k = vec2(1,-1);
     return normalize( k.xyy*map( p + k.xyy*h ).dist +
     k.yyx*map( p + k.yyx*h ).dist +
@@ -731,7 +731,7 @@ vec3 calcNormal(vec3 p, object obj){
     //    }
     //    return nor/n;
     return tetraNorm(p,obj.eps);
-//    return numDiff(p,obj.eps);
+    //    return numDiff(p,obj.eps);
     //    return numDiff(p);
 }
 
@@ -788,15 +788,15 @@ float orennayarTerm(float lambert, vec3 n, vec3 l, float roughness) {
 
 float brdf(mat material, vec3 normal, vec3 dir_in, vec3 dir_out){
     return 0.5;
-//    return cdot(normal, dir_in);
+    //    return cdot(normal, dir_in);
 }
 
 vec3 sky(vec3 direction){
     float t = 0.5*(direction.y + 1.0);
     return vec3(1.-t) + t*vec3(0.5, 0.7, 1.0);
-//    return iTrans(direction, viewMat);
-//    return vec3(1);
-//    return vec3(0.);
+    //    return iTrans(direction, viewMat);
+    //    return vec3(1);
+    //    return vec3(0.);
 }
 
 struct path {
@@ -836,26 +836,26 @@ vec3 pathtracing(vec3 origin, vec3 direction){
         if (r.hit){
             object obj = world[r.index];
             vec3 p = origin + r.dist*trace.direction;
-//            if (in_intersection(p)) return trace.emmission+intersection_emmission(p);
+            //            if (in_intersection(p)) return trace.emmission+intersection_emmission(p);
             vec3 normal = calcNormal(p, obj);
-//            return inverse(mat3(viewMat))*normal;
+            //            return inverse(mat3(viewMat))*normal;
             trace = add(trace, scatter(obj.material, p, normal, trace.direction));
             origin = p+2*obj.eps*normalize(trace.direction+normal);
 
-//            float theta = acos(-p.y);
-//            float phi = atan2(-p.z, p.x)+pi;
-//            float u = phi / (2*pi);
-//            float v = theta / pi;
-//            origin = p;
-//            if (map(origin).dist < obj.eps) return vec3(0,1,0);
-//            if (map(origin, trace.direction) < obj.eps) origin += 2*obj.eps*normal;
+            //            float theta = acos(-p.y);
+            //            float phi = atan2(-p.z, p.x)+pi;
+            //            float u = phi / (2*pi);
+            //            float v = theta / pi;
+            //            origin = p;
+            //            if (map(origin).dist < obj.eps) return vec3(0,1,0);
+            //            if (map(origin, trace.direction) < obj.eps) origin += 2*obj.eps*normal;
         }
         else {
-//            vec3 col = refl*sky(iTrans(trace.direction, inverse(viewMat)));
+            //            vec3 col = refl*sky(iTrans(trace.direction, inverse(viewMat)));
             vec3 col = trace.emmission + trace.attenuation*sky(iTrans(trace.direction, inverse(viewMat)));
             return col;
-//            emit_accum += attenuation_accum*sky(iTrans(trace.direction, inverse(viewMat)));
-//            return emit_accum;
+            //            emit_accum += attenuation_accum*sky(iTrans(trace.direction, inverse(viewMat)));
+            //            return emit_accum;
         }
         if (trace.stop) return trace.emmission;
     }
@@ -877,7 +877,7 @@ void main(){
     ivec2 resolution = imageSize(hdrOut);
 
     if (texelCoord.x >= resolution.x || texelCoord.y >= resolution.y)
-        return;
+    return;
 
     for (int i = 0; i < world.length(); ++i){
         world[i].scale /= world_scale;
@@ -893,13 +893,13 @@ void main(){
     vec4 col = vec4(.1,.1,.1,1);
 
     // for noise testing
-//    col = vec4(0,0,0,1);
-//    for (int i = 0; i <10; ++i){
-//        col.xyz += vec3(rand());
-//    }
-//    col.xyz /= 10.;
-//    imageStore(hdrOut, ivec2(texelCoord), col);
-//    return;
+    //    col = vec4(0,0,0,1);
+    //    for (int i = 0; i <10; ++i){
+    //        col.xyz += vec3(rand());
+    //    }
+    //    col.xyz /= 10.;
+    //    imageStore(hdrOut, ivec2(texelCoord), col);
+    //    return;
 
     if (preview) {
         col = vec4(float(currentSample) + float(samplesPerPass) - float(currentSample) - float(samplesPerPass) + 0.1);
@@ -924,7 +924,7 @@ void main(){
             vec4 shadow = vec4(1, 1, 1, 1)*clamp(10*pow(0.18*sun_sh, 0.4545), 0.4, 1.);
             col = col*shadow;
 
-//            col = world[r.index].diff_col;
+            //            col = world[r.index].diff_col;
             col = vec4(inverse(mat3(viewMat))*nor,1);
         }
     }

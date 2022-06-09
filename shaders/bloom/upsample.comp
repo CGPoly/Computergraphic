@@ -11,7 +11,7 @@ uniform bool lastPass;
 uniform uint passes;
 
 void main() {
-    vec2 texelCoord = vec2(gl_GlobalInvocationID.xy + 0.5) / imageSize(dst);
+    vec2 texelCoord = vec2(gl_GlobalInvocationID.xy + vec2(0.5)) / imageSize(dst);
     vec2 texelSize = vec2(1) / imageSize(dst);
 
     vec4 color = vec4(0);

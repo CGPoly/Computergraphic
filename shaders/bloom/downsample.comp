@@ -9,7 +9,7 @@ vec4 box4(vec4 p0, vec4 p1, vec4 p2, vec4 p3) {
 }
 
 void main() {
-    vec2 texelCoord = vec2(gl_GlobalInvocationID.xy + 0.5) / imageSize(dst);
+    vec2 texelCoord = vec2(gl_GlobalInvocationID.xy + vec2(0.5)) / imageSize(dst);
     vec2 texelSize = vec2(1) / imageSize(dst);
 
     vec4 a = textureLod(src, texelCoord + texelSize * vec2(-1.0, -1.0), 1);

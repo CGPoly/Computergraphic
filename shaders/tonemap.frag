@@ -1,4 +1,4 @@
-#version 400 core
+#version 460 core
 out vec4 fragColor;
 
 layout(binding = 0) uniform sampler2D hdrBuffer;
