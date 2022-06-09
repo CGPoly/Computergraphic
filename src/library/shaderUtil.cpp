@@ -26,14 +26,11 @@ std::string loadShaderFile(std::string_view filename) {
 GLuint compileShader(std::string_view filename, GLenum type) {
     std::string shaderSource = loadShaderFile(filename);
 
-    // create shader object
     GLuint shader = glCreateShader(type);
 	const auto *source = (GLchar const*)shaderSource.c_str();
     glShaderSource(shader, 1, &source, NULL);
-    // try to compile
     glCompileShader(shader);
 
-    // check if compilation succeeded
     int success;
     glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
 
@@ -53,23 +50,4 @@ GLuint compileShader(std::string_view filename, GLenum type) {
 	}
 
 	return !success ? 0 : shader;
-}
-
-GLuint linkProgram(GLuint vertexShader, GLuint fragmentShader) {
-	GLuint shaderProgram;
-    shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-
-    GLint success;
-    char infoLog[512];
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-    if(!success) {
-        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-        std::cerr << "Linking program failed\n" << infoLog << std::endl;
-        return 0;
-    }
-
-    return shaderProgram;
 }
