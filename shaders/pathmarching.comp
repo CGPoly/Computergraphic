@@ -95,6 +95,187 @@ float rand_vec2seed(vec2 co){
 uint non_constant_seed = uint(floor(rand_vec2seed(ivec2(tileOffset * workGroupSize * workGroupCount + gl_GlobalInvocationID.xy))*1341*(uFrame+100)));
 uint constant_seed = 0;
 
+uint rot(uint x, uint k){
+    return (x << k) | (x >> (32 - k));
+}
+
+void final(inout uint a, inout uint b, inout uint c){
+    c ^= b;
+    c -= rot(b, 14);
+    a ^= c;
+    a -= rot(c, 11);
+    b ^= a;
+    b -= rot(a, 25);
+    c ^= b;
+    c -= rot(b, 16);
+    a ^= c;
+    a -= rot(c, 4);
+    b ^= a;
+    b -= rot(a, 14);
+    c ^= b;
+    c -= rot(b, 24);
+}
+
+uint hash_uint2(uint kx, uint ky){
+    uint a, b, c;
+    a = b = c = 0xdeadbeefu + (2u << 2u) + 13u;
+    b += ky;
+    a += kx;
+    final(a, b, c);
+    return c;
+}
+
+uint hash_uint3(uint kx, uint ky, uint kz){
+    uint a, b, c;
+    a = b = c = 0xdeadbeefu + (3u << 2u) + 13u;
+    c += kz;
+    b += ky;
+    a += kx;
+    final(a, b, c);
+    return c;
+}
+
+uint hash_int3(int kx, int ky, int kz){
+    return hash_uint3(uint(kx), uint(ky), uint(kz));
+}
+
+float hash_uint2_to_float(uint kx, uint ky){
+    return float(hash_uint2(kx, ky)) / float(0xFFFFFFFFu);
+}
+
+float hash_vec2_to_float(vec2 k){
+    return hash_uint2_to_float(floatBitsToUint(k.x), floatBitsToUint(k.y));
+}
+
+void FLOORFRAC(inout float x, inout int x_int, inout float x_fract) {
+    float x_floor = floor(x);
+    x_int = int(x_floor);
+    x_fract = x - x_floor;
+}
+
+float tri_mix(float v0, float v1, float v2, float v3, float v4, float v5,
+    float v6, float v7, float x, float y, float z){
+    float x1 = 1.0 - x;
+    float y1 = 1.0 - y;
+    float z1 = 1.0 - z;
+    return z1 * (y1 * (v0 * x1 + v1 * x) + y * (v2 * x1 + v3 * x)) +
+        z * (y1 * (v4 * x1 + v5 * x) + y * (v6 * x1 + v7 * x));
+}
+
+float fade(float t){
+    return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+}
+
+float negate_if(float value, uint condition){
+    return (condition != 0u) ? -value : value;
+}
+
+vec3 random_vec3_offset(float seed){
+    return vec3(100.0 + hash_vec2_to_float(vec2(seed, 0.0)) * 100.0,
+    100.0 + hash_vec2_to_float(vec2(seed, 1.0)) * 100.0,
+    100.0 + hash_vec2_to_float(vec2(seed, 2.0)) * 100.0);
+}
+
+float noise_grad(uint hash, float x, float y, float z){
+    uint h = hash & 15u;
+    float u = h < 8u ? x : y;
+    float vt = ((h == 12u) || (h == 14u)) ? x : z;
+    float v = h < 4u ? y : vt;
+    return negate_if(u, h & 1u) + negate_if(v, h & 2u);
+}
+
+float noise_perlin(vec3 vec){
+    int X, Y, Z;
+    float fx, fy, fz;
+
+    FLOORFRAC(vec.x, X, fx);
+    FLOORFRAC(vec.y, Y, fy);
+    FLOORFRAC(vec.z, Z, fz);
+
+    float u = fade(fx);
+    float v = fade(fy);
+    float w = fade(fz);
+
+    float r = tri_mix(noise_grad(hash_int3(X, Y, Z), fx, fy, fz),
+    noise_grad(hash_int3(X + 1, Y, Z), fx - 1, fy, fz),
+    noise_grad(hash_int3(X, Y + 1, Z), fx, fy - 1, fz),
+    noise_grad(hash_int3(X + 1, Y + 1, Z), fx - 1, fy - 1, fz),
+    noise_grad(hash_int3(X, Y, Z + 1), fx, fy, fz - 1),
+    noise_grad(hash_int3(X + 1, Y, Z + 1), fx - 1, fy, fz - 1),
+    noise_grad(hash_int3(X, Y + 1, Z + 1), fx, fy - 1, fz - 1),
+    noise_grad(hash_int3(X + 1, Y + 1, Z + 1), fx - 1, fy - 1, fz - 1),
+    u,
+    v,
+    w);
+
+    return r;
+}
+
+float noise_scale3(float result){
+    return 0.9820 * result;
+}
+
+float snoise(vec3 p){
+    float r = noise_perlin(p);
+    return (isinf(r)) ? 0.0 : noise_scale3(r);
+}
+
+float noise(vec3 p){
+    return 0.5 * snoise(p) + 0.5;
+}
+
+float fractal_noise(vec3 p, float octaves, float roughness){
+    float fscale = 1.0;
+    float amp = 1.0;
+    float maxamp = 0.0;
+    float sum = 0.0;
+    octaves = clamp(octaves, 0.0, 15.0);
+    int n = int(octaves);
+    for (int i = 0; i <= n; i++) {
+        float t = noise(fscale * p);
+        sum += t * amp;
+        maxamp += amp;
+        amp *= clamp(roughness, 0.0, 1.0);
+        fscale *= 2.0;
+    }
+    float rmd = octaves - floor(octaves);
+    if (rmd != 0.0) {
+        float t = noise(fscale * p);
+        float sum2 = sum + t * amp;
+        sum /= maxamp;
+        sum2 /= maxamp + amp;
+        return (1.0 - rmd) * sum + rmd * sum2;
+    }
+    else {
+        return sum / maxamp;
+    }
+}
+
+void node_noise_texture_3d(vec3 co,
+float w,
+float scale,
+float detail,
+float roughness,
+float distortion,
+out float value,
+out vec4 color
+){
+    vec3 p = co * scale;
+    if (distortion != 0.0) {
+        p += vec3(snoise(p + random_vec3_offset(0.0)) * distortion,
+        snoise(p + random_vec3_offset(1.0)) * distortion,
+        snoise(p + random_vec3_offset(2.0)) * distortion);
+    }
+
+    value = fractal_noise(p, detail, roughness);
+    color = vec4(value,
+    fractal_noise(p + random_vec3_offset(3.0), detail, roughness),
+    fractal_noise(p + random_vec3_offset(4.0), detail, roughness),
+    1.0);
+//    return value;
+}
+
+
 //uint hash(){
 //    uint x = ++non_constant_seed;
 //    x += (x << 10u);
@@ -161,169 +342,6 @@ vec3 rand_in_hemisphere(vec3 nor){
     vec3 in_unit_sphere = rand_in_unit_sphere();
     if (dot(in_unit_sphere, nor) > 0.) return in_unit_sphere;
     return -in_unit_sphere;
-}
-
-//noise
-//int permutations[] = int[](151,160,137,91,90,15,
-//131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,
-//190, 6,148,247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,33,
-//88,237,149,56,87,174,20,125,136,171,168, 68,175,74,165,71,134,139,48,27,166,
-//77,146,158,231,83,111,229,122,60,211,133,230,220,105,92,41,55,46,245,40,244,
-//102,143,54, 65,25,63,161, 1,216,80,73,209,76,132,187,208, 89,18,169,200,196,
-//135,130,116,188,159,86,164,100,109,198,173,186, 3,64,52,217,226,250,124,123,
-//5,202,38,147,118,126,255,82,85,212,207,206,59,227,47,16,58,17,182,189,28,42,
-//223,183,170,213,119,248,152, 2,44,154,163, 70,221,153,101,155,167, 43,172,9,
-//129,22,39,253, 19,98,108,110,79,113,224,232,178,185, 112,104,218,246,97,228,
-//251,34,242,193,238,210,144,12,191,179,162,241, 81,51,145,235,249,14,239,107,
-//49,192,214, 31,181,199,106,157,184, 84,204,176,115,121,50,45,127, 4,150,254,
-//138,236,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180);
-
-uint p[] = uint[](151,160,137,91,90,15,
-131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,
-190, 6,148,247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,33,
-88,237,149,56,87,174,20,125,136,171,168, 68,175,74,165,71,134,139,48,27,166,
-77,146,158,231,83,111,229,122,60,211,133,230,220,105,92,41,55,46,245,40,244,
-102,143,54, 65,25,63,161, 1,216,80,73,209,76,132,187,208, 89,18,169,200,196,
-135,130,116,188,159,86,164,100,109,198,173,186, 3,64,52,217,226,250,124,123,
-5,202,38,147,118,126,255,82,85,212,207,206,59,227,47,16,58,17,182,189,28,42,
-223,183,170,213,119,248,152, 2,44,154,163, 70,221,153,101,155,167, 43,172,9,
-129,22,39,253, 19,98,108,110,79,113,224,232,178,185, 112,104,218,246,97,228,
-251,34,242,193,238,210,144,12,191,179,162,241, 81,51,145,235,249,14,239,107,
-49,192,214, 31,181,199,106,157,184, 84,204,176,115,121,50,45,127, 4,150,254,
-138,236,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180,
-
-151,160,137,91,90,15,
-131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,
-190, 6,148,247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,33,
-88,237,149,56,87,174,20,125,136,171,168, 68,175,74,165,71,134,139,48,27,166,
-77,146,158,231,83,111,229,122,60,211,133,230,220,105,92,41,55,46,245,40,244,
-102,143,54, 65,25,63,161, 1,216,80,73,209,76,132,187,208, 89,18,169,200,196,
-135,130,116,188,159,86,164,100,109,198,173,186, 3,64,52,217,226,250,124,123,
-5,202,38,147,118,126,255,82,85,212,207,206,59,227,47,16,58,17,182,189,28,42,
-223,183,170,213,119,248,152, 2,44,154,163, 70,221,153,101,155,167, 43,172,9,
-129,22,39,253, 19,98,108,110,79,113,224,232,178,185, 112,104,218,246,97,228,
-251,34,242,193,238,210,144,12,191,179,162,241, 81,51,145,235,249,14,239,107,
-49,192,214, 31,181,199,106,157,184, 84,204,176,115,121,50,45,127, 4,150,254,
-138,236,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180);
-
-//int p[] = int[](
-//151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225,
-//140, 36, 103, 30, 69, 142, 8, 99, 37, 240, 21, 10, 23, 190, 6, 148,
-//247, 120, 234, 75, 0, 26, 197, 62, 94, 252, 219, 203, 117, 35, 11, 32,
-//57, 177, 33, 88, 237, 149, 56, 87, 174, 20, 125, 136, 171, 168, 68, 175,
-//74, 165, 71, 134, 139, 48, 27, 166, 77, 146, 158, 231, 83, 111, 229, 122,
-//60, 211, 133, 230, 220, 105, 92, 41, 55, 46, 245, 40, 244, 102, 143, 54,
-//65, 25, 63, 161, 1, 216, 80, 73, 209, 76, 132, 187, 208, 89, 18, 169,
-//200, 196, 135, 130, 116, 188, 159, 86, 164, 100, 109, 198, 173, 186, 3, 64,
-//52, 217, 226, 250, 124, 123, 5, 202, 38, 147, 118, 126, 255, 82, 85, 212,
-//207, 206, 59, 227, 47, 16, 58, 17, 182, 189, 28, 42, 223, 183, 170, 213,
-//119, 248, 152, 2, 44, 154, 163, 70, 221, 153, 101, 155, 167, 43, 172, 9,
-//129, 22, 39, 253, 19, 98, 108, 110, 79, 113, 224, 232, 178, 185, 112, 104,
-//218, 246, 97, 228, 251, 34, 242, 193, 238, 210, 144, 12, 191, 179, 162, 241,
-//81, 51, 145, 235, 249, 14, 239, 107, 49, 192, 214, 31, 181, 199, 106, 157,
-//184, 84, 204, 176, 115, 121, 50, 45, 127, 4, 150, 254, 138, 236, 205, 93,
-//222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180);
-
-float fade(float t){return t * t * t * (t * (t * 6. - 15.) + 10.);}
-float lerp(float t, float a, float b) {return a + t * (b - a);}
-//float grad(int hash, float x, float y, float z){
-//    int h = hash & 15;                      // CONVERT LO 4 BITS OF HASH CODE
-//    float u = (h<8) ? x : y;              // INTO 12 GRADIENT DIRECTIONS.
-//    float v = (h<4) ? y : ((h == 12 || h == 14) ? x : z);
-//    return (((h&1)==0) ? u : -u) + (((h&2)==0) ? v : -v);
-//}
-
-//float perlin_noise_p(float x, float y, float z){
-//    int X = int(floor(x)) & 255,                  // FIND UNIT CUBE THAT
-//        Y = int(floor(y)) & 255,                  // CONTAINS POINT.
-//        Z = int(floor(z)) & 255;
-//    x -= floor(x);                                // FIND RELATIVE X,Y,Z
-//    y -= floor(y);                                // OF POINT IN CUBE.
-//    z -= floor(z);
-//    float u = fade(x),                                // COMPUTE FADE CURVES
-//        v = fade(y),                                // FOR EACH OF X,Y,Z.
-//        w = fade(z);
-//    int A = p[X  ]+Y, AA = p[A]+Z, AB = p[A+1]+Z,      // HASH COORDINATES OF
-//        B = p[X+1]+Y, BA = p[B]+Z, BB = p[B+1]+Z;      // THE 8 CUBE CORNERS,
-//    return lerp(w, lerp(v, lerp(u, grad(p[AA  ], x  , y  , z   ),  // AND ADD
-//        grad(p[BA  ], x-1, y  , z   )), // BLENDED
-//        lerp(u, grad(p[AB  ], x  , y-1, z   ),  // RESULTS
-//        grad(p[BB  ], x-1, y-1, z   ))),// FROM  8
-//        lerp(v, lerp(u, grad(p[AA+1], x  , y  , z-1 ),  // CORNERS
-//        grad(p[BA+1], x-1, y  , z-1 )), // OF CUBE
-//        lerp(u, grad(p[AB+1], x  , y-1, z-1 ),
-//        grad(p[BB+1], x-1, y-1, z-1 ))));
-//}
-
-//float perlin_noise(float x, float y, float z){
-//    int X = int(floor(x)) & 255,                  // FIND UNIT CUBE THAT
-//    Y = int(floor(y)) & 255,                  // CONTAINS POINT.
-//    Z = int(floor(z)) & 255;
-//    x -= floor(x);                                // FIND RELATIVE X,Y,Z
-//    y -= floor(y);                                // OF POINT IN CUBE.
-//    z -= floor(z);
-//    float u = fade(x),                                // COMPUTE FADE CURVES
-//    v = fade(y),                                // FOR EACH OF X,Y,Z.
-//    w = fade(z);
-//    int A = hash[X  ]+Y, AA = hash[A]+Z, AB = hash[A+1]+Z,      // HASH COORDINATES OF
-//    B = hash[X+1]+Y, BA = hash[B]+Z, BB = hash[B+1]+Z;      // THE 8 CUBE CORNERS,
-//    return lerp(w, lerp(v, lerp(u, grad(hash[AA  ], x  , y  , z   ),  // AND ADD
-//    grad(hash[BA  ], x-1, y  , z   )), // BLENDED
-//    lerp(u, grad(hash[AB  ], x  , y-1, z   ),  // RESULTS
-//    grad(hash[BB  ], x-1, y-1, z   ))),// FROM  8
-//    lerp(v, lerp(u, grad(hash[AA+1], x  , y  , z-1 ),  // CORNERS
-//    grad(hash[BA+1], x-1, y  , z-1 )), // OF CUBE
-//    lerp(u, grad(hash[AB+1], x  , y-1, z-1 ),
-//    grad(hash[BB+1], x-1, y-1, z-1 ))));
-//}
-
-float grad(uint hash, float x, float y, float z){
-    switch(hash&15u){
-        case 0 : return  x+y;
-        case 1 : return  y-x;
-        case 2 : return  x-y;
-        case 3 : return -x-y;
-        case 4 : return  x+z;
-        case 5 : return  z-x;
-        case 6 : return  x-z;
-        case 7 : return -x-y;
-        case 8 : return  y+z;
-        case 9 : return  z-y;
-        case 10: return  y-z;
-        case 11: return -y-z;
-        case 12: return  x+y;
-        case 13: return  z-y;
-        case 14: return  y-x;
-        default:
-        case 15: return -y-z;
-    }
-}
-
-//TODO: Warum klappt das nicht????
-uint pt(uint t){return p[t];}
-float noise(float x, float y, float z){
-    uint a = uint(x) & 255u, b = uint(y) & 255u, c = uint(z) & 255u;
-    x -= floor(x), y -= floor(y), z -= floor(z);
-    float u = fade(x), v = fade(y), w = fade(z);
-    uint A0 = pt(a)+b;
-    uint A1 = pt(A0)+c;
-    uint A2 = pt(A0+1)+c;
-//    return p[int(255.8)&255] == 180 ? 1. : 0.;
-//    return 0 < A0 && A0 < p.length() ? 1. : 0.;
-    uint B0 = pt(a+1)+b;
-    uint B1 = pt(B0)+c;
-    uint B2 = pt(B0+1)+c;
-//    return 250000000u <= B2 ? 1. : 0.;
-//    return grad(hash(A1), x, y, z);
-//
-    return lerp(w, lerp(v, lerp(u, grad(pt(A1), x, y, z),
-        grad(pt(B1), x-1, y, z)),
-        lerp(u, grad(pt(A2), x, y-1, z),
-        grad(pt(B2), x-1, y-1, z))),
-        lerp(v, lerp(u, grad(pt(A1+1), x, y, z-1),
-        grad(pt(B1+1), x-1, y, z-1)),
-        lerp(u, grad(pt(A2+1), x, y-1, z-1),
-        grad(pt(B2+1), x-1, y-1, z-1))));
 }
 
 //DE of the primitives is from https://iquilezles.org/articles/distfunctions/
@@ -680,6 +698,14 @@ vec3 calcNormal(vec3 p, object obj){
 }
 
 vec3 mapping(vec3 p, object obj){
+    //Sphere UV project:
+//    p = iTrans(p, viewMat);
+//    float theta = acos(-p.y);
+//    float phi = atan2(-p.z, p.x)+pi;
+//    float u = phi / (2*pi);
+//    float v = theta / pi;
+//    return vec3(u,v,0);
+    // normal
     return inverse(mat3(viewMat))*calcNormal(p, obj);
 }
 
@@ -866,10 +892,13 @@ void main(){
             //            col = clamp(vec4(obj.material.diff_col,1) * diffuseTerm + vec4(obj.material.spec_col,1) * specularTerm, 0.0, 1.0);
 
             vec3 diff_col = vec3(0);
-            vec3 map = mapping(pos, obj)*1000;
+            vec3 map = mapping(pos, obj);
             //            diff_col = vec3(fade(.1));
             //            diff_col = vec3(perlin_noise_p(map.x,map.y,map.z));
-                        diff_col = vec3(noise(map.x,map.y,map.z));
+            float val;
+            vec4 coll;
+            node_noise_texture_3d(map, 1., 2., 2., 1, 5., val, coll);
+            diff_col = vec3(val);
 
             col = clamp(vec4(diff_col,1) * diffuseTerm + vec4(obj.material.spec_col,1) * specularTerm, 0.0, 1.0);
 
@@ -882,7 +911,7 @@ void main(){
 
             //            col = world[r.index].diff_col;
             //            col = vec4(inverse(mat3(viewMat))*nor,1);
-            col = vec4(diff_col,1);
+//            col = vec4(diff_col,1);
         }
     }
     else {
