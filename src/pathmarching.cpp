@@ -1,8 +1,6 @@
 #include "library/common.hpp"
-#include "library/shaderUtil.hpp"
 #include "library/Camera.h"
 #include "library/buffer.hpp"
-#include "library/helper.hpp"
 
 #include "../vendor/imgui/imgui.h"
 #include "../vendor/imgui/imgui_impl_glfw.h"
@@ -12,7 +10,6 @@
 #include "library/BloomProcessor.h"
 
 #include <chrono>
-#include <iostream>
 
 int windowWidth = 1280;
 int windowHeight = 720;
