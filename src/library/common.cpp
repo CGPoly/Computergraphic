@@ -11,6 +11,8 @@ void APIENTRY glDebugOutput(
 ) {
 	// ignore non-significant error/warning codes
 	if(id == 131169 || id == 131185 || id == 131218 || id == 131204) return;
+	// ignore shader errors, as we are handling them ourself
+	if (id == 2000 || id == 2001) return;
 
 	std::cout << "---------------" << std::endl;
 	std::cout << "Debug message (" << id << "): " <<  message << std::endl;

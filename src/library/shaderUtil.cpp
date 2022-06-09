@@ -25,8 +25,23 @@ GLuint compileShader(const char* filename, GLenum type) {
     delete [] shaderSource;
 
     // check if compilation succeeded
-    int  success;
+    int success;
     glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+
+	if (success == GL_FALSE) {
+
+		GLint maxLength = 0;
+		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
+
+		// The maxLength includes the NULL character
+		std::vector<GLchar> infoLog(maxLength);
+		glGetShaderInfoLog(shader, maxLength, &maxLength, &infoLog[0]);
+
+		std::cerr << "Failed to compile shader: " << filename << std::endl;
+		std::cerr << &infoLog[0] << std::endl;
+
+		glDeleteShader(shader);
+	}
 
 	return !success ? 0 : shader;
 }

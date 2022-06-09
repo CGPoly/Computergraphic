@@ -11,7 +11,7 @@
 class ShaderProgram {
 private:
 	struct ShaderInfo {
-	    std::optional<GLuint> id;
+	    GLuint id;
 		GLenum type;
 		std::filesystem::file_time_type lastModification;
     };

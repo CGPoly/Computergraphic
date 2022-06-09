@@ -32,6 +32,7 @@ void ShaderProgram::use() const {
 
 void ShaderProgram::compile() {
 	bool needsLink = false;
+	bool cantLink = false;
 	for (auto& [fileName, shaderInfo]: this->shaders) {
 		auto newLastModification = std::filesystem::last_write_time(SHADER_ROOT + fileName);
 		if (shaderInfo.lastModification == newLastModification)
@@ -40,11 +41,13 @@ void ShaderProgram::compile() {
 		shaderInfo.lastModification = newLastModification;
 
 		GLuint shaderId = compileShader(fileName.c_str(), shaderInfo.type);
-		if (shaderId == 0)
+		if (shaderId == 0) {
+			cantLink = true;
 			continue;
+		}
 
-		if (shaderInfo.id)
-			glDetachShader(this->id, *shaderInfo.id);
+		if (shaderInfo.id != 0)
+			glDetachShader(this->id, shaderInfo.id);
 
 		glAttachShader(this->id, shaderId);
 		glDeleteShader(shaderId);
@@ -55,7 +58,7 @@ void ShaderProgram::compile() {
 		std::cout << "Successfully compiled " << fileName << std::endl;
 	}
 
-	if (!needsLink)
+	if (!needsLink || cantLink)
 		return;
 
 	glLinkProgram(this->id);
@@ -64,8 +67,19 @@ void ShaderProgram::compile() {
 	glGetProgramiv(this->id, GL_LINK_STATUS, &success);
 
 	valid = success;
-	if (success)
+	if (success) {
 		uniformLocationCache.clear();
+	} else {
+		GLint maxLength = 0;
+		glGetProgramiv(this->id, GL_INFO_LOG_LENGTH, &maxLength);
+
+		// The maxLength includes the NULL character
+		std::vector<GLchar> infoLog(maxLength);
+		glGetProgramInfoLog(this->id, maxLength, &maxLength, &infoLog[0]);
+
+		std::cerr << "Failed to link Shader" << std::endl;
+		std::cerr << &infoLog[0] << std::endl;
+	}
 }
 
 bool ShaderProgram::isValid() const {
