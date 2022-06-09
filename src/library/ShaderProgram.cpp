@@ -40,7 +40,7 @@ void ShaderProgram::compile() {
 
 		shaderInfo.lastModification = newLastModification;
 
-		GLuint shaderId = compileShader(fileName.c_str(), shaderInfo.type);
+		GLuint shaderId = compileShader(fileName, shaderInfo.type);
 		if (shaderId == 0) {
 			cantLink = true;
 			continue;

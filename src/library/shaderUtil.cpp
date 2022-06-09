@@ -23,7 +23,7 @@ std::string loadShaderFile(std::string_view filename) {
 	std::cout << filename << " is supposedly empty" << std::endl;
 }
 
-GLuint compileShader(const char* filename, GLenum type) {
+GLuint compileShader(std::string_view filename, GLenum type) {
     std::string shaderSource = loadShaderFile(filename);
 
     // create shader object
