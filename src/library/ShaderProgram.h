@@ -4,6 +4,7 @@
 #include <string>
 #include <optional>
 #include <functional>
+#include <filesystem>
 #include "glad/glad.h"
 #include "glm/detail/type_mat4x4.hpp"
 
@@ -12,7 +13,7 @@ private:
 	struct ShaderInfo {
 	    std::optional<GLuint> id;
 		GLenum type;
-		time_t lastModification;
+		std::filesystem::file_time_type lastModification;
     };
 
     GLuint id = 0;

@@ -1,6 +1,5 @@
 #include "ShaderProgram.h"
 #include "config.hpp"
-#include "helper.hpp"
 #include "shaderUtil.hpp"
 
 #include <algorithm>
@@ -34,7 +33,7 @@ void ShaderProgram::use() const {
 void ShaderProgram::compile() {
 	bool needsLink = false;
 	for (auto& [fileName, shaderInfo]: this->shaders) {
-		time_t newLastModification = get_filetime(SHADER_ROOT + fileName);
+		auto newLastModification = std::filesystem::last_write_time(SHADER_ROOT + fileName);
 		if (shaderInfo.lastModification == newLastModification)
 			continue;
 
