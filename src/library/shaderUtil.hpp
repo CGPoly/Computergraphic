@@ -2,8 +2,7 @@
 
 #include "common.hpp"
 
-const char*
-loadShaderFile(const char* filename);
+std::string loadShaderFile(std::string_view filename);
 
 // loads a shader source file, tries to compile the shader
 // and checks for compilation errors

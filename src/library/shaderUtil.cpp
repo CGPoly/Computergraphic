@@ -3,27 +3,35 @@
 #include <fstream>
 #include <vector>
 
-const char* loadShaderFile(const char* filename) {
-    std::string actualFile = SHADER_ROOT + filename;
-    std::ifstream in(actualFile.c_str());
-    std::string str((std::istreambuf_iterator<char>(in)),
-                     std::istreambuf_iterator<char>());
-    char* code = new char[str.size()+1];
-    code[str.size()] = '\0';
-    str.copy(code, str.size());
-    return code;
+std::string loadShaderFile(std::string_view filename) {
+
+	// For some reason only god knows, this function sometimes returns an empty string,
+	// even if the file hast contents in it. To fix this we just try reading the file contents
+	// at least 5 times before giving up.
+	for (int i = 0; i < 5; ++i) {
+		std::string absoluteFilename = std::string(SHADER_ROOT).append(filename);
+		std::ifstream in(absoluteFilename, std::ios::in | std::ios::binary);
+		in.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+		if (!in)
+			throw std::system_error(errno, std::system_category(), std::string("failed to open ").append(filename));
+
+		auto res = std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+
+		if (!res.empty())
+			return res;
+	}
+	std::cout << filename << " is supposedly empty" << std::endl;
 }
 
 GLuint compileShader(const char* filename, GLenum type) {
-    const char* shaderSource = loadShaderFile(filename);
+    std::string shaderSource = loadShaderFile(filename);
 
     // create shader object
     GLuint shader = glCreateShader(type);
-    glShaderSource(shader, 1, &shaderSource, NULL);
+	const auto *source = (GLchar const*)shaderSource.c_str();
+    glShaderSource(shader, 1, &source, NULL);
     // try to compile
     glCompileShader(shader);
-    // source code is no longer needed
-    delete [] shaderSource;
 
     // check if compilation succeeded
     int success;
