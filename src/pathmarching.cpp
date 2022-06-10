@@ -14,6 +14,8 @@
 int windowWidth = 1280;
 int windowHeight = 720;
 
+unsigned int samplesPerFrame = 0;
+
 // tone mapping
 float exposure = 1;
 bool gammaCorrection = true;
@@ -26,13 +28,13 @@ const glm::uvec2 workGroupCount(4);
 glm::uvec2 currentRenderingTile(0);
 unsigned int currentSample = 0;
 
-const unsigned int minFrameTimeTarget = 1;
-const unsigned int maxFrameTimeTarget = 1000;
+const unsigned int minPassTimeTarget = 1;
+const unsigned int maxPassTimeTarget = 1000;
 unsigned int frameTimeTarget = 10; // in milliseconds
 
-unsigned int minSamplesPerFrame = 1;
-unsigned int maxSamplesPerFrame = 100;
-unsigned int samplesPerFrame = 1;
+unsigned int minSamplesPerPass = 1;
+unsigned int maxSamplesPerPass = 100;
+unsigned int samplesPerPass = 1;
 
 bool bloomEnabled = true;
 
@@ -105,6 +107,7 @@ int main(int, char* argv[]) {
     unsigned int quadIbo = makeBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW, sizeof(indices), indices);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, quadIbo);
 
+    unsigned int render_step = 0;
     unsigned int frame = 0;
     while (!glfwWindowShouldClose(window)) {
 	    glfwPollEvents();
@@ -122,22 +125,23 @@ int main(int, char* argv[]) {
 
 	    ImGui::Begin("Rendering");
 	    ImGui::SliderScalar(
-			    "Frame time target",
+			    "Pass time target",
 			    ImGuiDataType_U32,
 			    &frameTimeTarget,
-			    &minFrameTimeTarget,
-			    &maxFrameTimeTarget,
+			    &minPassTimeTarget,
+			    &maxPassTimeTarget,
 			    NULL,
 			    ImGuiSliderFlags_Logarithmic
 	    );
 	    bool changedSamplesPerPass = ImGui::SliderScalar(
 			    "Samples per pass",
 			    ImGuiDataType_U32,
-			    &samplesPerFrame,
-			    &minSamplesPerFrame,
-			    &maxSamplesPerFrame
+			    &samplesPerPass,
+			    &minSamplesPerPass,
+			    &maxSamplesPerPass
 	    );
 	    ImGui::Text("Current sample: %u", currentSample);
+	    ImGui::Text("Current frame: %u", frame);
 	    ImGui::Text("Current tile: %u, %u", currentRenderingTile.x, currentRenderingTile.y);
 	    ImGui::End();
 
@@ -149,12 +153,22 @@ int main(int, char* argv[]) {
 			glClearTexImage(hdrColorBuffer, 0, GL_RGBA, GL_FLOAT, NULL);
 		}
 
+        if (samplesPerFrame != 0 && currentSample >= samplesPerFrame){
+            currentSample = 0;
+            currentRenderingTile = glm::uvec2(0);
+
+            glClearTexImage(hdrColorBuffer, 0, GL_RGBA, GL_FLOAT, NULL);
+            ++frame;
+
+        }
+
 		// ---- Render to hdr buffer
 	    {
 		    pathMarchingProgram.use();
 		    pathMarchingProgram.setMatrix4f("viewMat", camera.view_matrix());
+		    pathMarchingProgram.set1ui("uRendStep", render_step);
 		    pathMarchingProgram.set1ui("uFrame", frame);
-			pathMarchingProgram.set1ui("samplesPerPass", samplesPerFrame);
+			pathMarchingProgram.set1ui("samplesPerPass", samplesPerPass);
 
 		    glBindImageTexture(0, hdrColorBuffer, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
@@ -180,7 +194,7 @@ int main(int, char* argv[]) {
 			    }
 
 				currentRenderingTile = glm::uvec2(0);
-			    currentSample += samplesPerFrame;
+			    currentSample += samplesPerPass;
 			}
 		    endDispatchLoop:;
 		}
@@ -237,7 +251,7 @@ int main(int, char* argv[]) {
 	    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         glfwSwapBuffers(window);
-        ++frame;
+        ++render_step;
     }
 
 	ImGui_ImplOpenGL3_Shutdown();

@@ -11,6 +11,7 @@ uniform uvec2 tileOffset;
 uniform uint currentSample;
 uniform uint samplesPerPass;
 
+uniform uint uRendStep;
 uniform uint uFrame;
 uniform mat4 viewMat;
 
@@ -19,7 +20,7 @@ const float world_scale = 1000;  //how big one unit in metern is (this is for ea
 //const float FAR_PLANE = 149597870700.+696342000.*10000/world_scale;
 float FAR_PLANE = 30.;
 
-const float steps = 300;
+const float steps = 500;
 
 const bool preview = false;
 const int max_bounce = 12;
@@ -69,11 +70,12 @@ struct hit {
 };
 
 object world[] = object[](
-//    object(2, 0.00001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), mat(0, lambertian(vec3(1,1,1))),
+//    object(2, 0.0001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), lambertian(vec3(.8)))
+//    object(2, 0.01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), lambertian(vec3(.8)))
 //    object(1, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,-1000,0), lambertian(vec3(.8,.8,.8))),
-    object(8, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), metal(vec3(1), 0.3)),
-    object(8, 0.001, mat3(0,-1,0,1,0,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), metal(vec3(1),0.2)),
-    object(8, 0.001, mat3(1,0,0,0,0,-1,0,1,0), vec3(1,1,1), 1, vec3(0,0,0), metal(vec3(1),0.1)),
+//    object(8, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), metal(vec3(1), 0.3)),
+//    object(8, 0.001, mat3(0,-1,0,1,0,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), metal(vec3(1),0.2)),
+//    object(8, 0.001, mat3(1,0,0,0,0,-1,0,1,0), vec3(1,1,1), 1, vec3(0,0,0), metal(vec3(1),0.1)),
 //    object(1, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,-1000,3000), emitter(vec3(100,1.,1.)))
     object(1, 0.0001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(1))
 //    object(1, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(2000,0,0), metal(vec3(.722,.451,.20), 0.3)),
@@ -90,13 +92,24 @@ float atan2(in float y, in float x){
     return (x == 0.) ? sign(y)*pi/2 : atan(y, x);
 }
 
+vec3 mix_add(float fac, vec3 col1, vec3 col2){
+    fac = clamp(fac, 0., 1.);
+    return mix(col1, col1 + col2, fac);
+}
+
+float cutoff(float inp, float fac, float min, float max){
+    float m = 1/(max-min);
+    float b = -min*m;
+    return mix(inp, clamp(inp*m+b, 0, 1), fac);
+}
+
 //random functions
 float rand_vec2seed(vec2 co){
     return fract(sin(dot(co, vec2(12.9898, 78.233)))*43758.5453);
 }
 
-//TODO: Aktueller Zufallsgenerator nur für große uFrame zuverlässig zufällig.
-uint non_constant_seed = uint(floor(rand_vec2seed(ivec2(tileOffset * workGroupSize * workGroupCount + gl_GlobalInvocationID.xy))*1341*(uFrame+100)));
+//TODO: Aktueller Zufallsgenerator nur für große uRendStep zuverlässig zufällig.
+uint non_constant_seed = uint(floor(rand_vec2seed(ivec2(tileOffset * workGroupSize * workGroupCount + gl_GlobalInvocationID.xy))*1341*(uRendStep+100)));
 uint constant_seed = 0;
 
 uint rot(uint x, uint k){
@@ -255,15 +268,7 @@ float fractal_noise(vec3 p, float octaves, float roughness){
     }
 }
 
-void node_noise_texture_3d(vec3 co,
-//float w,
-float scale,
-float detail,
-float roughness,
-float distortion,
-out float value,
-out vec4 color
-){
+void node_noise_texture_3d(vec3 co,float scale,float detail,float roughness,float distortion,out float value,out vec4 color){
     vec3 p = co * scale;
     if (distortion != 0.0) {
         p += vec3(snoise(p + random_vec3_offset(0.0)) * distortion,
@@ -273,10 +278,24 @@ out vec4 color
 
     value = fractal_noise(p, detail, roughness);
     color = vec4(value,
-    fractal_noise(p + random_vec3_offset(3.0), detail, roughness),
-    fractal_noise(p + random_vec3_offset(4.0), detail, roughness),
-    1.0);
-//    return value;
+        fractal_noise(p + random_vec3_offset(3.0), detail, roughness),
+        fractal_noise(p + random_vec3_offset(4.0), detail, roughness),
+        1.0);
+}
+
+vec3 vector_noise(vec3 vector, float amount, float scale, float detail, float distortion){
+    vec4 coll;
+    float tmp;
+    node_noise_texture_3d(vector, scale, detail, 0.5, amount, tmp, coll);
+    vec3 col = coll.xyz;
+    col -= vec3(0.5);
+//    return vector + amount*col;
+    return mix_add(amount, vector, col);
+}
+
+void oil(vec3 vector, float amount, float scale, float detail, float distortion, float oil_size, out vec4 col, out float fac){
+    vec3 map_noised = vector_noise(vector, amount, scale*oil_size, detail, distortion);
+    node_noise_texture_3d(map_noised, scale, detail, 0.5, distortion, fac, col);
 }
 
 
@@ -346,6 +365,17 @@ vec3 rand_in_hemisphere(vec3 nor){
     vec3 in_unit_sphere = rand_in_unit_sphere();
     if (dot(in_unit_sphere, nor) > 0.) return in_unit_sphere;
     return -in_unit_sphere;
+}
+
+//Procedural Planet
+float continent_mask(vec3 map, float LandSize, float OceanFill){
+    LandSize = clamp(LandSize, 0, 1);
+    OceanFill = clamp(OceanFill, 0, 1);
+    vec4 col; float fac;
+    oil(map, 0.625, 1.9, 5, 0.4, 1.8, col, fac);
+    //cutoff(float inp, float fac, float min, float max)
+    fac = cutoff(fac, LandSize, .75, 1);
+    return fac;
 }
 
 //DE of the primitives is from https://iquilezles.org/articles/distfunctions/
@@ -500,11 +530,11 @@ float deManySpheres(vec3 pos){
     return length(pos)-0.4;
 }
 float deMandelbulb(vec3 pos, int Iterations, float Bailout) {
-    //    float t = fract(0.01*(uTime+15));
-    //    float y = 16.0*t*(1.0-t);
-    //    float maxp = 8;
-    //    float Power = -2*maxp*abs(t-0.5)+maxp;
-    float Power = 4;
+    float t = fract(0.0001*(float(uFrame)+15.));
+    float y = 16.0*t*(1.0-t);
+    float maxp = 8;
+    float Power = -2*maxp*abs(t-0.5)+maxp;
+//    float Power = 4;
     vec3 z = pos;
     float dr = 1.0;
     float r = 0.0;
@@ -525,10 +555,10 @@ float deMandelbulb(vec3 pos, int Iterations, float Bailout) {
 }
 float deJulia(vec3 p, int Iterations, float Bailout) {
     vec3 c = vec3(0.4,-0.4,0.6);
-    //    float maxp = 8;
-    //    float t = fract(0.01*(uTime+15));
-    //    float power = -2*maxp*abs(t-0.5)+maxp;
-    float power = 8;
+    float maxp = 8;
+    float t = fract(0.01*(float(uFrame)+15.));
+    float power = -2*maxp*abs(t-0.5)+maxp;
+//    float power = 8;
 
     vec3 orbit = p;
     float dz = 1.0;
@@ -595,6 +625,7 @@ float distObj(object obj, vec3 pos){
         return sdSphere(pos,  obj.scale);
         case 2:
         return deJulia(pos, 30, 10);
+//        return deKaliRemix(pos, 30);
         case 3:
         return sdEnterprise(pos/obj.scale)*obj.scale;
         case 4:
@@ -668,7 +699,7 @@ hit ray(vec3 ro, vec3 rd){
 }
 
 vec3 numDiff(vec3 p, float e){
-    vec2 h = vec2(e,min(int(uFrame),0));
+    vec2 h = vec2(e,min(int(uRendStep),0));
     return normalize(vec3(map(p+h.xyy).dist - map(p-h.xyy).dist, map(p+h.yxy).dist - map(p-h.yxy).dist, map(p+h.yyx).dist - map(p-h.yyx).dist));
 }
 vec3 tetraNormUnfix(vec3 p, float h){ // for function f(p){
@@ -681,7 +712,7 @@ vec3 tetraNormUnfix(vec3 p, float h){ // for function f(p){
 }
 vec3 tetraNorm(vec3 pos, float h){
     //    const float h = eps;      // replace by an appropriate value
-    int ZERO = min(int(uFrame),0); // non-constant zero
+    int ZERO = min(int(uRendStep),0); // non-constant zero
     vec3 n = vec3(0.0);
     for( int i=ZERO; i<4; i++) {
         vec3 e = 0.5773*(2.0*vec3((((i+3)>>1)&1),((i>>1)&1),(i&1))-1.0);
@@ -811,17 +842,27 @@ mat simple_noise(object obj, inout vec3 p, inout vec3 normal){
     vec3 map = texcoord_nor(p, obj);
     float val;
     vec4 coll;
-    node_noise_texture_3d(map, 10., 2., 0.5, 0., val, coll);
-    return lambertian(coll.xyz);
+//    node_noise_texture_3d(map, 10., 2., 0.5, 0., val, coll);
+//    return lambertian(coll.xyz);
+//    return lambertian(vector_noise(map, 1, 5, 1, 0));
+//    return emitter(vector_noise(map, 1, 5, 2, 0));
+    oil(map, 1, 2, 5, 0.5, 1.8, coll, val);
+    return emitter(coll.xyz);
 }
 
-path cust_mat(object obj, vec3 p, vec3 normal, vec3 dir_in){
+mat planet(object obj, inout vec3 p, inout vec3 normal){
+    vec3 map = texcoord_nor(p, obj);
+    return lambertian(vec3(continent_mask(map, 0.0, 0.258621)));
+}
+
+mat cust_mat(object obj, vec3 p, inout vec3 normal){
     switch(obj.material.custom){
         case 1:
-            return scatter(simple_noise(obj, p, normal), p, normal, dir_in);
+            return planet(obj, p, normal);
         case 0:
         default:
-            return scatter(obj.material, p, normal, dir_in);
+            return obj.material;
+//            return scatter(obj.material, p, normal, dir_in);
     }
 }
 
@@ -836,7 +877,7 @@ vec3 pathtracing(vec3 origin, vec3 direction){
             vec3 normal = calcNormal(p, obj);
             //            return inverse(mat3(viewMat))*normal;
 //            trace = add(trace, scatter(obj.material, p, normal, trace.direction));
-            trace = add(trace, cust_mat(obj, p, normal, trace.direction));
+            trace = add(trace, scatter(cust_mat(obj, p, normal), p, normal, trace.direction));
             origin = p+2*obj.eps*normalize(trace.direction+normal);
 
             //            float theta = acos(-p.y);
@@ -869,12 +910,10 @@ vec3 getRayDir(vec2 p, float aspect){
 }
 
 void main(){
-
     uvec2 texelCoord = ivec2(tileOffset * workGroupSize * workGroupCount + gl_GlobalInvocationID.xy);
     ivec2 resolution = imageSize(hdrOut);
 
-    if (texelCoord.x >= resolution.x || texelCoord.y >= resolution.y)
-    return;
+    if (texelCoord.x >= resolution.x || texelCoord.y >= resolution.y) return;
 
     for (int i = 0; i < world.length(); ++i){
         world[i].scale /= world_scale;
@@ -908,11 +947,12 @@ void main(){
             object obj = world[r.index];
             vec3 pos = ro + t*rd;
             vec3 nor = calcNormal(pos, obj);
+            mat material = cust_mat(obj, pos, nor);
             float diffuseTerm = cdot(nor, interp_light_dir);
-            diffuseTerm = orennayarTerm(diffuseTerm, nor, interp_light_dir, obj.material.roughness);
+            diffuseTerm = orennayarTerm(diffuseTerm, nor, interp_light_dir, material.roughness);
             diffuseTerm = max(diffuseTerm, 0.1);
-            float specularTerm = cooktorranceTerm(nor, interp_light_dir, obj.material.roughness, obj.material.refractionIndex);
-                        col = clamp(vec4(obj.material.diff_col,1) * diffuseTerm + vec4(obj.material.spec_col,1) * specularTerm, 0.0, 1.0);
+            float specularTerm = cooktorranceTerm(nor, interp_light_dir, material.roughness, material.refractionIndex);
+                        col = clamp(vec4(material.diff_col,1) * diffuseTerm + vec4(material.spec_col,1) * specularTerm, 0.0, 1.0);
 
 //            vec3 diff_col = vec3(0);
 //            vec3 map = mapping(pos, obj);
