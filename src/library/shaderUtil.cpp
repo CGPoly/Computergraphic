@@ -2,18 +2,19 @@
 
 #include <fstream>
 #include <vector>
+#include <filesystem>
 
-std::string loadShaderFile(std::string_view filename) {
+std::string loadShaderFile(std::filesystem::path const& filename) {
 
 	// For some reason only god knows, this function sometimes returns an empty string,
 	// even if the file hast contents in it. To fix this we just try reading the file contents
 	// at least 5 times before giving up.
 	for (int i = 0; i < 5; ++i) {
-		std::string absoluteFilename = std::string(SHADER_ROOT).append(filename);
-		std::ifstream in(absoluteFilename, std::ios::in | std::ios::binary);
+		std::filesystem::path resolvedFile = SHADER_ROOT / filename;
+		std::ifstream in(resolvedFile, std::ios::in | std::ios::binary);
 		in.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 		if (!in)
-			throw std::system_error(errno, std::system_category(), std::string("failed to open ").append(filename));
+			throw std::system_error(errno, std::system_category(), "failed to open " + filename.string());
 
 		auto res = std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
 
@@ -23,7 +24,7 @@ std::string loadShaderFile(std::string_view filename) {
 	std::cout << filename << " is supposedly empty" << std::endl;
 }
 
-GLuint compileShader(std::string_view filename, GLenum type) {
+GLuint compileShader(std::filesystem::path const& filename, GLenum type) {
     std::string shaderSource = loadShaderFile(filename);
 
     GLuint shader = glCreateShader(type);

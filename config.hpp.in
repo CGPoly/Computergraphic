@@ -1,6 +1,6 @@
 #pragma once
 
-#include <string>
+#include <filesystem>
 
-#define SHADER_ROOT std::string("@PROJECT_SOURCE_DIR@/shaders/")
-#define DATA_ROOT std::string("@PROJECT_SOURCE_DIR@/data/")
+#define SHADER_ROOT std::filesystem::path("@PROJECT_SOURCE_DIR@/shaders/")
+#define DATA_ROOT std::filesystem::path("@PROJECT_SOURCE_DIR@/data/")

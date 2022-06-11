@@ -5,6 +5,7 @@
 #include <optional>
 #include <functional>
 #include <filesystem>
+#include <set>
 #include "glad/glad.h"
 #include "glm/detail/type_mat4x4.hpp"
 
@@ -18,14 +19,14 @@ private:
 
     GLuint id = 0;
 	bool valid = false;
-	std::map<std::string const, ShaderInfo> shaders{};
+	std::map<std::filesystem::path const, ShaderInfo> shaders{};
 	std::map<std::string const, GLint const> uniformLocationCache{};
 
 	std::optional<GLint> uniformLocation(std::string const& uniformName);
 	void setGeneric(std::string const& uniformName, std::function<void(GLint)> const& glCall);
 
 public:
-	explicit ShaderProgram(std::map<std::string const, GLenum const> const& shaders);
+	explicit ShaderProgram(std::map<std::filesystem::path const, GLenum const> const& shaders);
     ShaderProgram(ShaderProgram const&) = delete;
 	ShaderProgram(ShaderProgram&&) noexcept;
     ~ShaderProgram();

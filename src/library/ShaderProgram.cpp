@@ -3,12 +3,13 @@
 #include "shaderUtil.hpp"
 
 #include <algorithm>
+#include <utility>
 
-ShaderProgram::ShaderProgram(std::map<std::string const, GLenum const> const& shaders) {
+ShaderProgram::ShaderProgram(std::map<std::filesystem::path const, GLenum const> const& shaders) {
 	this->id = glCreateProgram();
 
-	for (const auto& [fileName, type]: shaders) {
-		this->shaders[fileName] = ShaderInfo {
+	for (auto const& [path, type]: shaders) {
+		this->shaders[path] = ShaderInfo {
 				{},
 				type,
 				{}
@@ -33,14 +34,14 @@ void ShaderProgram::use() const {
 void ShaderProgram::compile() {
 	bool needsLink = false;
 	bool cantLink = false;
-	for (auto& [fileName, shaderInfo]: this->shaders) {
-		auto newLastModification = std::filesystem::last_write_time(SHADER_ROOT + fileName);
+	for (auto& [filePath, shaderInfo]: this->shaders) {
+		auto newLastModification = std::filesystem::last_write_time(SHADER_ROOT / filePath);
 		if (shaderInfo.lastModification == newLastModification)
 			continue;
 
 		shaderInfo.lastModification = newLastModification;
 
-		GLuint shaderId = compileShader(fileName, shaderInfo.type);
+		GLuint shaderId = compileShader(filePath, shaderInfo.type);
 		if (shaderId == 0) {
 			cantLink = true;
 			continue;
@@ -55,7 +56,7 @@ void ShaderProgram::compile() {
 		shaderInfo.id = shaderId;
 		needsLink = true;
 
-		std::cout << "Successfully compiled " << fileName << std::endl;
+		std::cout << "Successfully compiled " << filePath << std::endl;
 	}
 
 	if (!needsLink || cantLink)
@@ -68,6 +69,7 @@ void ShaderProgram::compile() {
 
 	valid = success;
 	if (success) {
+		std::cout << "Successfully linked Shader" << std::endl;
 		uniformLocationCache.clear();
 	} else {
 		GLint maxLength = 0;
