@@ -386,34 +386,34 @@ void oil(vec3 vector, float amount, float scale, float detail, float distortion,
     vec3 map_noised = vector_noise(vector, amount, scale*oil_size, detail, distortion);
     node_noise_texture_3d(map_noised, scale, detail, 0.5, distortion, fac, col);
 }
-uint hash(uint x){
-    x += (x << 10u);
-    x ^= (x >> 6u);
-    x += (x << 3u);
-    x ^= (x >> 11u);
-    x += (x << 15u);
-    return x;
-}
-int hash(int x){
-    x += (x << 10);
-    x ^= (x >> 6);
-    x += (x << 3);
-    x ^= (x >> 11);
-    x += (x << 15);
-    return x;
-}
+//uint hash(uint x){
+//    x += (x << 10u);
+//    x ^= (x >> 6u);
+//    x += (x << 3u);
+//    x ^= (x >> 11u);
+//    x += (x << 15u);
+//    return x;
+//}
+//int hash(int x){
+//    x += (x << 10);
+//    x ^= (x >> 6);
+//    x += (x << 3);
+//    x ^= (x >> 11);
+//    x += (x << 15);
+//    return x;
+//}
 float gradient(vec3 map){
     return clamp(map.x, 0, 1);
 }
 
-float floatConstruct(uint m){
-    const uint ieeeMantissa = 0x007FFFFFu;
-    const uint ieeeOne = 0x3F800000u;
-    m &= ieeeMantissa;
-    m |= ieeeOne;
-    float f = uintBitsToFloat(m);
-    return f - 1.;
-}
+//float floatConstruct(uint m){
+//    const uint ieeeMantissa = 0x007FFFFFu;
+//    const uint ieeeOne = 0x3F800000u;
+//    m &= ieeeMantissa;
+//    m |= ieeeOne;
+//    float f = uintBitsToFloat(m);
+//    return f - 1.;
+//}
 
 vec3 random_in_unit_disk() {
     while (true) {
