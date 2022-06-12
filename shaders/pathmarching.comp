@@ -40,6 +40,8 @@ struct mat {
     vec3 albedo;
     float fuzz;
     float IOR;
+    float alpha;
+    vec3 transmission_col;
     vec3 emmission;
 //preview:
     float roughness;
@@ -48,12 +50,14 @@ struct mat {
     vec3 spec_col;
 };
 
-mat lambertian(vec3 col){return mat(0, 0, col, 0, 1.45, vec3(0), 0.3, 0.3, col, vec3(1));}
-mat metal(vec3 col, float fuzz){return mat(1, 0, col, fuzz, 1.45, vec3(0), 0.1, fuzz, col, col);}
-mat emitter(vec3 col){return mat(2, 0, vec3(0), 0, 1.45, col, 0, 0, col, vec3(0));}
+mat transmission_lamb(vec3 lam_col, float alpha, vec3 transm_col){return mat(100,0,lam_col,0,1.45,alpha,transm_col,vec3(0),.3,.3,lam_col,vec3(1));}
+mat lambertian(vec3 col){return mat(0, 0, col, 0, 1.45, 1, vec3(1), vec3(0), 0.3, 0.3, col, vec3(1));}
+mat metal(vec3 col, float fuzz){return mat(1, 0, col, fuzz, 1.45, 1, vec3(1), vec3(0), 0.1, fuzz, col, col);}
+mat transmission_emm(vec3 emm_col, float alpha, vec3 transm_col){return mat(102,0,vec3(0),0,1.45,alpha,transm_col,emm_col,.3,.3,emm_col,vec3(1));}
+mat emitter(vec3 col){return mat(2, 0, vec3(0), 0, 1.45, 1, vec3(1), col, 0, 0, col, vec3(0));}
 //TODO: KEIN PHONG SHADER, aber fürs erste muss es reichen
-mat phong(vec3 col, float fuzz){return mat(4, 0, col, fuzz, 1.45,vec3(0),0.3,fuzz,col,vec3(1));}
-mat custom(uint index){return mat(0, index, vec3(1,0,1),0, 1.45,vec3(0),0.3,0.3,vec3(1,0,1),vec3(1));}
+mat phong(vec3 col, float fuzz){return mat(4, 0, col, fuzz, 1.45, 1, vec3(1),vec3(0),0.3,fuzz,col,vec3(1));}
+mat custom(uint index){return mat(2, index, vec3(1,0,1),0, 1.45, 1, vec3(1),vec3(1,0,1),0.3,0.3,vec3(1,0,1),vec3(1));}
 
 struct object {
     uint obj_index;
@@ -81,6 +85,7 @@ object world[] = object[](
 //    object(8, 0.001, mat3(1,0,0,0,0,-1,0,1,0), vec3(1,1,1), 1, vec3(0,0,0), metal(vec3(1),0.1)),
 //    object(1, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,-1000,3000), emitter(vec3(100,1.,1.)))
     object(1, 0.0001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(1))
+//    object(1, 0.0001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1100, vec3(0,0,0), custom(2))
 //    object(1, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(2000,0,0), metal(vec3(.722,.451,.20), 0.3)),
 //    object(1, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,2000), emitter(vec3(8,4,4))),
 //    object(8, 0.01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), lambertian(vec3(.8,.8,0.)))
@@ -207,15 +212,12 @@ vec4 uintToFloat(uvec4 v) {
 vec4 rand4(){
     return uintToFloat(rand4u());
 }
-
 vec3 rand3(){
     return uintToFloat(rand4u()).xyz;
 }
-
 vec2 rand2(){
     return uintToFloat(rand4u()).xy;
 }
-
 float rand(){
     return uintToFloat(rand4u()).x;
 }
@@ -223,7 +225,7 @@ float rand(){
 uint rot(uint x, uint k){
     return (x << k) | (x >> (32 - k));
 }
-void final(inout uint a, inout uint b, inout uint c){
+uint final(uint a, uint b, uint c){
     c ^= b;
     c -= rot(b, 14);
     a ^= c;
@@ -238,14 +240,14 @@ void final(inout uint a, inout uint b, inout uint c){
     b -= rot(a, 14);
     c ^= b;
     c -= rot(b, 24);
+    return c;
 }
 uint hash_uint2(uint kx, uint ky){
     uint a, b, c;
     a = b = c = 0xdeadbeefu + (2u << 2u) + 13u;
     b += ky;
     a += kx;
-    final(a, b, c);
-    return c;
+    return final(a,b,c);
 }
 uint hash_uint3(uint kx, uint ky, uint kz){
     uint a, b, c;
@@ -253,8 +255,19 @@ uint hash_uint3(uint kx, uint ky, uint kz){
     c += kz;
     b += ky;
     a += kx;
-    final(a, b, c);
-    return c;
+    return final(a,b,c);
+}
+uint hash_uint4(uint kx, uint ky, uint kz, uint kw){
+    uint a, b, c;
+    a = b = c = 0xdeadbeefu + (4u << 2u) + 13u;
+
+    a += kx;
+    b += ky;
+    c += kz;
+    mix(a, b, c);
+
+    a += kw;
+    return final(a,b,c);
 }
 uint hash_int3(int kx, int ky, int kz){
     return hash_uint3(uint(kx), uint(ky), uint(kz));
@@ -262,16 +275,25 @@ uint hash_int3(int kx, int ky, int kz){
 float hash_uint2_to_float(uint kx, uint ky){
     return float(hash_uint2(kx, ky)) / float(0xFFFFFFFFu);
 }
+float hash_uint3_to_float(uint kx, uint ky, uint kz){
+    return float(hash_uint3(kx, ky, kz)) / float(0xFFFFFFFFu);
+}
+float hash_uint4_to_float(uint kx, uint ky, uint kz, uint kw){
+    return float(hash_uint4(kx, ky, kz, kw)) / float(0xFFFFFFFFu);
+}
 float hash_vec2_to_float(vec2 k){
     return hash_uint2_to_float(floatBitsToUint(k.x), floatBitsToUint(k.y));
 }
-void FLOORFRAC(inout float x, inout int x_int, inout float x_fract) {
-    float x_floor = floor(x);
-    x_int = int(x_floor);
-    x_fract = x - x_floor;
+float hash_vec3_to_float(vec3 k){
+    return hash_uint3_to_float(floatBitsToUint(k.x), floatBitsToUint(k.y), floatBitsToUint(k.z));
 }
-float tri_mix(float v0, float v1, float v2, float v3, float v4, float v5,
-    float v6, float v7, float x, float y, float z){
+float hash_vec4_to_float(vec4 k){
+    return hash_uint4_to_float(floatBitsToUint(k.x), floatBitsToUint(k.y), floatBitsToUint(k.z), floatBitsToUint(k.w));
+}
+vec3 hash_vec3_to_vec3(vec3 k){
+    return vec3(hash_vec3_to_float(k), hash_vec4_to_float(vec4(k, 1.0)), hash_vec4_to_float(vec4(k, 2.0)));
+}
+float tri_mix(float v0, float v1, float v2, float v3, float v4, float v5,float v6,float v7,float x,float y,float z){
     float x1 = 1.0 - x;
     float y1 = 1.0 - y;
     float z1 = 1.0 - z;
@@ -284,10 +306,10 @@ float fade(float t){
 float negate_if(float value, uint condition){
     return (condition != 0u) ? -value : value;
 }
-vec3 random_vec3_offset(float seed){
-    return vec3(100.0 + hash_vec2_to_float(vec2(seed, 0.0)) * 100.0,
-    100.0 + hash_vec2_to_float(vec2(seed, 1.0)) * 100.0,
-    100.0 + hash_vec2_to_float(vec2(seed, 2.0)) * 100.0);
+vec3 random_vec3_offset(float inp){
+    return vec3(100.0 + hash_vec2_to_float(vec2(inp, 0.0)) * 100.0,
+    100.0 + hash_vec2_to_float(vec2(inp, 1.0)) * 100.0,
+    100.0 + hash_vec2_to_float(vec2(inp, 2.0)) * 100.0);
 }
 float noise_grad(uint hash, float x, float y, float z){
     uint h = hash & 15u;
@@ -297,12 +319,12 @@ float noise_grad(uint hash, float x, float y, float z){
     return negate_if(u, h & 1u) + negate_if(v, h & 2u);
 }
 float noise_perlin(vec3 vec){
-    int X, Y, Z;
-    float fx, fy, fz;
-
-    FLOORFRAC(vec.x, X, fx);
-    FLOORFRAC(vec.y, Y, fy);
-    FLOORFRAC(vec.z, Z, fz);
+    int X = int(floor(vec.x));
+    int Y = int(floor(vec.y));
+    int Z = int(floor(vec.z));
+    float fx = fract(vec.x);
+    float fy = fract(vec.y);
+    float fz = fract(vec.z);
 
     float u = fade(fx);
     float v = fade(fy);
@@ -353,15 +375,20 @@ float fractal_noise(vec3 p, float octaves, float roughness){
         sum /= maxamp;
         sum2 /= maxamp + amp;
         return (1.0 - rmd) * sum + rmd * sum2;
+//        fac = (1.0 - rmd) * sum + rmd * sum2;
     }
     else {
         return sum / maxamp;
+//        fac = sum / maxamp;
     }
 }
 
 void node_noise_texture_3d(vec3 co,float scale,float detail,float roughness,float distortion,out float value,out vec4 color){
     vec3 p = co * scale;
     if (distortion != 0.0) {
+        int X, Y, Z;
+        float fx, fy, fz;
+        float x, y, z;
         p += vec3(snoise(p + random_vec3_offset(0.0)) * distortion,
         snoise(p + random_vec3_offset(1.0)) * distortion,
         snoise(p + random_vec3_offset(2.0)) * distortion);
@@ -379,41 +406,41 @@ vec3 vector_noise(vec3 vector, float amount, float scale, float detail, float di
     node_noise_texture_3d(vector, scale, detail, 0.5, amount, tmp, coll);
     vec3 col = coll.xyz;
     col -= vec3(0.5);
-//    return vector + amount*col;
     return mix_add(amount, vector, col);
 }
 void oil(vec3 vector, float amount, float scale, float detail, float distortion, float oil_size, out vec4 col, out float fac){
     vec3 map_noised = vector_noise(vector, amount, scale*oil_size, detail, distortion);
     node_noise_texture_3d(map_noised, scale, detail, 0.5, distortion, fac, col);
 }
-//uint hash(uint x){
-//    x += (x << 10u);
-//    x ^= (x >> 6u);
-//    x += (x << 3u);
-//    x ^= (x >> 11u);
-//    x += (x << 15u);
-//    return x;
-//}
-//int hash(int x){
-//    x += (x << 10);
-//    x ^= (x >> 6);
-//    x += (x << 3);
-//    x ^= (x >> 11);
-//    x += (x << 15);
-//    return x;
-//}
+
+float voronoi(vec3 coord,float scale,float smoothness,float randomness){
+    randomness = clamp(randomness, 0.0, 1.0);
+    smoothness = clamp(smoothness / 2.0, 0.0, 0.5);
+
+    vec3 scaledCoord = coord * scale;
+    vec3 cellPosition = floor(scaledCoord);
+    vec3 localPosition = scaledCoord - cellPosition;
+
+    float smoothDistance = 8.0;
+    vec3 smoothColor = vec3(0.0);
+    vec3 smoothPosition = vec3(0.0);
+    for (int k = -2; k <= 2; k++) {
+        for (int j = -2; j <= 2; j++) {
+            for (int i = -2; i <= 2; i++) {
+                vec3 cellOffset = vec3(i, j, k);
+                vec3 pointPosition = cellOffset + hash_vec3_to_vec3(cellPosition + cellOffset) * randomness;
+                float distanceToPoint = distance(pointPosition, localPosition);
+                float h = smoothstep(0.0, 1.0, 0.5 + 0.5 * (smoothDistance - distanceToPoint) / smoothness);
+                float correctionFactor = smoothness * h * (1.0 - h);
+                smoothDistance = mix(smoothDistance, distanceToPoint, h) - correctionFactor;
+            }
+        }
+    }
+    return smoothDistance;
+}
 float gradient(vec3 map){
     return clamp(map.x, 0, 1);
 }
-
-//float floatConstruct(uint m){
-//    const uint ieeeMantissa = 0x007FFFFFu;
-//    const uint ieeeOne = 0x3F800000u;
-//    m &= ieeeMantissa;
-//    m |= ieeeOne;
-//    float f = uintBitsToFloat(m);
-//    return f - 1.;
-//}
 
 vec3 random_in_unit_disk() {
     while (true) {
@@ -520,6 +547,15 @@ float height_planet(float land_det, float land_mask, float riv_mask, float river
     height = mix(height, 0, land_mask);
     height = mix(height, clamp(linear_rgb_curve(land_det, 1, 0, 0.323979), 0, 1), caps_mask);
     return height;
+}
+float cloud_mask(vec3 map){
+    vec4 col1; float fac1;
+    vec4 col2; float fac2;
+    oil(map, 0.331, 4.5, 5, .5, 5., col1, fac1);
+    oil(map, 1, 1.8, 5, .5, 1., col2, fac2);
+    fac1 = col_ramp(fac1, .255, .822, 0, 1);
+    fac2 = col_ramp(fac2, .255, .822, 0, 1);
+    return mix(fac1, fac2, 0.659);
 }
 
 //DE of the primitives is from https://iquilezles.org/articles/distfunctions/
@@ -763,26 +799,28 @@ float deKaliRemix(vec3 p, int Iterations) {
 float distObj(object obj, vec3 pos){
     switch(obj.obj_index){
         case 0:
-        return sdBox(pos,  vec3(1,1,1));
+            return sdBox(pos,  vec3(1,1,1));
         case 1:
-        return sdSphere(pos,  obj.scale);
+            return sdSphere(pos,  obj.scale);
         case 2:
-        return deJulia(pos, 30, 10);
-//        return deKaliRemix(pos, 30);
+            return deJulia(pos, 30, 10);
+            //return deKaliRemix(pos, 30);
         case 3:
-        return sdEnterprise(pos/obj.scale)*obj.scale;
+            return sdEnterprise(pos/obj.scale)*obj.scale;
         case 4:
-        return deKaliRemix(pos, 10);
+            return deKaliRemix(pos, 10);
         case 5:
-        return deManySpheres(pos);
+            return deManySpheres(pos);
         case 6:
-        return test(pos);
+            return test(pos);
         case 7:
-        return sbU(oBevel(sdBox(pos,  vec3(1,1,0.5)),0.01), sdEllipsoid(pos,  vec3(1,1,1)), 0.01);
+            return sbU(oBevel(sdBox(pos,  vec3(1,1,0.5)),0.01), sdEllipsoid(pos,  vec3(1,1,1)), 0.01);
         case 8:
-        return sdPlane(pos, vec3(0,1,0),1);
+            return sdPlane(pos, vec3(0,1,0),1);
+        case 101:
+            return -sdSphere(pos,  obj.scale);
         default:
-        return 1.0/0.0; // maximal highp float
+            return 1.0/0.0; // maximal highp float
     }
 }
 
@@ -979,8 +1017,18 @@ float node_fresnel(float ior, vec3 nor, vec3 p, vec3 origin){
     return fresnel_dielectric(V, nor, eta);
 }
 
-path scatter(mat material, vec3 p, vec3 origin, vec3 normal, vec3 dir_in){
-    if(material.type == 0) {  //lambertian
+path scatter(mat material, uint index, vec3 p, vec3 origin, vec3 normal, vec3 dir_in){
+    //how transmission works is my own idea, might not be optimal
+    if (100 <= material.type){ //transmission
+        if (rand() > material.alpha) {
+//            world[index].obj_index = (world[index].obj_index+100)%200;
+            world[index].obj_index = 21;
+            return path(false,material.transmission_col,dir_in,vec3(0));
+        }
+//        material.type -= 100;
+        material.type = 2;
+    }
+    if (material.type == 0) {  //lambertian
         vec3 new_direction =  normalize(normalize(normal) + rand_unit_sphere());
         return path(false, material.albedo, new_direction, vec3(0));
     }
@@ -1004,18 +1052,6 @@ path scatter(mat material, vec3 p, vec3 origin, vec3 normal, vec3 dir_in){
         return path(dot(new_direction, normal) <= 0, mix(material.albedo, vec3(1), fresnel), new_direction, vec3(0));
     }
     return path(true, vec3(0),vec3(0),vec3(0));
-}
-
-mat simple_noise(object obj, inout vec3 p, inout vec3 normal){
-    vec3 map = texcoord_nor(p, obj);
-    float val;
-    vec4 coll;
-//    node_noise_texture_3d(map, 10., 2., 0.5, 0., val, coll);
-//    return lambertian(coll.xyz);
-//    return lambertian(vector_noise(map, 1, 5, 1, 0));
-//    return emitter(vector_noise(map, 1, 5, 2, 0));
-    oil(map, 1, 2, 5, 0.5, 1.8, coll, val);
-    return emitter(coll.xyz);
 }
 
 mat planet(object obj, inout vec3 p, inout vec3 normal){
@@ -1043,15 +1079,41 @@ mat planet(object obj, inout vec3 p, inout vec3 normal){
     vec3 col = color_planet(land_det, sea_det, planet_col, desert_col, sea_col, mix(cont_mask, cont_mask+riv_mask, river_str_col), des_mask, caps_mask);
     float rough = roughness_planet(land_det, cont_mask, riv_mask, river_str_rough_bump, caps_mask);
     float height = height_planet(land_det, cont_mask, riv_mask, river_str_rough_bump, caps_mask);
-//    return emitter(vec3(height));
+
+    return emitter(col);
 //    return phong(col, rough);
-    return lambertian(col);
+//    return lambertian(col);
+}
+
+mat clouds_low(object obj, inout vec3 p, inout vec3 normal){
+    float planet_rot = 0;
+    float wind = 0;
+
+    vec3 map = texcoord_nor(p, obj);
+//    vec3 map = vec3(1,0,0);
+    map = mat3(cos(planet_rot),-sin(planet_rot),0,sin(planet_rot),cos(planet_rot),0,0,0,1)*map;
+    map.x += wind;
+    vec4 col1; float fac1;
+    vec4 col2; float fac2;
+    oil(map, 0.331, 4.5, 5, .5, 5., col1, fac1);
+    oil(map, 1, 1.8, 5, .5, 1., col2, fac2);
+    float cloads = cloud_mask(map);
+    float land_det = land_detail(map);
+    fac1 = col_ramp(fac1, 0.268966, 1., 0, 1);
+    fac2 = col_ramp(fac2, 0.344828, 0.627587, 0, 1);
+    float fac = mix(fac1, fac1 + fac2, 0.644828);
+    fac = col_ramp(fac, 0.344828, 1, 0, 1);
+//    return transmission_emm(vec3(1), fac1, vec3(1));
+//    return emitter(map);
+    return emitter(vec3(1));
 }
 
 mat cust_mat(object obj, vec3 p, inout vec3 normal){
     switch(obj.material.custom){
         case 1:
             return planet(obj, p, normal);
+        case 2:
+            return clouds_low(obj, p, normal);
         case 0:
         default:
             return obj.material;
@@ -1074,7 +1136,7 @@ vec3 pathtracing(vec3 origin, vec3 direction){
             vec3 normal = calcNormal(p, obj);
             //            return inverse(mat3(viewMat))*normal;
 //            trace = add(trace, scatter(obj.material, p, normal, trace.direction));
-            trace = add(trace, scatter(cust_mat(obj, p, normal), p, origin, normal, trace.direction));
+            trace = add(trace, scatter(cust_mat(obj, p, normal), r.index, p, origin, normal, trace.direction));
             origin = p+2*obj.eps*normalize(trace.direction+normal);
 
             //            float theta = acos(-p.y);
