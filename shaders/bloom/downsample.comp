@@ -4,6 +4,8 @@ layout(local_size_x = 32, local_size_y = 32) in;
 layout(binding = 0) uniform sampler2D src;
 layout(rgba32f, binding = 1) uniform image2D dst;
 
+uniform uint srcLod;
+
 vec4 box4(vec4 p0, vec4 p1, vec4 p2, vec4 p3) {
     return (p0 + p1 + p2 + p3) * 0.25;
 }
@@ -12,19 +14,19 @@ void main() {
     vec2 texelCoord = vec2(gl_GlobalInvocationID.xy + vec2(0.5)) / imageSize(dst);
     vec2 texelSize = vec2(1) / imageSize(dst);
 
-    vec4 a = textureLod(src, texelCoord + texelSize * vec2(-1.0, -1.0), 1);
-    vec4 b = textureLod(src, texelCoord + texelSize * vec2( 0.0, -1.0), 1);
-    vec4 c = textureLod(src, texelCoord + texelSize * vec2( 1.0, -1.0), 1);
-    vec4 d = textureLod(src, texelCoord + texelSize * vec2(-0.5, -0.5), 1);
-    vec4 e = textureLod(src, texelCoord + texelSize * vec2( 0.5, -0.5), 1);
-    vec4 f = textureLod(src, texelCoord + texelSize * vec2(-1.0,  0.0), 1);
-    vec4 g = textureLod(src, texelCoord + texelSize * vec2( 0.0,  0.0), 1);
-    vec4 h = textureLod(src, texelCoord + texelSize * vec2( 1.0,  0.0), 1);
-    vec4 i = textureLod(src, texelCoord + texelSize * vec2(-0.5,  0.5), 1);
-    vec4 j = textureLod(src, texelCoord + texelSize * vec2( 0.5,  0.5), 1);
-    vec4 k = textureLod(src, texelCoord + texelSize * vec2(-1.0,  1.0), 1);
-    vec4 l = textureLod(src, texelCoord + texelSize * vec2( 0.0,  1.0), 1);
-    vec4 m = textureLod(src, texelCoord + texelSize * vec2( 1.0,  1.0), 1);
+    vec4 a = textureLodOffset(src, texelCoord, srcLod, ivec2(-2, -2));
+    vec4 b = textureLodOffset(src, texelCoord, srcLod, ivec2( 0, -2));
+    vec4 c = textureLodOffset(src, texelCoord, srcLod, ivec2( 2, -2));
+    vec4 d = textureLodOffset(src, texelCoord, srcLod, ivec2(-1, -1));
+    vec4 e = textureLodOffset(src, texelCoord, srcLod, ivec2( 1, -1));
+    vec4 f = textureLodOffset(src, texelCoord, srcLod, ivec2(-2,  0));
+    vec4 g = textureLodOffset(src, texelCoord, srcLod, ivec2( 0,  0));
+    vec4 h = textureLodOffset(src, texelCoord, srcLod, ivec2( 2,  0));
+    vec4 i = textureLodOffset(src, texelCoord, srcLod, ivec2(-1,  1));
+    vec4 j = textureLodOffset(src, texelCoord, srcLod, ivec2( 1,  1));
+    vec4 k = textureLodOffset(src, texelCoord, srcLod, ivec2(-2,  2));
+    vec4 l = textureLodOffset(src, texelCoord, srcLod, ivec2( 0,  2));
+    vec4 m = textureLodOffset(src, texelCoord, srcLod, ivec2( 2,  2));
 
     vec4 color = box4(d, e, i, j) * 0.5
             + box4(a, b, g, f) * 0.125

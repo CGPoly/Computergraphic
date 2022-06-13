@@ -43,7 +43,6 @@ unsigned int maxBloomPasses = 15;
 unsigned int bloomPasses = 6;
 
 float bloomThreshold = 1;
-float bloomRadius = 1;
 float bloomIntensity = 1;
 
 static Camera camera;
@@ -206,13 +205,12 @@ int main(int, char* argv[]) {
 		ImGui::Checkbox("Enabled", &bloomEnabled);
 	    ImGui::SliderScalar("Passes", ImGuiDataType_U32, &bloomPasses, &minBloomPasses, &maxBloomPasses);
 		ImGui::SliderFloat("Threshold", &bloomThreshold, 0, 10, "%.3f", ImGuiSliderFlags_Logarithmic);
-		ImGui::SliderFloat("Radius", &bloomRadius, 0, 100, "%.3f", ImGuiSliderFlags_Logarithmic);
 		ImGui::SliderFloat("Intensity", &bloomIntensity, 0, 10, "%.3f", ImGuiSliderFlags_Logarithmic);
 		ImGui::End();
 
 	    if (bloomEnabled) {
 		    (*bloomProcessor).process(hdrColorBuffer, windowWidth, windowHeight,
-		                              bloomPasses, bloomThreshold / exposure, bloomRadius, bloomIntensity);
+		                              bloomPasses, bloomThreshold / exposure, bloomIntensity);
 	    }
 
 		// ---- End Bloom

@@ -33,7 +33,7 @@ void BloomProcessor::resize(unsigned int width, unsigned int height) {
 	mipCount = log2(std::max(width, height));
 	glGenTextures(1, &bloomTexture);
 	glBindTexture(GL_TEXTURE_2D, bloomTexture);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
@@ -41,7 +41,7 @@ void BloomProcessor::resize(unsigned int width, unsigned int height) {
 }
 
 void BloomProcessor::process(GLuint hdrTexture, unsigned int width, unsigned int height, unsigned int passes,
-                             float threshold, float radius, float intensity) {
+                             float threshold, float intensity) {
 	thresholdFilterProgram.compile();
 	downsampleProgram.compile();
 	upsampleProgram.compile();
@@ -63,6 +63,7 @@ void BloomProcessor::process(GLuint hdrTexture, unsigned int width, unsigned int
 	thresholdFilterProgram.use();
 	thresholdFilterProgram.set1f("threshold", threshold);
 	dispatchCompute(width, height);
+
 	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 	glActiveTexture(GL_TEXTURE0);
@@ -72,8 +73,9 @@ void BloomProcessor::process(GLuint hdrTexture, unsigned int width, unsigned int
 	downsampleProgram.use();
 	for (unsigned int i = 0; i < clampedPasses; ++i) {
 		glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, i);
+
 		glBindImageTexture(1, bloomTexture, i + 1, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+		downsampleProgram.set1ui("srcLod", i);
 
 		dispatchCompute(width / pow(2, i + 1), height / pow(2, i + 1));
 	}
@@ -82,19 +84,17 @@ void BloomProcessor::process(GLuint hdrTexture, unsigned int width, unsigned int
 
 	// upsample pass
 	upsampleProgram.use();
-	upsampleProgram.set1f("radius", radius);
 	upsampleProgram.set1f("intensity", intensity);
 	upsampleProgram.set1ui("passes", clampedPasses);
 	for (int i = clampedPasses - 1; i >= 0; --i) {
-		upsampleProgram.set1i("lastPass", i == 0);
+		glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, i + 1);
-		glBindImageTexture(1, bloomTexture, i, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+		glBindImageTexture(1, bloomTexture, i, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+		upsampleProgram.set1ui("srcLod", i + 1);
+		upsampleProgram.set1i("lastPass", i == 0);
 
 		dispatchCompute(width / pow(2, i), height / pow(2, i));
 	}
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 
 	// for now. could be more efficient
 	glFinish();

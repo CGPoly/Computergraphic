@@ -25,8 +25,7 @@ public:
 
 	void resize(unsigned int width, unsigned int height);
 	void process(GLuint hdrTexture, unsigned int width, unsigned int height, unsigned int passes, float threshold,
-	             float radius,
-	             float d);
+	             float intensity);
 
 	GLuint getBloomTexture() const;
 };
