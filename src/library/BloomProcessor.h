@@ -6,6 +6,7 @@
 class BloomProcessor {
 private:
 	GLuint bloomTexture = 0;
+	GLuint bloomSampler = 0;
 	unsigned int mipCount = 0;
 
 	ShaderProgram thresholdFilterProgram;

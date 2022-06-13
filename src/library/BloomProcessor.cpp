@@ -18,6 +18,7 @@ BloomProcessor::BloomProcessor(unsigned int width, unsigned int height):
 
 BloomProcessor::BloomProcessor(BloomProcessor&& other) noexcept:
 		bloomTexture(std::exchange(other.bloomTexture, 0)),
+		bloomSampler(std::exchange(other.bloomSampler, 0)),
 		mipCount(other.mipCount),
 		thresholdFilterProgram(std::move(other.thresholdFilterProgram)),
 		downsampleProgram(std::move(other.downsampleProgram)),
@@ -25,6 +26,7 @@ BloomProcessor::BloomProcessor(BloomProcessor&& other) noexcept:
 
 BloomProcessor::~BloomProcessor() {
 	glDeleteTextures(1, &bloomTexture);
+	glDeleteSamplers(1, &bloomSampler);
 }
 
 void BloomProcessor::resize(unsigned int width, unsigned int height) {
@@ -33,11 +35,13 @@ void BloomProcessor::resize(unsigned int width, unsigned int height) {
 	mipCount = log2(std::max(width, height));
 	glGenTextures(1, &bloomTexture);
 	glBindTexture(GL_TEXTURE_2D, bloomTexture);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 	glTexStorage2D(GL_TEXTURE_2D, mipCount, GL_RGBA32F, width, height);
+
+	glGenSamplers(1, &bloomSampler);
+	glSamplerParameteri(bloomSampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+	glSamplerParameteri(bloomSampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glSamplerParameteri(bloomSampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glSamplerParameteri(bloomSampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 }
 
 void BloomProcessor::process(GLuint hdrTexture, unsigned int width, unsigned int height, unsigned int passes,
@@ -68,6 +72,7 @@ void BloomProcessor::process(GLuint hdrTexture, unsigned int width, unsigned int
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, bloomTexture);
+	glBindSampler(0, bloomSampler);
 
 	// downsample pass
 	downsampleProgram.use();
@@ -96,6 +101,7 @@ void BloomProcessor::process(GLuint hdrTexture, unsigned int width, unsigned int
 		dispatchCompute(width / pow(2, i), height / pow(2, i));
 	}
 
+	glBindSampler(0, 0);
 	// for now. could be more efficient
 	glFinish();
 }
