@@ -34,7 +34,7 @@ void main() {
         resultColor = (color * intensity) / passes;
     } else {
         vec4 previousColor = imageLoad(dst, pixelCoord);
-        resultColor = previousColor + color * intensity;
+        resultColor = previousColor + color;
     }
     imageStore(dst, pixelCoord, resultColor);
 }
