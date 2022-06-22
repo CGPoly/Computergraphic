@@ -363,6 +363,10 @@ void initTextures(GLsizei res) {
 //}
 
 void resizeCallback(GLFWwindow*, int width, int height) {
+	std::cout << "resized to " << width << "x" << height << std::endl;
+	if (width == 0 || height == 0)
+		return;
+
 	glViewport(0, 0, width, height);
 	windowWidth = width;
 	windowHeight = height;
