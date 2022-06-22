@@ -16,6 +16,9 @@ int windowHeight = 720;
 
 unsigned int samplesPerFrame = 0;
 
+const int texture_resolution = 1024*1;
+//const int texture_resolution = 32;
+
 // tone mapping
 float exposure = 1;
 bool gammaCorrection = true;
@@ -23,6 +26,9 @@ bool gammaCorrection = true;
 // constants - THESE NEED TO BE IDENTICAL TO THE ONES DEFINED IN pathmarching.comp
 const glm::uvec2 workGroupSize(32);
 const glm::uvec2 workGroupCount(4);
+
+const glm::uvec2 workGroupSize_tex(32);
+const glm::uvec2 workGroupCount_tex(4);
 
 // path marching state
 glm::uvec2 currentRenderingTile(0);
@@ -49,6 +55,12 @@ static Camera camera;
 
 std::optional<BloomProcessor> bloomProcessor;
 
+unsigned int planet_albedo;
+unsigned int planet_displacement;
+unsigned int planet_roughness;
+void initTextures(GLsizei res);
+//void resizeTextures(GLsizei res);
+
 unsigned int hdrColorBuffer;
 void initHdrColorBuffer(GLsizei width, GLsizei height);
 void resizeHdrColorBuffer(GLsizei width, GLsizei height);
@@ -69,6 +81,7 @@ int main(int, char* argv[]) {
 	ImGui_ImplOpenGL3_Init("#version 400 core");
 
 	initHdrColorBuffer(windowWidth, windowHeight);
+    initTextures(texture_resolution);
 	bloomProcessor = BloomProcessor(windowWidth, windowHeight);
 
 	ShaderProgram toneMapProgram({
@@ -76,6 +89,11 @@ int main(int, char* argv[]) {
 		{ "tonemap.frag", GL_FRAGMENT_SHADER }
 	});
 	toneMapProgram.compile();
+
+    ShaderProgram textureProgram({
+        {"textures.comp", GL_COMPUTE_SHADER}
+    });
+    textureProgram.compile();
 
 	ShaderProgram pathMarchingProgram({
 		{ "pathmarching.comp", GL_COMPUTE_SHADER }
@@ -108,14 +126,16 @@ int main(int, char* argv[]) {
 
     unsigned int render_step = 0;
     unsigned int frame = 0;
+    bool frame_update = true;
     while (!glfwWindowShouldClose(window)) {
 	    glfwPollEvents();
 
 		// Recompile shaders if modifications happened
+        textureProgram.compile();
 	    pathMarchingProgram.compile();
 	    toneMapProgram.compile();
 
-		if (!pathMarchingProgram.isValid() || !toneMapProgram.isValid())
+		if (!pathMarchingProgram.isValid() || !toneMapProgram.isValid() || !textureProgram.isValid())
 			continue;
 
 	    ImGui_ImplOpenGL3_NewFrame();
@@ -158,7 +178,29 @@ int main(int, char* argv[]) {
 
             glClearTexImage(hdrColorBuffer, 0, GL_RGBA, GL_FLOAT, NULL);
             ++frame;
+            frame_update = true;
 
+        }
+
+        // Render Textures
+        {
+//            glClearTexImage(planet_albedo, 0, GL_RGBA, GL_FLOAT, NULL);
+//            resizeTextures(texture_resolution);
+            glm::uvec2 currentRenderingTile_tex(0);
+            textureProgram.use();
+            textureProgram.set1ui("uFrame", frame);
+            textureProgram.set1i("frame_update", frame_update);
+            glBindImageTexture(0, planet_albedo, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+            glBindImageTexture(1, planet_displacement, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+            glBindImageTexture(2, planet_roughness, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+            for (int y = 0; y < divCeil(texture_resolution, workGroupSize_tex.y * workGroupCount_tex.y); ++y){
+                for (int x = 0; x < divCeil(texture_resolution, workGroupSize_tex.y * workGroupCount_tex.y); ++x){
+                    textureProgram.set2ui("tileOffset", x, y);
+                    glDispatchCompute(workGroupCount_tex.x, workGroupCount_tex.y, 1);
+                }
+            }
+//            glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+            glFinish();
         }
 
 		// ---- Render to hdr buffer
@@ -168,6 +210,12 @@ int main(int, char* argv[]) {
 		    pathMarchingProgram.set1ui("uRendStep", render_step);
 		    pathMarchingProgram.set1ui("uFrame", frame);
 			pathMarchingProgram.set1ui("samplesPerPass", samplesPerPass);
+            glBindTextureUnit(100, planet_albedo);
+            glBindTextureUnit(101, planet_displacement);
+            glBindTextureUnit(102, planet_roughness);
+			pathMarchingProgram.set1i("planet_albedo", 100);
+			pathMarchingProgram.set1i("planet_height", 101);
+			pathMarchingProgram.set1i("planet_roughness", 102);
 
 		    glBindImageTexture(0, hdrColorBuffer, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
@@ -249,6 +297,7 @@ int main(int, char* argv[]) {
 	    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         glfwSwapBuffers(window);
+        frame_update = false;
         ++render_step;
     }
 
@@ -272,6 +321,31 @@ void resizeHdrColorBuffer(GLsizei width, GLsizei height) {
 	glBindTexture(GL_TEXTURE_2D, hdrColorBuffer);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
 }
+
+void initTextures(GLsizei res) {
+    glGenTextures(1, &planet_albedo);
+    glBindTexture(GL_TEXTURE_2D, planet_albedo);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, res, res, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glGenTextures(1, &planet_displacement);
+    glBindTexture(GL_TEXTURE_2D, planet_displacement);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, res, res, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glGenTextures(1, &planet_roughness);
+    glBindTexture(GL_TEXTURE_2D, planet_roughness);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, res, res, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+}
+
+//void resizeTextures(GLsizei res) {
+//    glBindTexture(GL_TEXTURE_2D, planet_albedo);
+//    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, res, res, 0, GL_RGBA, GL_FLOAT, NULL);
+//}
 
 void resizeCallback(GLFWwindow*, int width, int height) {
 	glViewport(0, 0, width, height);
