@@ -16,7 +16,7 @@ int windowHeight = 720;
 
 unsigned int samplesPerFrame = 0;
 
-const int texture_resolution = 1024*1;
+const int texture_resolution = 1024*16;
 //const int texture_resolution = 32;
 
 // tone mapping
@@ -33,6 +33,9 @@ const glm::uvec2 workGroupCount_tex(4);
 // path marching state
 glm::uvec2 currentRenderingTile(0);
 unsigned int currentSample = 0;
+
+auto passStartTime = std::chrono::system_clock::now();
+float samplesPerPassPerPixel = 0;
 
 const unsigned int minPassTimeTarget = 1;
 const unsigned int maxPassTimeTarget = 1000;
@@ -162,12 +165,14 @@ int main(int, char* argv[]) {
 	    ImGui::Text("Current sample: %u", currentSample);
 	    ImGui::Text("Current frame: %u", frame);
 	    ImGui::Text("Current tile: %u, %u", currentRenderingTile.x, currentRenderingTile.y);
+		ImGui::Text("Samples per Pass per Pixel: %0.2f", samplesPerPassPerPixel);
 	    ImGui::End();
 
 
 	    if (camera.pollChanged() || changedSamplesPerPass) {
 			currentSample = 0;
 		    currentRenderingTile = glm::uvec2(0);
+		    passStartTime = std::chrono::system_clock::now();
 
 			glClearTexImage(hdrColorBuffer, 0, GL_RGBA, GL_FLOAT, NULL);
 		}
@@ -183,16 +188,19 @@ int main(int, char* argv[]) {
         }
 
         // Render Textures
-        {
+        if (frame_update) {
+	        auto startTime = std::chrono::system_clock::now();
 //            glClearTexImage(planet_albedo, 0, GL_RGBA, GL_FLOAT, NULL);
 //            resizeTextures(texture_resolution);
             glm::uvec2 currentRenderingTile_tex(0);
             textureProgram.use();
             textureProgram.set1ui("uFrame", frame);
             textureProgram.set1i("frame_update", frame_update);
-            glBindImageTexture(0, planet_albedo, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-            glBindImageTexture(1, planet_displacement, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-            glBindImageTexture(2, planet_roughness, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+
+            glBindImageTexture(0, planet_albedo, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
+            glBindImageTexture(1, planet_displacement, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R8);
+            glBindImageTexture(2, planet_roughness, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R8);
+
             for (int y = 0; y < divCeil(texture_resolution, workGroupSize_tex.y * workGroupCount_tex.y); ++y){
                 for (int x = 0; x < divCeil(texture_resolution, workGroupSize_tex.y * workGroupCount_tex.y); ++x){
                     textureProgram.set2ui("tileOffset", x, y);
@@ -201,6 +209,10 @@ int main(int, char* argv[]) {
             }
 //            glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
             glFinish();
+
+	        auto nowTime = std::chrono::system_clock::now();
+	        auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(nowTime - startTime).count();
+			std::cout << "Rendered planet textures time: " << elapsedTime << "ms" << std::endl;
         }
 
 		// ---- Render to hdr buffer
@@ -210,14 +222,11 @@ int main(int, char* argv[]) {
 		    pathMarchingProgram.set1ui("uRendStep", render_step);
 		    pathMarchingProgram.set1ui("uFrame", frame);
 			pathMarchingProgram.set1ui("samplesPerPass", samplesPerPass);
-            glBindTextureUnit(100, planet_albedo);
-            glBindTextureUnit(101, planet_displacement);
-            glBindTextureUnit(102, planet_roughness);
-			pathMarchingProgram.set1i("planet_albedo", 100);
-			pathMarchingProgram.set1i("planet_height", 101);
-			pathMarchingProgram.set1i("planet_roughness", 102);
 
 		    glBindImageTexture(0, hdrColorBuffer, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+            glBindTextureUnit(1, planet_albedo);
+            glBindTextureUnit(2, planet_displacement);
+            glBindTextureUnit(3, planet_roughness);
 
 		    auto renderingStartTime = std::chrono::system_clock::now();
 		    while (true) {
@@ -239,6 +248,12 @@ int main(int, char* argv[]) {
 					currentRenderingTile.x = 0;
 				    currentRenderingTile.y++;
 			    }
+
+			    auto nowTime = std::chrono::system_clock::now();
+			    auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(nowTime - passStartTime).count();
+				samplesPerPassPerPixel = (windowWidth * windowHeight * samplesPerPass) / elapsedTime;
+			    passStartTime = nowTime;
+
 
 				currentRenderingTile = glm::uvec2(0);
 			    currentSample += samplesPerPass;
@@ -325,19 +340,19 @@ void resizeHdrColorBuffer(GLsizei width, GLsizei height) {
 void initTextures(GLsizei res) {
     glGenTextures(1, &planet_albedo);
     glBindTexture(GL_TEXTURE_2D, planet_albedo);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, res, res, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, res, res, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     glGenTextures(1, &planet_displacement);
     glBindTexture(GL_TEXTURE_2D, planet_displacement);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, res, res, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, res, res, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     glGenTextures(1, &planet_roughness);
     glBindTexture(GL_TEXTURE_2D, planet_roughness);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, res, res, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, res, res, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 }

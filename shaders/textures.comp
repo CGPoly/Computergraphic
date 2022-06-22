@@ -5,17 +5,14 @@ const uvec2 workGroupSize = uvec2(32);
 const uvec2 workGroupCount = uvec2(4);
 
 layout(local_size_x = workGroupSize.x, local_size_y = workGroupSize.y) in;
-layout(rgba32f, binding = 0) uniform image2D planet_albedo;
-layout(rgba32f, binding = 1) uniform image2D planet_displacement;
-layout(rgba32f, binding = 2) uniform image2D planet_roughness;
+layout(rgba32f, binding = 0) writeonly uniform image2D planet_albedo;
+layout(rgba32f, binding = 1) writeonly uniform image2D planet_displacement;
+layout(rgba32f, binding = 2) writeonly uniform image2D planet_roughness;
 
 uniform uvec2 tileOffset;
 uniform uint uFrame;
 uniform bool frame_update;
 
-
-//layout(rgba32f, binding = 0) uniform image2D planet_displacement;
-//layout(rgba32f, binding = 0) uniform image2D planet_roughness;
 const float pi = 3.14159265359;
 float atan2(float y, float x){
     if (x > 0) return atan(y/x);
@@ -444,18 +441,18 @@ vec3 polar_to_cartisan(vec2 p){
 }
 
 void planet(vec3 p, out vec3 col, out float rough, out float height){
-    vec3 planet_col =  vec3(0.168252, 0.372686, 0.143013);
-    vec3 sea_col = vec3(0.156895, 0.296105, 0.791773);
-    vec3 desert_col = vec3(0.713180, 0.459846, 0.284079);
-    float river_str_col = 0.717;
-    float river_str_rough_bump = 0.383333;
-    float river_thickness = 0.002;
-    float river_green_thickness = 0.006;
-    float equator_offset = 0.4;
-    float deep_see_cutoff = 0.03;
-    float deep_sea_brightness = .15;
-    float ice_caps_size = 0.558333;
-    float detail = 20;
+    const vec3 planet_col =  vec3(0.168252, 0.372686, 0.143013);
+    const vec3 sea_col = vec3(0.156895, 0.296105, 0.791773);
+    const vec3 desert_col = vec3(0.713180, 0.459846, 0.284079);
+    const float river_str_col = 0.717;
+    const float river_str_rough_bump = 0.383333;
+    const float river_thickness = 0.002;
+    const float river_green_thickness = 0.006;
+    const float equator_offset = 0.4;
+    const float deep_see_cutoff = 0.03;
+    const float deep_sea_brightness = .15;
+    const float ice_caps_size = 0.558333;
+    const float detail = 20;
 
     vec3 map = p;
     float cont_mask, ocean_mask;
@@ -488,7 +485,7 @@ void main(){
         planet(p, col, rough, height);
 
         imageStore(planet_albedo, ivec2(texelCoord), vec4(col, 1));
-        imageStore(planet_displacement, ivec2(texelCoord), vec4(vec3(height), 1));
-        imageStore(planet_roughness, ivec2(texelCoord), vec4(vec3(rough), 1));
+        imageStore(planet_displacement, ivec2(texelCoord), vec4(height, 0, 0, 0));
+        imageStore(planet_roughness, ivec2(texelCoord), vec4(rough, 0, 0, 0));
     }
 }
