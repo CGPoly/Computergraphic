@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <utility>
+#include <fstream>
 
 ShaderProgram::ShaderProgram(std::map<std::filesystem::path const, GLenum const> const& shaders) {
 	this->id = glCreateProgram();
@@ -27,11 +28,19 @@ ShaderProgram::~ShaderProgram() {
 	glDeleteProgram(this->id);
 }
 
+ShaderProgram& ShaderProgram::operator=(ShaderProgram&& other) noexcept {
+	id = std::exchange(other.id, 0);
+	valid = other.valid;
+	shaders = std::move(other.shaders);
+	uniformLocationCache = std::move(other.uniformLocationCache);
+	return *this;
+}
+
 void ShaderProgram::use() const {
 	glUseProgram(this->id);
 }
 
-void ShaderProgram::compile() {
+bool ShaderProgram::compile() {
 	bool needsLink = false;
 	bool cantLink = false;
 	for (auto& [filePath, shaderInfo]: this->shaders) {
@@ -60,7 +69,7 @@ void ShaderProgram::compile() {
 	}
 
 	if (!needsLink || cantLink)
-		return;
+		return false;
 
 	glLinkProgram(this->id);
 
@@ -82,10 +91,30 @@ void ShaderProgram::compile() {
 		std::cerr << "Failed to link Shader" << std::endl;
 		std::cerr << &infoLog[0] << std::endl;
 	}
+
+	return true;
 }
 
 bool ShaderProgram::isValid() const {
 	return valid;
+}
+
+void ShaderProgram::e() const {
+	// Get the binary length
+	GLint length = 0;
+	glGetProgramiv(id, GL_PROGRAM_BINARY_LENGTH, &length);
+
+	// Retrieve the binary code
+	std::vector<GLubyte> buffer(length);
+	GLenum format = 0;
+	glGetProgramBinary(id, length, NULL, &format, buffer.data());
+
+	// Write the binary to a file.
+	std::string fName("shader.bin");
+	std::cout << "Writing to " << fName << ", binary format = " <<format << std::endl;
+	std::ofstream out(fName.c_str(), std::ios::binary);
+	out.write( reinterpret_cast<char *>(buffer.data()), length );
+	out.close();
 }
 
 void ShaderProgram::setMatrix4f(std::string const& uniformName, const glm::mat<4, 4, float>& value) {

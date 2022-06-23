@@ -1,4 +1,4 @@
-#version 440 core
+#version 460 core
 
 //THESE NEED TO BE IDENTICAL TO THE ONES DEFINED IN pathmarching.cpp
 const uvec2 workGroupSize = uvec2(32);
@@ -14,8 +14,8 @@ uniform uvec2 tileOffset;
 uniform uint currentSample;
 uniform uint samplesPerPass;
 
-uniform uint uRendStep;
-uniform uint uFrame;
+uniform uint passSeed;
+uniform float time;
 uniform mat4 viewMat;
 
 const float world_scale = 1000;  //how big one unit in metern is (this is for easier camera control)
@@ -229,7 +229,7 @@ uvec4 pcg4d(uvec4 v) {
 
 uint seed = 0;
 uvec4 rand4u() {
-    return pcg4d(uvec4(tileOffset * workGroupSize * workGroupCount + gl_GlobalInvocationID.xy, seed++, uRendStep));
+    return pcg4d(uvec4(tileOffset * workGroupSize * workGroupCount + gl_GlobalInvocationID.xy, seed++, passSeed));
 }
 
 float uintToFloat(uint v) {
@@ -767,7 +767,7 @@ float deManySpheres(vec3 pos){
     return length(pos)-0.4;
 }
 float deMandelbulb(vec3 pos, int Iterations, float Bailout) {
-    float t = fract(0.0001*(float(uFrame)+15.));
+    float t = fract(0.0001*((time * 30)+15.));
     float y = 16.0*t*(1.0-t);
     float maxp = 8;
     float Power = -2*maxp*abs(t-0.5)+maxp;
@@ -793,7 +793,7 @@ float deMandelbulb(vec3 pos, int Iterations, float Bailout) {
 float deJulia(vec3 p, int Iterations, float Bailout) {
     vec3 c = vec3(0.4,-0.4,0.6);
     float maxp = 8;
-    float t = fract(0.01*(float(uFrame)+15.));
+    float t = fract(0.01*((time * 30)+15.));
 //    float power = -2*maxp*abs(t-0.5)+maxp;
     float power = 8;
 
@@ -854,7 +854,7 @@ float deKaliRemix(vec3 p, int Iterations) {
 }
 
 vec3 calcNormalSphere(vec3 pos, object obj){
-    int ZERO = min(int(uRendStep),0); // non-constant zero
+    int ZERO = min(int(passSeed),0); // non-constant zero
     vec3 n = vec3(0.0);
     for( int i=ZERO; i<4; i++) {
         vec3 e = 0.5773*(2.0*vec3((((i+3)>>1)&1),((i>>1)&1),(i&1))-1.0);
@@ -946,7 +946,7 @@ hit ray(vec3 ro, vec3 rd){
 }
 
 vec3 numDiff(vec3 p, float e){
-    vec2 h = vec2(e,min(int(uRendStep),0));
+    vec2 h = vec2(e,min(int(passSeed),0));
     return normalize(vec3(map(p+h.xyy).dist - map(p-h.xyy).dist, map(p+h.yxy).dist - map(p-h.yxy).dist, map(p+h.yyx).dist - map(p-h.yyx).dist));
 }
 vec3 tetraNormUnfix(vec3 p, float h){ // for function f(p){
@@ -959,7 +959,7 @@ vec3 tetraNormUnfix(vec3 p, float h){ // for function f(p){
 }
 vec3 tetraNorm(vec3 pos, float h){
     //    const float h = eps;      // replace by an appropriate value
-    int ZERO = min(int(uRendStep),0); // non-constant zero
+    int ZERO = min(int(passSeed),0); // non-constant zero
     vec3 n = vec3(0.0);
     for( int i=ZERO; i<4; i++) {
         vec3 e = 0.5773*(2.0*vec3((((i+3)>>1)&1),((i>>1)&1),(i&1))-1.0);

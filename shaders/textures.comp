@@ -1,4 +1,4 @@
-#version 440 core
+#version 460 core
 
 //const int texture_resolution = 512;
 const uvec2 workGroupSize = uvec2(32);
@@ -10,8 +10,8 @@ layout(rgba32f, binding = 1) writeonly uniform image2D planet_displacement;
 layout(rgba32f, binding = 2) writeonly uniform image2D planet_roughness;
 
 uniform uvec2 tileOffset;
-uniform uint uFrame;
-uniform bool frame_update;
+uniform float time;
+uniform float lastTime;
 
 const float pi = 3.14159265359;
 float atan2(float y, float x){
@@ -469,14 +469,14 @@ void planet(vec3 p, out vec3 col, out float rough, out float height){
     height = height_planet(land_det, cont_mask, riv_mask, river_str_rough_bump, caps_mask);
 }
 
-void main(){
-    if (frame_update){
+void main() {
+    if (lastTime != time) {
         uvec2 texelCoord = ivec2(tileOffset * workGroupSize * workGroupCount + gl_GlobalInvocationID.xy);
         //    uvec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
         ivec2 resolution = imageSize(planet_albedo);
         if (texelCoord.x >= resolution.x || texelCoord.y >= resolution.y) return;
 
-        vec2 uv = vec2(texelCoord)/vec2(resolution);
+        vec2 uv = vec2(texelCoord) / vec2(resolution);
 
         vec3 p = polar_to_cartisan(uv);
 

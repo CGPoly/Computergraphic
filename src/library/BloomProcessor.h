@@ -2,10 +2,11 @@
 
 #include "glad/glad.h"
 #include "ShaderProgram.h"
+#include "Texture.h"
 
 class BloomProcessor {
 private:
-	GLuint bloomTexture = 0;
+	Texture bloomTexture;
 	GLuint bloomSampler = 0;
 	unsigned int mipCount = 0;
 
@@ -22,11 +23,11 @@ public:
 	~BloomProcessor();
 
 	BloomProcessor& operator=(BloomProcessor const&) = delete;
-	BloomProcessor& operator=(BloomProcessor&&) = default;
+	BloomProcessor& operator=(BloomProcessor&&) noexcept;
 
 	void resize(unsigned int width, unsigned int height);
-	void process(GLuint hdrTexture, unsigned int width, unsigned int height, unsigned int passes, float threshold,
+	void process(Texture const& hdrTexture, unsigned int width, unsigned int height, unsigned int passes, float threshold,
 	             float intensity);
 
-	GLuint getBloomTexture() const;
+	[[nodiscard]] Texture const& getBloomTexture() const;
 };

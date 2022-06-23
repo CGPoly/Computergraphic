@@ -32,11 +32,13 @@ public:
     ~ShaderProgram();
 
 	ShaderProgram& operator=(ShaderProgram const&) = delete;
-	ShaderProgram& operator=(ShaderProgram&&) = default;
+	ShaderProgram& operator=(ShaderProgram&&) noexcept;
 
     void use() const;
-    void compile();
+    bool compile();
 	[[nodiscard]] bool isValid() const;
+
+	void e() const;
 
 	void setMatrix4f(std::string const&, glm::mat<4, 4, float> const& mat);
 	void set1i(std::string const& uniformName, int value);

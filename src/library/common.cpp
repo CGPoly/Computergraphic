@@ -50,8 +50,7 @@ void APIENTRY glDebugOutput(
 	std::cout << std::endl;
 }
 
-GLFWwindow*
-initOpenGL(int width, int height, const char* title) {
+GLFWwindow* initOpenGL(int width, int height, std::string const& title) {
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
@@ -60,7 +59,7 @@ initOpenGL(int width, int height, const char* title) {
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // uncomment this statement to fix compilation on OS X
 #endif
-    GLFWwindow* window = glfwCreateWindow(width, height, title, nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
 
     // Check for Valid Context
     if (window == nullptr) {
@@ -78,4 +77,25 @@ initOpenGL(int width, int height, const char* title) {
 	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
 
     return window;
+}
+
+GLFWwindow* createWindow(int width, int height, std::string const& title) {
+	GLFWwindow* window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
+
+	// Check for Valid Context
+	if (window == nullptr) {
+		std::cerr << "Failed to Create OpenGL Context" << std::endl;
+		std::terminate();
+	}
+
+	// create context and load OpenGL functions
+	glfwMakeContextCurrent(window);
+	gladLoadGL();
+
+	glEnable(GL_DEBUG_OUTPUT);
+//	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+	glDebugMessageCallback(glDebugOutput, nullptr);
+	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
+
+	return window;
 }

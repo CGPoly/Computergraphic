@@ -2,5 +2,4 @@
 
 #include "common.hpp"
 
-unsigned int
-makeBuffer(unsigned int bufferType, GLenum usageHint, unsigned int bufferSize = 0, void* data = nullptr);
+GLuint makeBuffer(GLenum bufferType, GLenum usageHint, GLsizeiptr bufferSize = 0, void const* data = nullptr);

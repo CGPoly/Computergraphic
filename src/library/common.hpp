@@ -14,5 +14,5 @@
 
 #include "config.hpp"
 
-GLFWwindow*
-initOpenGL(int width, int height, const char* title);
+GLFWwindow* initOpenGL(int width, int height, std::string const& title);
+GLFWwindow* createWindow(int width, int height, std::string const& title);

@@ -1,8 +1,7 @@
 #include "buffer.hpp"
 
-unsigned int
-makeBuffer(unsigned int bufferType, GLenum usageHint, unsigned int bufferSize, void* data) {
-    unsigned int handle;
+GLuint makeBuffer(GLenum bufferType, GLenum usageHint, GLsizeiptr bufferSize, void const* data) {
+	GLuint handle;
     glGenBuffers(1, &handle);
     if (data) {
         glBindBuffer(bufferType, handle);
