@@ -3,6 +3,7 @@
 #include "glad/glad.h"
 #include "ShaderProgram.h"
 #include "Texture.h"
+#include "Profiler.h"
 
 class TexturesRenderer {
 public:
@@ -13,7 +14,7 @@ public:
 	TexturesRenderer& operator=(TexturesRenderer const&) = delete;
 	TexturesRenderer& operator=(TexturesRenderer&&) = delete;
 
-	void render(float time);
+	void render(float time, Profiler* profiler = nullptr);
 
 	[[nodiscard]] Texture const& getAlbedo() const;
 	[[nodiscard]] Texture const& getDisplacement() const;

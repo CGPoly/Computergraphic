@@ -82,6 +82,7 @@ void LiveRenderer::run() {
 		ImGui::NewFrame();
 
 		bool changedSamplesPerPass = drawGuiRender();
+		drawStatistic();
 
 		if (camera.pollChanged() || changedSamplesPerPass || timeChanged) {
 			timeChanged = false;
@@ -89,7 +90,7 @@ void LiveRenderer::run() {
 			glClearTexImage(hdrColoTexture.getId(), 0, GL_RGBA, GL_FLOAT, nullptr);
 		}
 
-		texturesRenderer.render(time);
+		renderTextures();
 		renderPathmarcher();
 		renderBloom();
 		renderToFramebuffer();
@@ -126,13 +127,29 @@ bool LiveRenderer::drawGuiRender() {
 	);
 	ImGui::Text("Current sample: %u", renderState.currentSample);
 	ImGui::Text("Current tile: %u, %u", renderState.currentRenderingTile.x, renderState.currentRenderingTile.y);
-	ImGui::Text("Samples per pass per pixel: %u", samplesPerPassPixel);
 	ImGui::End();
 
 	return changedSamplesPerPass;
 }
 
+void LiveRenderer::drawStatistic() const {
+	ImGui::Begin("Statistic");
+	ImGui::Text("Texture time: %u", profiler.getTextureTime());
+	ImGui::Text("Pass time: %u", profiler.getPassTime());
+	ImGui::Text("Bloom time: %u", profiler.getBloomTime());
+	ImGui::Text("Tonemap time: %u", profiler.getTonemapTime());
+	ImGui::Separator();
+	ImGui::Text("Samples per Pass per Pixel: %u", profiler.getPassTime() == 0 ? 0 : (windowWidth * windowHeight * samplesPerPass) / profiler.getPassTime());
+	ImGui::End();
+}
+
+void LiveRenderer::renderTextures() {
+	texturesRenderer.render(time, &profiler);
+}
+
 void LiveRenderer::renderPathmarcher() {
+	profiler.beginPathmarcher();
+
 	pathMarchingProgram.use();
 	pathMarchingProgram.setMatrix4f("viewMat", camera.view_matrix());
 	pathMarchingProgram.set1ui("passSeed", renderState.passSeed);
@@ -153,7 +170,7 @@ void LiveRenderer::renderPathmarcher() {
 				auto nowTime = std::chrono::system_clock::now();
 				auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(nowTime - renderingStartTime).count();
 				if (elapsedTime >= frameTimeTarget)
-					return;
+					goto endDispatchLoop;
 
 				pathMarchingProgram.set2ui("tileOffset", renderState.currentRenderingTile.x, renderState.currentRenderingTile.y);
 				glDispatchCompute(workGroupCount.x, workGroupCount.y, 1);
@@ -165,18 +182,22 @@ void LiveRenderer::renderPathmarcher() {
 			renderState.currentRenderingTile.y++;
 		}
 
-		auto nowTime = std::chrono::system_clock::now();
-		auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(nowTime - passStartTime).count();
-		samplesPerPassPixel = (windowWidth * windowHeight * samplesPerPass) / elapsedTime;
-		passStartTime = nowTime;
-
 		renderState.currentRenderingTile = glm::uvec2(0);
 		renderState.currentSample += samplesPerPass;
 		renderState.passSeed++;
+
+		profiler.endPathmarcher();
+		profiler.passFinished();
+		profiler.beginPathmarcher();
 	}
+	endDispatchLoop:;
+
+	profiler.endPathmarcher();
 }
 
 void LiveRenderer::renderBloom() {
+	profiler.beginBloom();
+
 	unsigned int minBloomPasses = 1;
 	unsigned int maxBloomPasses = 15;
 
@@ -191,9 +212,13 @@ void LiveRenderer::renderBloom() {
 		bloomProcessor.process(hdrColoTexture, windowWidth, windowHeight, bloomPasses,
 							   bloomThreshold / exposure, bloomIntensity);
 	}
+
+	profiler.endBloom();
 }
 
 void LiveRenderer::renderToFramebuffer() {
+	profiler.beginTonemap();
+
 	ImGui::Begin("HDR");
 	ImGui::SliderFloat("Exposure", &exposure, 0, 10, "%.3f", ImGuiSliderFlags_Logarithmic);
 	if (ImGui::Button("Reset"))
@@ -217,6 +242,8 @@ void LiveRenderer::renderToFramebuffer() {
 	glBindVertexArray(fullscreenVao);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)nullptr);
 	glBindVertexArray(0);
+
+	profiler.endTonemap();
 }
 
 void LiveRenderer::onResize(int width, int height) {

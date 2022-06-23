@@ -6,6 +6,7 @@
 #include "BloomProcessor.h"
 #include "TexturesRenderer.h"
 #include "common.hpp"
+#include "Profiler.h"
 
 class LiveRenderer {
 public:
@@ -25,12 +26,14 @@ private:
 	unsigned int windowWidth = 1280;
 	unsigned int windowHeight = 720;
 
+	Profiler profiler{};
+
 	GLFWwindow* window = createWindow(windowWidth, windowHeight, "LiveRenderer");
 
 	Camera camera{};
 
 	BloomProcessor bloomProcessor{windowWidth, windowHeight};
-	TexturesRenderer texturesRenderer{1024};
+	TexturesRenderer texturesRenderer{1024 * 4};
 
 	ShaderProgram pathMarchingProgram{{
 		{ "pathmarching.comp", GL_COMPUTE_SHADER }
@@ -72,13 +75,12 @@ private:
 	float time = 0;
 	bool timeChanged = false;
 
-	std::chrono::time_point<std::chrono::system_clock> passStartTime = std::chrono::system_clock::now();
-	unsigned int samplesPerPassPixel;
-
 	void initFullscreenQuad();
 
 	bool drawGuiRender();
+	void drawStatistic() const;
 
+	void renderTextures();
 	void renderPathmarcher();
 	void renderBloom();
 	void renderToFramebuffer();

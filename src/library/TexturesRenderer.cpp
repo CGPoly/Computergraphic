@@ -22,13 +22,14 @@ TexturesRenderer::TexturesRenderer(unsigned int resolution) noexcept:
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 }
 
-void TexturesRenderer::render(float time) {
+void TexturesRenderer::render(float time, Profiler* profiler) {
 	if (textureProgram.compile())
 		lastTime = -1; // reset last time, because textureProgram source changed
 	if (!textureProgram.isValid() || lastTime == time)
 		return;
 
-	auto startTime = std::chrono::system_clock::now();
+	if (profiler != nullptr)
+		profiler->beginTextures();
 
 	textureProgram.use();
 	textureProgram.set1f("time", time);
@@ -47,11 +48,10 @@ void TexturesRenderer::render(float time) {
 //            glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 	glFinish();
 
-	auto nowTime = std::chrono::system_clock::now();
-	auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(nowTime - startTime).count();
-	std::cout << "Rendered planet textures time: " << elapsedTime << "ms" << std::endl;
-
 	lastTime = time;
+
+	if (profiler != nullptr)
+		profiler->endTextures();
 }
 
 Texture const& TexturesRenderer::getAlbedo() const {
