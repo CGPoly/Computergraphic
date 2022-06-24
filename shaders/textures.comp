@@ -470,7 +470,7 @@ void planet(vec3 p, out vec3 col, out float rough, out float height){
 }
 
 void main() {
-    if (lastTime != time) {
+    if (lastTime < 0) {
         uvec2 texelCoord = ivec2(tileOffset * workGroupSize * workGroupCount + gl_GlobalInvocationID.xy);
         //    uvec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
         ivec2 resolution = imageSize(planet_albedo);

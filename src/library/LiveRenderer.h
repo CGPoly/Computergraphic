@@ -1,5 +1,6 @@
 #pragma once
 
+#include <variant>
 #include "GLFW/glfw3.h"
 #include "Camera.h"
 #include "ShaderProgram.h"
@@ -72,13 +73,34 @@ private:
 	unsigned int frameTimeTarget = 10;
 	unsigned int samplesPerPass = 1;
 
-	float time = 0;
+	std::chrono::duration<float> time{0};
 	bool timeChanged = false;
+
+	struct TimeAdvance {
+		enum class Type { timed, sampleTarget };
+		struct TimedAdvance {
+			std::chrono::time_point<std::chrono::system_clock> lastTime{};
+		} timedAdvance;
+		struct SampleTargetAdvance {
+			unsigned int sampleTarget = 100;
+		} sampleTargetAdvance;
+
+		bool enabled = false;
+		Type type = Type::sampleTarget;
+		std::chrono::duration<float, std::milli> timeStep{32};
+
+		void setType(Type newType) {
+			type = newType;
+			if (type == Type::timed)
+				timedAdvance.lastTime = std::chrono::system_clock::now();
+		}
+	} timeAdvance;
 
 	void initFullscreenQuad();
 
 	bool drawGuiRender();
 	void drawStatistic() const;
+	void drawTimeControl();
 
 	void renderTextures();
 	void renderPathmarcher();

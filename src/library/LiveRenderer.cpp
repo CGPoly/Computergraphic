@@ -83,11 +83,12 @@ void LiveRenderer::run() {
 
 		bool changedSamplesPerPass = drawGuiRender();
 		drawStatistic();
+		drawTimeControl();
 
 		if (camera.pollChanged() || changedSamplesPerPass || timeChanged) {
 			timeChanged = false;
 			renderState.reset();
-			glClearTexImage(hdrColoTexture.getId(), 0, GL_RGBA, GL_FLOAT, nullptr);
+//			glClearTexImage(hdrColoTexture.getId(), 0, GL_RGBA, GL_FLOAT, nullptr);
 		}
 
 		renderTextures();
@@ -143,8 +144,58 @@ void LiveRenderer::drawStatistic() const {
 	ImGui::End();
 }
 
+void LiveRenderer::drawTimeControl() {
+	ImGui::Begin("Time control", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+
+	auto timeAdvanceTypeToString = [](TimeAdvance::Type type) {
+		switch (type) {
+			case TimeAdvance::Type::timed: return "Timed";
+			case TimeAdvance::Type::sampleTarget: return "On Sample Target";
+		};
+	};
+
+	ImGui::PushItemWidth(200);
+	if (ImGui::Checkbox("Automatic time advance", &timeAdvance.enabled) && timeAdvance.enabled)
+		timeAdvance.setType(timeAdvance.type);
+	ImGui::BeginDisabled(!timeAdvance.enabled);
+	if (ImGui::BeginCombo("Type", timeAdvanceTypeToString(timeAdvance.type))) {
+		for (auto type : { TimeAdvance::Type::timed, TimeAdvance::Type::sampleTarget }) {
+			bool selected = timeAdvance.type == type;
+			if (ImGui::Selectable(timeAdvanceTypeToString(type), selected))
+				timeAdvance.setType(type);
+			if (selected)
+				ImGui::SetItemDefaultFocus();
+		}
+		ImGui::EndCombo();
+	}
+	float timeStepFloat = timeAdvance.timeStep.count();
+	if (ImGui::SliderFloat("Time step", &timeStepFloat, 1, 1000, "%.1f ms"))
+		timeAdvance.timeStep = std::chrono::duration<float, std::milli>(timeStepFloat);
+
+	if (timeAdvance.type == TimeAdvance::Type::sampleTarget) {
+		unsigned int minSampleTarget = 1;
+		unsigned int maxSampleTarget = 100;
+		ImGui::SliderScalar("Sample per Pixel Target", ImGuiDataType_U32, &timeAdvance.sampleTargetAdvance.sampleTarget,
+							&minSampleTarget, &maxSampleTarget);
+	}
+	ImGui::EndDisabled();
+	ImGui::PopItemWidth();
+
+	ImGui::Separator();
+
+	ImGui::PushItemWidth(-1);
+	float timeFloat = time.count();
+	if (ImGui::SliderFloat("##Time", &timeFloat, 0, 60)) {
+		time = std::chrono::duration<float>(timeFloat);
+		timeChanged = true;
+	}
+	ImGui::PopItemWidth();
+
+	ImGui::End();
+};
+
 void LiveRenderer::renderTextures() {
-	texturesRenderer.render(time, &profiler);
+	texturesRenderer.render(time.count(), &profiler);
 }
 
 void LiveRenderer::renderPathmarcher() {
@@ -153,7 +204,7 @@ void LiveRenderer::renderPathmarcher() {
 	pathMarchingProgram.use();
 	pathMarchingProgram.setMatrix4f("viewMat", camera.view_matrix());
 	pathMarchingProgram.set1ui("passSeed", renderState.passSeed);
-	pathMarchingProgram.set1f("time", time);
+	pathMarchingProgram.set1f("time", time.count());
 	pathMarchingProgram.set1ui("samplesPerPass", samplesPerPass);
 
 	glBindImageTexture(0, hdrColoTexture.getId(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
@@ -167,16 +218,30 @@ void LiveRenderer::renderPathmarcher() {
 
 		while (renderState.currentRenderingTile.y < divCeil(windowHeight, workGroupSize.y * workGroupCount.y)) {
 			while (renderState.currentRenderingTile.x < divCeil(windowWidth, workGroupSize.x * workGroupCount.x)) {
-				auto nowTime = std::chrono::system_clock::now();
-				auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(nowTime - renderingStartTime).count();
-				if (elapsedTime >= frameTimeTarget)
-					goto endDispatchLoop;
+				{
+					auto nowTime = std::chrono::system_clock::now();
+					auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(nowTime - renderingStartTime).count();
+					if (elapsedTime >= frameTimeTarget)
+						goto endDispatchLoop;
 
-				pathMarchingProgram.set2ui("tileOffset", renderState.currentRenderingTile.x, renderState.currentRenderingTile.y);
-				glDispatchCompute(workGroupCount.x, workGroupCount.y, 1);
-				glFinish();
+					pathMarchingProgram.set2ui("tileOffset", renderState.currentRenderingTile.x,renderState.currentRenderingTile.y);
+					glDispatchCompute(workGroupCount.x, workGroupCount.y, 1);
+					glFinish();
+				}
 
 				renderState.currentRenderingTile.x++;
+
+				if (timeAdvance.enabled && timeAdvance.type == TimeAdvance::Type::timed) {
+					auto nowTime = std::chrono::system_clock::now();
+					auto elapsedTime = nowTime - timeAdvance.timedAdvance.lastTime;
+
+					unsigned int advanceCount = elapsedTime / timeAdvance.timeStep;
+					time += timeAdvance.timeStep * advanceCount;
+					timeChanged |= advanceCount > 0;
+					timeAdvance.timedAdvance.lastTime += duration_cast<std::chrono::system_clock::duration>(timeAdvance.timeStep * advanceCount);
+
+					goto endDispatchLoop;
+				}
 			}
 			renderState.currentRenderingTile.x = 0;
 			renderState.currentRenderingTile.y++;
@@ -189,6 +254,14 @@ void LiveRenderer::renderPathmarcher() {
 		profiler.endPathmarcher();
 		profiler.passFinished();
 		profiler.beginPathmarcher();
+
+		if (timeAdvance.enabled && timeAdvance.type == TimeAdvance::Type::sampleTarget) {
+			if (renderState.currentSample >= timeAdvance.sampleTargetAdvance.sampleTarget) {
+				time += timeAdvance.timeStep;
+				timeChanged = true;
+				goto endDispatchLoop;
+			}
+		}
 	}
 	endDispatchLoop:;
 
