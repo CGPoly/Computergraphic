@@ -21,9 +21,6 @@ public:
 
 	void run();
 private:
-	const glm::uvec2 workGroupSize{32};
-	const glm::uvec2 workGroupCount{4};
-
 	unsigned int windowWidth = 1280;
 	unsigned int windowHeight = 720;
 

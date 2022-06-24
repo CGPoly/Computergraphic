@@ -199,6 +199,9 @@ void LiveRenderer::renderTextures() {
 }
 
 void LiveRenderer::renderPathmarcher() {
+	const glm::uvec2 workGroupSize{32};
+	const glm::uvec2 workGroupCount{4};
+
 	profiler.beginPathmarcher();
 
 	pathMarchingProgram.use();
