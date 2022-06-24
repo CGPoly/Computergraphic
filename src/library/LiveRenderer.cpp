@@ -23,59 +23,19 @@ LiveRenderer::LiveRenderer() noexcept {
 	ImGui::CreateContext();
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 460 core");
-
-	initFullscreenQuad();
 }
 
 LiveRenderer::~LiveRenderer() noexcept {
-	glDeleteBuffers(1, &fullscreenIbo);
-	glDeleteBuffers(1, &fullscreenVbo);
-	glDeleteVertexArrays(1, &fullscreenVao);
-
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
 
 	glfwDestroyWindow(window);
-	glfwTerminate();
-}
-
-void LiveRenderer::initFullscreenQuad() {
-	static float const vertices[] = {
-			-1.0f, -1.0f, 0.0f,
-			1.f, -1.f, 0.0f,
-			-1.f,1.f,0.f,
-			1.0f,  1.f, 0.0f
-	};
-
-	static unsigned int const indices[] = {
-			0, 1, 2, 1, 2, 3
-	};
-
-	glGenVertexArrays(1, &fullscreenVao);
-	glBindVertexArray(fullscreenVao);
-
-	fullscreenVbo = makeBuffer(GL_ARRAY_BUFFER, GL_STATIC_DRAW, sizeof(vertices), vertices);
-	glBindBuffer(GL_ARRAY_BUFFER, fullscreenVbo);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)nullptr);
-	glEnableVertexAttribArray(0);
-
-	fullscreenIbo = makeBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW, sizeof(indices), indices);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, fullscreenIbo);
-
-	glBindVertexArray(0);
 }
 
 void LiveRenderer::run() {
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
-
-		// Recompile shaders if modifications happened
-		pathMarchingProgram.compile();
-		toneMapProgram.compile();
-
-		if (!pathMarchingProgram.isValid() || !toneMapProgram.isValid())
-			continue;
 
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
@@ -202,6 +162,10 @@ void LiveRenderer::renderPathmarcher() {
 	const glm::uvec2 workGroupSize{32};
 	const glm::uvec2 workGroupCount{4};
 
+	pathMarchingProgram.compile();
+	if (!pathMarchingProgram.isValid())
+		return;
+
 	profiler.beginPathmarcher();
 
 	pathMarchingProgram.use();
@@ -302,22 +266,15 @@ void LiveRenderer::renderToFramebuffer() {
 	ImGui::Checkbox("Do Gamma Correction", &gammaCorrection);
 	ImGui::End();
 
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glClearColor(0.f, 0.f, 0.f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
-
-	toneMapProgram.use();
-	toneMapProgram.set2ui("resolution", windowWidth, windowHeight);
-	toneMapProgram.set1f("exposure", exposure);
-	toneMapProgram.set1i("doGammaCorrection", gammaCorrection);
-	toneMapProgram.set1i("doBloom", bloomEnabled);
-
-	glBindTextureUnit(0, hdrColoTexture.getId());
-	glBindTextureUnit(1, bloomProcessor.getBloomTexture().getId());
-
-	glBindVertexArray(fullscreenVao);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)nullptr);
-	glBindVertexArray(0);
+	tonemapProcessor.renderToFramebuffer(
+			windowWidth,
+			windowHeight,
+			hdrColoTexture,
+			bloomProcessor.getBloomTexture(),
+			exposure,
+			gammaCorrection,
+			bloomEnabled
+	);
 
 	profiler.endTonemap();
 }

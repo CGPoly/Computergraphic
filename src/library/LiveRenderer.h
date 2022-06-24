@@ -8,6 +8,7 @@
 #include "TexturesRenderer.h"
 #include "common.hpp"
 #include "Profiler.h"
+#include "TonemapProcessor.h"
 
 class LiveRenderer {
 public:
@@ -30,22 +31,15 @@ private:
 
 	Camera camera{};
 
-	BloomProcessor bloomProcessor{windowWidth, windowHeight};
 	TexturesRenderer texturesRenderer{1024 * 4};
+	BloomProcessor bloomProcessor{windowWidth, windowHeight};
+	TonemapProcessor tonemapProcessor{};
 
 	ShaderProgram pathMarchingProgram{{
 		{ "pathmarching.comp", GL_COMPUTE_SHADER }
 	}};
-	ShaderProgram toneMapProgram{{
-		{ "tonemap.vert", GL_VERTEX_SHADER },
-		{ "tonemap.frag", GL_FRAGMENT_SHADER }
-	}};
 
 	Texture hdrColoTexture = Texture::immutable(1, GL_RGBA32F, windowWidth, windowHeight);
-
-	GLuint fullscreenVao = 0;
-	GLuint fullscreenVbo = 0;
-	GLuint fullscreenIbo = 0;
 
 	struct State {
 		glm::uvec2 currentRenderingTile{};
@@ -92,8 +86,6 @@ private:
 				timedAdvance.lastTime = std::chrono::system_clock::now();
 		}
 	} timeAdvance;
-
-	void initFullscreenQuad();
 
 	bool drawGuiRender();
 	void drawStatistic() const;
