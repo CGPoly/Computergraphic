@@ -9,4 +9,6 @@ int main() {
 
 	static LiveRenderer renderer{};
 	renderer.run();
+
+	glfwTerminate();
 }
