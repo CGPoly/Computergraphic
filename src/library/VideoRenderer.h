@@ -40,7 +40,7 @@ private:
 
 	unsigned int passSeed = 0;
 
-	enum class ProfilerType {};
+	enum class ProfilerType { texture, pathmarcher, bloom, tonemap, write };
 	Profiler<ProfilerType> profiler;
 
 	GLFWwindow* window = createWindow(1280, 720, "LiveRenderer");
@@ -60,6 +60,9 @@ private:
 	unsigned int renderFbo = 0;
 	unsigned int renderRbo = 0;
 
+	void renderTextures(std::chrono::duration<float> time);
 	void renderPathmarcher(std::chrono::duration<float> time);
-	void writeImage(std::chrono::duration<float, std::milli> time);
+	void renderBloom();
+	void renderToFramebuffer();
+	int writeImage(std::chrono::duration<float, std::milli> time);
 };
