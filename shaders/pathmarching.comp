@@ -1580,7 +1580,7 @@ void main(){
     else {
         vec3 pathTraceCol = vec3(0);
         for (int i = 0; i < samplesPerPass; i++) {
-            vec3 rd = inverse(mat3(viewMat))*getRayDir(p+vec2(2.*rand()-1.,2.*rand()-1.)/resolution.y,aspect);
+            vec3 rd = inverse(mat3(viewMat)) * getRayDir(p + (rand2() / resolution) * 2, aspect);
 //            vec3 rd = (viewMat*vec4(getRayDir(p+vec2(2.*rand()-1.,2.*rand()-1.)/resolution.y,aspect),0)).xyz;
             pathTraceCol += pathtracing(ro, rd);
         }
