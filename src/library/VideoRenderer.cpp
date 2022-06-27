@@ -48,7 +48,7 @@ void VideoRenderer::run(
 		if (!pathMarchingProgram.isValid())
 			return;
 
-		texturesRenderer.render(time.count());
+		texturesRenderer.render<ProfilerType>(time.count());
 		renderPathmarcher(time);
 		bloomProcessor.process(hdrColoTexture, width, height, 8, 1, 1);
 

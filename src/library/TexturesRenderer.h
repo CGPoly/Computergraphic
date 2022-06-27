@@ -14,7 +14,8 @@ public:
 	TexturesRenderer& operator=(TexturesRenderer const&) = delete;
 	TexturesRenderer& operator=(TexturesRenderer&&) = delete;
 
-	void render(float time, Profiler* profiler = nullptr);
+	template<class T>
+	void render(float time, std::optional<std::tuple<Profiler<T>&, T>> profiling = {});
 
 	[[nodiscard]] Texture const& getAlbedo() const;
 	[[nodiscard]] Texture const& getDisplacement() const;
@@ -34,4 +35,27 @@ private:
 		{ "textures.comp", GL_COMPUTE_SHADER }
 	}};
 
+	void renderImpl(float time);
 };
+
+template<class T>
+void TexturesRenderer::render(float time, std::optional<std::tuple<Profiler<T>&, T>> profiling) {
+	if (textureProgram.compile())
+		lastTime = -1; // reset last time, because textureProgram source changed
+	if (!textureProgram.isValid() || lastTime == time)
+		return;
+
+	if (profiling) {
+		auto [profiler, type] = *profiling;
+		profiler.begin(type);
+	}
+
+	renderImpl(time);
+	lastTime = time;
+
+	if (profiling) {
+		auto [profiler, type] = *profiling;
+		profiler.end(type);
+		profiler.commit(type);
+	}
+}

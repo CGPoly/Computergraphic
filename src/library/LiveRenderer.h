@@ -25,7 +25,8 @@ private:
 	unsigned int windowWidth = 1280;
 	unsigned int windowHeight = 720;
 
-	Profiler profiler{};
+	enum class ProfilerType { texture, pass, bloom, tonemap };
+	Profiler<ProfilerType> profiler{};
 
 	GLFWwindow* window = createWindow(windowWidth, windowHeight, "LiveRenderer");
 
@@ -88,7 +89,7 @@ private:
 	} timeAdvance;
 
 	bool drawGuiRender();
-	void drawStatistic() const;
+	void drawStatistic();
 	void drawTimeControl();
 
 	void renderTextures();

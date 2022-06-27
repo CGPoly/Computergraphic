@@ -22,15 +22,7 @@ TexturesRenderer::TexturesRenderer(unsigned int resolution) noexcept:
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 }
 
-void TexturesRenderer::render(float time, Profiler* profiler) {
-	if (textureProgram.compile())
-		lastTime = -1; // reset last time, because textureProgram source changed
-	if (!textureProgram.isValid() || lastTime == time)
-		return;
-
-	if (profiler != nullptr)
-		profiler->beginTextures();
-
+void TexturesRenderer::renderImpl(float time) {
 	textureProgram.use();
 	textureProgram.set1f("time", time);
 	textureProgram.set1f("lastTime", lastTime);
@@ -47,11 +39,6 @@ void TexturesRenderer::render(float time, Profiler* profiler) {
 	}
 //            glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 	glFinish();
-
-	lastTime = time;
-
-	if (profiler != nullptr)
-		profiler->endTextures();
 }
 
 Texture const& TexturesRenderer::getAlbedo() const {

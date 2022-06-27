@@ -40,6 +40,9 @@ private:
 
 	unsigned int passSeed = 0;
 
+	enum class ProfilerType {};
+	Profiler<ProfilerType> profiler;
+
 	GLFWwindow* window = createWindow(1280, 720, "LiveRenderer");
 
 	Camera camera{};

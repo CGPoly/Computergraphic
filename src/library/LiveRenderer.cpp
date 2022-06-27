@@ -93,14 +93,17 @@ bool LiveRenderer::drawGuiRender() {
 	return changedSamplesPerPass;
 }
 
-void LiveRenderer::drawStatistic() const {
+void LiveRenderer::drawStatistic() {
 	ImGui::Begin("Statistic");
-	ImGui::Text("Texture time: %u", profiler.getTextureTime());
-	ImGui::Text("Pass time: %u", profiler.getPassTime());
-	ImGui::Text("Bloom time: %u", profiler.getBloomTime());
-	ImGui::Text("Tonemap time: %u", profiler.getTonemapTime());
+	ImGui::Text("Texture time: %lld", profiler.getTime(ProfilerType::texture).count());
+	ImGui::Text("Pass time: %lld", profiler.getTime(ProfilerType::pass).count());
+	ImGui::Text("Bloom time: %lld", profiler.getTime(ProfilerType::bloom).count());
+	ImGui::Text("Tonemap time: %lld", profiler.getTime(ProfilerType::tonemap).count());
 	ImGui::Separator();
-	ImGui::Text("Samples per Pass per Pixel: %u", profiler.getPassTime() == 0 ? 0 : (windowWidth * windowHeight * samplesPerPass) / profiler.getPassTime());
+	long long int samplesPerPassPerPixel = profiler.getTime(ProfilerType::pass).count() == 0
+			? 0
+			: (windowWidth * windowHeight * samplesPerPass) /profiler.getTime(ProfilerType::pass).count();
+	ImGui::Text("Samples per Pass per Pixel: %lld", samplesPerPassPerPixel);
 	ImGui::End();
 }
 
@@ -155,7 +158,8 @@ void LiveRenderer::drawTimeControl() {
 };
 
 void LiveRenderer::renderTextures() {
-	texturesRenderer.render(time.count(), &profiler);
+	auto profiling = std::tuple<Profiler<ProfilerType> &, ProfilerType>(profiler, ProfilerType::texture);
+	texturesRenderer.render<ProfilerType>(time.count(), profiling);
 }
 
 void LiveRenderer::renderPathmarcher() {
@@ -166,7 +170,7 @@ void LiveRenderer::renderPathmarcher() {
 	if (!pathMarchingProgram.isValid())
 		return;
 
-	profiler.beginPathmarcher();
+	profiler.begin(ProfilerType::pass);
 
 	pathMarchingProgram.use();
 	pathMarchingProgram.setMatrix4f("viewMat", camera.view_matrix());
@@ -218,9 +222,9 @@ void LiveRenderer::renderPathmarcher() {
 		renderState.currentSample += samplesPerPass;
 		renderState.passSeed++;
 
-		profiler.endPathmarcher();
-		profiler.passFinished();
-		profiler.beginPathmarcher();
+		profiler.end(ProfilerType::pass);
+		profiler.commit(ProfilerType::pass);
+		profiler.begin(ProfilerType::pass);
 
 		if (timeAdvance.enabled && timeAdvance.type == TimeAdvance::Type::sampleTarget) {
 			if (renderState.currentSample >= timeAdvance.sampleTargetAdvance.sampleTarget) {
@@ -232,11 +236,11 @@ void LiveRenderer::renderPathmarcher() {
 	}
 	endDispatchLoop:;
 
-	profiler.endPathmarcher();
+	profiler.end(ProfilerType::pass);
 }
 
 void LiveRenderer::renderBloom() {
-	profiler.beginBloom();
+	profiler.begin(ProfilerType::bloom);
 
 	unsigned int minBloomPasses = 1;
 	unsigned int maxBloomPasses = 15;
@@ -253,11 +257,12 @@ void LiveRenderer::renderBloom() {
 							   bloomThreshold / exposure, bloomIntensity);
 	}
 
-	profiler.endBloom();
+	profiler.end(ProfilerType::bloom);
+	profiler.commit(ProfilerType::bloom);
 }
 
 void LiveRenderer::renderToFramebuffer() {
-	profiler.beginTonemap();
+	profiler.begin(ProfilerType::tonemap);
 
 	ImGui::Begin("HDR");
 	ImGui::SliderFloat("Exposure", &exposure, 0, 10, "%.3f", ImGuiSliderFlags_Logarithmic);
@@ -276,7 +281,8 @@ void LiveRenderer::renderToFramebuffer() {
 			bloomEnabled
 	);
 
-	profiler.endTonemap();
+	profiler.end(ProfilerType::tonemap);
+	profiler.commit(ProfilerType::tonemap);
 }
 
 void LiveRenderer::onResize(int width, int height) {
