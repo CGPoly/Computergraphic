@@ -32,7 +32,7 @@ private:
 	Texture roughnessTexture;
 
 	ShaderProgram textureProgram{{
-		{ "textures.comp", GL_COMPUTE_SHADER }
+		{ "planets_textures.comp", GL_COMPUTE_SHADER }
 	}};
 
 	void renderImpl(float time);
