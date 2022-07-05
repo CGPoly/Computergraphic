@@ -52,7 +52,8 @@ private:
 	TonemapProcessor tonemapProcessor{};
 
 	ShaderProgram pathMarchingProgram{{
-		{ "pathmarching.comp", GL_COMPUTE_SHADER }
+		{ "pathmarching.comp", GL_COMPUTE_SHADER },
+		{ "random.glsl", GL_COMPUTE_SHADER }
 	}};
 
 	Texture hdrColoTexture = Texture::immutable(1, GL_RGBA32F, width, height);
