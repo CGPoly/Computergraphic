@@ -10,7 +10,6 @@ layout(rgba32f, binding = 0) writeonly uniform image2D gasgiant_albedo;
 uniform uvec2 tileOffset;
 //TODO: Frame statt time von C++ ansteuern
 uniform float time;
-uniform int frame;
 uniform float lastTime;
 
 const float pi = 3.14159265359;
@@ -391,5 +390,5 @@ void main() {
 
     vec3 p = polar_to_cartisan(uv);
 
-    imageStore(gasgiant_albedo, ivec2(texelCoord), vec4(gasGiant(p, .1*frame, .001*frame), 1));
+    imageStore(gasgiant_albedo, ivec2(texelCoord), vec4(gasGiant(p, .1*time/30, .001*time/30), 1));
 }
