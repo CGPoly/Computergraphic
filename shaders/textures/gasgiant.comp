@@ -386,5 +386,5 @@ void main() {
 
     vec3 p = polar_to_cartisan(uv);
 
-    imageStore(albedo, ivec2(texelCoord), vec4(gasGiant(p, .1*time/30, .001*time/30), 1));
+    imageStore(albedo, ivec2(texelCoord), vec4(gasGiant(p, .1*time*30, .001*time*30), 1));
 }
