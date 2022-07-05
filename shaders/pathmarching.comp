@@ -80,7 +80,7 @@ struct hit {
 };
 
 vec3 sunPosition() {
-    vec3 startPoint = vec3(0,408000+12756270/2,151600000000.);
+    vec3 startPoint = normalize(vec3(0, 0.5, 1)) * 151600000000.;
     float angle = radians(360 * time / 10);
     vec3 rAxis = normalize(cross(startPoint, vec3(1, 0, 0)));
     mat3 rotationMatrix;
@@ -136,7 +136,7 @@ object world[num_obj] = object[num_obj](
 
     //solar system
 //    object(3, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 157, vec3(0,0,0), lambertian(vec3(.8))),  //enterprise
-//    object(10, 1, mat3(1,0,0,0,0,-1,0,1,0), vec3(1,1,1), 6371009, vec3(0,408000+12756270/2,0), custom(1)), //earth
+//    object(10, 1, mat3(1,0,0,0,0,-1,0,1,0), vec3(1,1,1), 6371009, vec3(0,-(408000+12756270/2),0), custom(1)), //earth
 //    object(1, 1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 6371009, vec3(0,408000+12756270/2,0), custom(1)), //earth
 //    object(1, 1, mat3(0,-1,0,1,0,0,0,0,1), vec3(1,1,1), 6376009, vec3(0,408000+12756270/2,0), custom(2)) //clouds
 //    object(1, 10, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, vec3(397000000,408000+12756270/2,0), lambertian(vec3(.8))),  //moon
@@ -884,7 +884,7 @@ vec3 calcNormalSphere(vec3 pos, object obj){
         vec3 e = 0.5773*(2.0*vec3((((i+3)>>1)&1),((i>>1)&1),(i&1))-1.0);
         //        n += e*map(pos+e*h).dist;
         vec3 p = pos+e*obj.eps;
-        n += e*oScale(sdSphere(iScale(inverse(obj.rotation)*(p+obj.position), obj.scaling), obj.scale), obj.scaling);
+        n += e*oScale(sdSphere(iScale(inverse(obj.rotation)*(p-obj.position), obj.scaling), obj.scale), obj.scaling);
     }
     return obj.rotation*normalize(n);
 }
@@ -894,13 +894,8 @@ vec2 cartesian_to_polar(vec3 p){
     return vec2(atan2(p.y, p.x)/(2*pi), acos(p.z)/pi);
 }
 
-vec3 texcoord_sphereProj(vec3 p, object obj){
-    p -= obj.position;
-    p = normalize(p);
-//    p = mat3(0, -1, 0, 1, 0, 0, 0, 0, 1)*p; // the UV map is rotated
-    p = obj.rotation*p;
-
-    vec2 phi_theta = cartesian_to_polar(p);
+vec3 texcoord_sphereProj(vec3 p){
+    vec2 phi_theta = cartesian_to_polar(normalize(p));
     return vec3(phi_theta, 0);
 }
 
@@ -926,7 +921,7 @@ float distObj(object obj, vec3 pos){
         case 8:
             return sdPlane(pos, vec3(0,1,0),1);
         case 10:
-            vec3 map = texcoord_sphereProj(pos, obj);
+            vec3 map = texcoord_sphereProj(pos);
             float height = texture(earth_albedo_plus_height, map.xy).w;
             height = height * 2 - 1;
             return oDisp(sdSphere(pos,  obj.scale), height*obj.scale*0.0025);
@@ -942,7 +937,7 @@ hit map(vec3 pos){
     hit h = hit(false, 1.0/0.0, 0, 0);
     for (int i = 0; i < num_obj; ++i){
 //        float dist = oScale(distObj(world[i], iScale(inverse(world[i].rotation)*pos, world[i].scaling)+world[i].position), world[i].scaling);
-        float dist = oScale(distObj(world[i], iScale(inverse(world[i].rotation)*(pos+world[i].position), world[i].scaling)), world[i].scaling);
+        float dist = oScale(distObj(world[i], iScale(inverse(world[i].rotation) * (pos - world[i].position), world[i].scaling)), world[i].scaling);
         if (dist < h.dist){
             h = hit(false, dist, 0, i);
         }
@@ -1299,7 +1294,7 @@ path scatter_light(vec3 p, vec3 normal, ONB onb, out float pdf){
     float radius = world[light_index].scale;
     vec3 position = world[light_index].position;
 
-    vec3 on_light = rand_in_unit_sphere()*world[light_index].scale-world[light_index].position;
+    vec3 on_light = rand_in_unit_sphere()*world[light_index].scale+world[light_index].position;
     vec3 new_direction = normalize(on_light - p);
 
     float cos_theta_max = sqrt(abs(1 - radius*radius/(length(position-p)*length(position-p))));
@@ -1357,7 +1352,8 @@ vec3 polar_to_cartisan(vec2 p){
 }
 
 mat planet(object obj, inout vec3 p, inout vec3 normal){
-    vec3 map = texcoord_sphereProj(p, obj);
+    vec3 localPos = iScale(inverse(obj.rotation) * (p - obj.position), obj.scaling);
+    vec3 map = texcoord_sphereProj(localPos);
     vec3 col = texture(earth_albedo_plus_height, map.xy).xyz;
 //    return phong(col, rough);
 //    return cook_torrance(col, rough);
