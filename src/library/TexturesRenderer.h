@@ -53,7 +53,11 @@ private:
 
 template<class T>
 void TexturesRenderer::render(float time, std::optional<std::tuple<Profiler<T>&, T>> profiling) {
-	if (earthTextureProgram.compile() || moonTextureProgram.compile() || gasgiantTextureProgram.compile())
+	bool earthCompile = earthTextureProgram.compile();
+	bool moonCompile = moonTextureProgram.compile();
+	bool gasgiantCompile = gasgiantTextureProgram.compile();
+
+	if (earthCompile || moonCompile || gasgiantCompile)
 		lastTime = -1; // reset last time, because earthTextureProgram source changed
 	if (!earthTextureProgram.isValid() || !moonTextureProgram.isValid() || gasgiantTextureProgram.isValid() || lastTime == time)
 		return;
