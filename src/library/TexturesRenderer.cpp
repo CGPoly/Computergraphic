@@ -12,8 +12,8 @@ TexturesRenderer::TexturesRenderer(
 		moonResolution(moonResolution),
 		gasgiantResolution(gasgiantResolution),
 		earthAlbedoPlusHeight(Texture::immutable(1, GL_RGBA8, earthResolution, earthResolution)),
-		moonAlbedoPlusHeight(Texture::immutable(1, GL_R8, moonResolution, moonResolution)),
-		gasgiantAlbedo(Texture::immutable(1, GL_R8, gasgiantResolution, gasgiantResolution)) {
+		moonAlbedoPlusHeight(Texture::immutable(1, GL_RGBA8, moonResolution, moonResolution)),
+		gasgiantAlbedo(Texture::immutable(1, GL_RGBA8, gasgiantResolution, gasgiantResolution)) {
 
 	auto textures = {
 			&earthAlbedoPlusHeight,
@@ -48,7 +48,7 @@ void TexturesRenderer::renderImpl(float time) {
 	gasgiantTextureProgram.set1f("time", time);
 	gasgiantTextureProgram.set1f("lastTime", lastTime);
 
-	glBindImageTexture(0, earthAlbedoPlusHeight.getId(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
+	glBindImageTexture(0, gasgiantAlbedo.getId(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
 	dispatchOverTexture(gasgiantTextureProgram, gasgiantResolution, gasgiantResolution);
 
 	glFinish();

@@ -5,7 +5,7 @@ const uvec2 workGroupSize = uvec2(32);
 const uvec2 workGroupCount = uvec2(4);
 
 layout(local_size_x = workGroupSize.x, local_size_y = workGroupSize.y) in;
-layout(rgba32f, binding = 0) writeonly uniform image2D albedo;
+layout(rgba8, binding = 0) writeonly uniform image2D albedo;
 
 uniform uvec2 tileOffset;
 uniform float time;

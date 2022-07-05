@@ -59,7 +59,7 @@ void TexturesRenderer::render(float time, std::optional<std::tuple<Profiler<T>&,
 
 	if (earthCompile || moonCompile || gasgiantCompile)
 		lastTime = -1; // reset last time, because earthTextureProgram source changed
-	if (!earthTextureProgram.isValid() || !moonTextureProgram.isValid() || gasgiantTextureProgram.isValid() || lastTime == time)
+	if (!earthTextureProgram.isValid() || !moonTextureProgram.isValid() || !gasgiantTextureProgram.isValid() || lastTime == time)
 		return;
 
 	if (profiling) {
