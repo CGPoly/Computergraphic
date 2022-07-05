@@ -6,9 +6,9 @@ const uvec2 workGroupCount = uvec2(4);
 
 layout(local_size_x = 32, local_size_y = 32) in;
 layout(binding = 0, rgba32f) uniform image2D hdrOut;
-layout(binding = 1) uniform sampler2D planet_albedo;
-layout(binding = 2) uniform sampler2D planet_height;
-layout(binding = 3) uniform sampler2D planet_roughness;
+layout(binding = 1) uniform sampler2D earth_albedo_plus_height;
+layout(binding = 2) uniform sampler2D moon_albedo_plus_height;
+layout(binding = 3) uniform sampler2D gasgiant_albedo;
 
 uniform uvec2 tileOffset;
 uniform uint currentSample;
@@ -927,8 +927,7 @@ float distObj(object obj, vec3 pos){
             return sdPlane(pos, vec3(0,1,0),1);
         case 10:
             vec3 map = texcoord_sphereProj(pos, obj);
-            float height = texture(planet_height, map.xy).x;
-//            float height = texture(planet_height, map).x;
+            float height = texture(earth_albedo_plus_height, map.xy).w;
             height = height * 2 - 1;
             return oDisp(sdSphere(pos,  obj.scale), height*obj.scale*0.0025);
         case 101:
@@ -1359,8 +1358,7 @@ vec3 polar_to_cartisan(vec2 p){
 
 mat planet(object obj, inout vec3 p, inout vec3 normal){
     vec3 map = texcoord_sphereProj(p, obj);
-    vec3 col = texture(planet_albedo, map.xy).xyz;
-    float rough = texture(planet_roughness, map.xy).x;
+    vec3 col = texture(earth_albedo_plus_height, map.xy).xyz;
 //    return phong(col, rough);
 //    return cook_torrance(col, rough);
     return lambertian(col);

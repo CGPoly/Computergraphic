@@ -47,7 +47,7 @@ private:
 
 	Camera camera{};
 
-	TexturesRenderer texturesRenderer{1024 * 4};
+	TexturesRenderer texturesRenderer{1024 * 4, 1024 * 4, 1024 * 4};
 	BloomProcessor bloomProcessor{width, height};
 	TonemapProcessor tonemapProcessor{};
 

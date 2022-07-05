@@ -7,7 +7,11 @@
 
 class TexturesRenderer {
 public:
-	explicit TexturesRenderer(unsigned int resolution) noexcept;
+	explicit TexturesRenderer(
+			unsigned int earthResolution,
+			unsigned int moonResolution,
+			unsigned int gasgiantResolution
+	) noexcept;
 	TexturesRenderer(TexturesRenderer const&) = delete;
 	TexturesRenderer(TexturesRenderer&&) = delete;
 
@@ -17,32 +21,41 @@ public:
 	template<class T>
 	void render(float time, std::optional<std::tuple<Profiler<T>&, T>> profiling = {});
 
-	[[nodiscard]] Texture const& getAlbedo() const;
-	[[nodiscard]] Texture const& getDisplacement() const;
-	[[nodiscard]] Texture const& getRoughness() const;
+	[[nodiscard]] Texture const& getEarthAlbedoPlusHeight() const;
+	[[nodiscard]] Texture const& getMoonAlbedoPlusHeight() const;
+	[[nodiscard]] Texture const& getGasgiantAlbedo() const;
 private:
 	const glm::uvec2 workGroupSize{32};
 	const glm::uvec2 workGroupCount{4};
 
-	unsigned int resolution;
+	unsigned int earthResolution;
+	unsigned int moonResolution;
+	unsigned int gasgiantResolution;
 	float lastTime = -1;
 
-	Texture albedoTexture;
-	Texture displacementTexture;
-	Texture roughnessTexture;
+	Texture earthAlbedoPlusHeight;
+	Texture moonAlbedoPlusHeight;
+	Texture gasgiantAlbedo;
 
-	ShaderProgram textureProgram{{
-		{ "planets_textures.comp", GL_COMPUTE_SHADER }
+	ShaderProgram earthTextureProgram{{
+		{ "textures/earth.comp", GL_COMPUTE_SHADER }
+	}};
+	ShaderProgram moonTextureProgram{{
+		{ "textures/moon.comp", GL_COMPUTE_SHADER }
+	}};
+	ShaderProgram gasgiantTextureProgram{{
+		{ "textures/gasgiant.comp", GL_COMPUTE_SHADER }
 	}};
 
 	void renderImpl(float time);
+	void dispatchOverTexture(ShaderProgram& program, unsigned int width, unsigned int height) const;
 };
 
 template<class T>
 void TexturesRenderer::render(float time, std::optional<std::tuple<Profiler<T>&, T>> profiling) {
-	if (textureProgram.compile())
-		lastTime = -1; // reset last time, because textureProgram source changed
-	if (!textureProgram.isValid() || lastTime == time)
+	if (earthTextureProgram.compile() || moonTextureProgram.compile() || gasgiantTextureProgram.compile())
+		lastTime = -1; // reset last time, because earthTextureProgram source changed
+	if (!earthTextureProgram.isValid() || !moonTextureProgram.isValid() || gasgiantTextureProgram.isValid() || lastTime == time)
 		return;
 
 	if (profiling) {

@@ -179,9 +179,9 @@ void LiveRenderer::renderPathmarcher() {
 	pathMarchingProgram.set1ui("samplesPerPass", samplesPerPass);
 
 	glBindImageTexture(0, hdrColoTexture.getId(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-	glBindTextureUnit(1, texturesRenderer.getAlbedo().getId());
-	glBindTextureUnit(2, texturesRenderer.getDisplacement().getId());
-	glBindTextureUnit(3, texturesRenderer.getRoughness().getId());
+	glBindTextureUnit(1, texturesRenderer.getEarthAlbedoPlusHeight().getId());
+	glBindTextureUnit(2, texturesRenderer.getMoonAlbedoPlusHeight().getId());
+	glBindTextureUnit(3, texturesRenderer.getGasgiantAlbedo().getId());
 
 	auto renderingStartTime = std::chrono::system_clock::now();
 	while (true) {

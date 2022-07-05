@@ -5,8 +5,7 @@ const uvec2 workGroupSize = uvec2(32);
 const uvec2 workGroupCount = uvec2(4);
 
 layout(local_size_x = workGroupSize.x, local_size_y = workGroupSize.y) in;
-layout(rgba32f, binding = 0) writeonly uniform image2D moon_albedo;
-layout(rgba32f, binding = 1) writeonly uniform image2D moon_displacement;
+layout(rgba32f, binding = 0) writeonly uniform image2D albedo;
 
 uniform uvec2 tileOffset;
 uniform float time;
@@ -285,6 +284,19 @@ void node_noise_texture_3d(vec3 co,float scale,float detail,float roughness,floa
     1.0);
 }
 
+vec3 vector_noise(vec3 vector, float amount, float scale, float detail, float distortion){
+    vec4 coll;
+    float tmp;
+    node_noise_texture_3d(vector, scale, detail, 0.5, amount, tmp, coll);
+    vec3 col = coll.xyz;
+    col -= vec3(0.5);
+    return mix_add(amount, vector, col);
+}
+void oil(vec3 vector, float amount, float scale, float detail, float distortion, float oil_size, out vec4 col, out float fac){
+    vec3 map_noised = vector_noise(vector, amount, scale*oil_size, detail, distortion);
+    node_noise_texture_3d(map_noised, scale, detail, 0.5, distortion, fac, col);
+}
+
 float voronoi(vec3 coord,float scale,float smoothness,float randomness){
     randomness = clamp(randomness, 0.0, 1.0);
     smoothness = clamp(smoothness / 2.0, 0.0, 0.5);
@@ -311,6 +323,19 @@ float voronoi(vec3 coord,float scale,float smoothness,float randomness){
     return smoothDistance;
 }
 
+float wave_texture(vec3 p,float scale,float distortion,float detail,float detail_scale,float detail_roughness,float phase){
+    p *= scale;
+    /* Prevent precision issues on unit coordinates. */
+    p = (p + 0.000001) * 0.999999;
+    float n;
+    n = (p.x + p.y + p.z) * 10.0;
+    n += phase;
+    if (distortion != 0.0) {
+        n += distortion * (fractal_noise(p * detail_scale, detail, detail_roughness) * 2.0 - 1.0);
+    }
+    return 0.5 + 0.5 * sin(n - pi/2);
+}
+
 
 vec2 cartesian_to_polar(vec3 p){
     return vec2(atan2(p.y, p.x)/(2*pi), acos(p.z)/pi);
@@ -322,111 +347,47 @@ vec3 polar_to_cartisan(vec2 p){
     return vec3(cos(p.x)*sin(p.y), sin(p.x)*sin(p.y), cos(p.y));
 }
 
-float largeCratersDisp(float gen1, float gen2){
-    gen1 = col_ramp3(gen1, .127, .214, .302, 0., .568, .25);
-    gen2 = col_ramp(gen2, .011, .073, 0., .5);
-    return mix(0.229, mix_overlay(1,gen1,gen2), 1);
-}
-float smallDeepCrater(float gen1, float gen2, float disp, vec3 p){
-    float mult = .5*clamp(color_ramp(gen1, .005, .073, 0, 1)*color_ramp(gen2, .009, .064, 0, 1),0,1);
-    float add = clamp(color_ramp3(gen1,.033,.078,.159,0,.133,0)+color_ramp(gen2,0,.036,.071,0,1,0), 0, 1);
-    float fac; vec3 col;
-    node_noise_texture_3d(p, 18, 6.5, .5, 1.6, fac, col);
-    float fac1 = color_ramp3(fac,0,.274,.505,0,.073,1);
-    float fac2 = color_ramp3(fac,.131,.518,.873,0,.141,1);
-    float res = clamp(mix(mult, fac1+mult, fac2),0,1);
-    res = mix(disp, disp*res, .5);
-    return mix(res, res+add, .25*fac2);
-}
-float plato_noise(float disp, vec3 p){
-    float fac; vec3 col;
-    node_noise_texture_3d(p, 6.3, 6.8, .5, .6, fac, col);
-    fac = color_ramp3(fac,.405,.471,.57,1,.159,0);
-    fac = fac+fac;
-    return mix(disp,disp+fac,.05);
-}
-float light_noise(float disp, float p){
-    float fac; vec3 col;
-    node_noise_texture_3d(p, 4, 3, .5, 10, fac, col);
-    fac = color_ramp4(fac,.318,.409,.527,.6,1,0,0,.5);
-    return mix(disp,disp+fac,.064);
-}
-float tinyCraters(float disp, vec3 vec){
-    float fac1 = color_ramp(voronoi(vec,128,0,1),.01,.041,0,1);
-    float fac1 = color_ramp(voronoi(vec,256,0,1),.02,.029,0,1);
-    return mix(disp,mix(fac1,fac1*fac2,.453),02);
-}
-float hugeCraters(float disp, vec3 vec){
-    float fac = color_ramp4(voronoi(vec,4,0,1),0,.255,.343,.935,0,.101,.792,.75);
-    return mix_overlay(1, disp, fac);
+vec3 coord_gasGiant(vec3 p, float rot, float offset){
+    rot *= pi/180;
+    p = mat3(cos(rot),-sin(rot),0,sin(rot),cos(rot),0,0,0,1)*p;
+    p.x += offset;
+
+    p = vector_noise(p, .074, 11, 2, 0);
+    float fac = voronoi(p, 3.23, 0, 1);
+    fac = color_ramp(fac*fac, 0, .159, 1, 0);
+    //rotating the space so that the bands will be rotated correctly
+    rot1 = 45*pi/180;
+    rot2 = -35*pi/180;
+    p = mat3(cos(rot1),0,-sin(rot1),0,1,0,sin(rot1),0,cos(rot1))*p;
+    p = mat3(1,0,0,0,cos(rot2),-sin(rot2),0,sin(rot2),cos(rot2))*p;
+    return mix_add(.095,p, vec3(fac));
 }
 
-vec3 largeCratersColor(float gen1, float gen2, vec3 col, vec3 p){
-    float fac; vec3 rcol;
-    node_noise_texture_3d(p, 9.4, 3.6, .5, 1.8, fac, rcol);
-    float mul = clamp(color_ramp(gen1,.036,.105,0,1)+color_ramp(fac,.247,.462,0,.124),0,1);
-    node_noise_texture_3d(p, 30.6, 3.6, .5, 1.5, fac, rcol);
-    float add = color_ramp4(gen1,.011,.107,.142,.388,0,.397,.072,0)+.01;
-    add = clamp(add*color_ramp3(gen2,.024,.151,.721,0,.665,.009),0,1);
-    add *= color_ramp(fac, .247, .716, 0, 1);
-    return mix_mul(.082, mix_add(.664, col, vec3(add)), vec3(mul));
-}
-vec3 smallDeepCratersCol(float gen1, float gen2, vec3 col, vec3 p){
-    float mul = clamp(color_ramp(gen1,.04,.189,0,1)*color_ramp(gen2,.062,.142,0,1));
-    float add = clamp(color_ramp4(gen1,.015,.098,.209,.744,0,1,.19,0)+color_ramp3(gen2,.011,.065,.165,0,1,0),0,1);
-    float fac; vec3 rcol;
-    node_noise_texture_3d(p, 25, 1.4, .5, 1.3, fac, rcol);
-    fac = color_ramp(fac, .364, .476, 0, 1);
-    return clamp(mix_add(.5*fac,clamp(mix_mul(.345*fac,col,vec3(mul)),0,1),vec3(add)),0,1);
-}
-vec3 hugeCratersCol(vec3 col, vec3 vec){
-    return mix_overlay(.082,col,vec3(color_ramp4(voronoi(vec,4.6,0,1),.065,.207,.321,.527,0,.15,.726,.5)));
-}
-vec3 colorDetail(vec3 col, vec3 p){
-    float fac; vec3 rcol;
-    node_noise_texture_3d(p, 240, 13.7, .5, 0, fac, rcol);
-    col = mix_add(1,col,vec3(color_ramp3(fac,.575,.681,.789,0,.091,1)));
-    node_noise_texture_3d(p, 4, 4, .5, 1, fac, rcol);
-    return mix_mul(.5,col,color_ramp4(fac,.225,.445,.676,775,0,.183,.541,1));
-}
+vec3 gasGiant(vec3 p, float rot, float offset){
+    vec3 col = vec3(0.500000, 0.193712, 0.075334);
 
-void moon(vec3 p, out vec3 col, out float height){
-    vec3 main_col = vec3(0.357);
+    p = coord_gasGiant(p, rot, offset);
+    //Banding
+    float fac1 = wave_texture(p,.5,1,1,1,.5,1.571);
+    float fac2 = wave_texture(vector_noise(p,.107,15.8,5,1),1.21,1,1,2,.5,1.571);
+    float banding = color_ramp(mix(fac1,fac2,.5),.344,.808,1,0);
 
     float fac;
-    vec4 rcol;
-    node_noise_texture_3d(p, 6.87, 4.7, .5, 4, fac, rcol);
-    vec3 p_dist = mix(p, vec3(rcol), .025);
-    node_noise_texture_3d(p, 2, 8, .5, 1, fac, rcol);
-    float PerlNoise = col_ramp3(fac, .255, .449, .574, 0., .1, .5);
-    float bigNoise1 = voronoi(p_dist,7.6,0,1);
-    float bigNoise2 = voronoi(p_dist,5.6,0,1);
-    float smallNoise1 = voronoi(p_dist,21,0,1);
-    float smallNoise2 = voronoi(p_dist,32,0,1);
+    vec3 rcol;
+    oil(p, .233, 3.04, 5, 2.3, 4.7, rcol, fac);
 
-    height = plato_noise(smallDeepCrater(smallNoise1,smallNoise2,largeCratersDisp(bigNoise1,bigNoise2),p),p);
-    height = .5*mix_overlay(.5,hugeCraters(tinyCraters(light_noise(height,p),p_dist),p_dist),PerlNoise);
-
-    col = smallDeepCratersCol(smallNoise1,smallNoise2,largeCratersColor(bigNoise1, bigNoise1, main_col, p),p);
-    col = mix_overlay(.418,colorDetail(hugeCratersCol(col,p_dist),p),PerlNoise);
+    return mix_overlay(banding, color_ramp(fac, .159, .913, .102, 1), col);
 }
 
 void main() {
-    if (lastTime < 0) {
-        uvec2 texelCoord = ivec2(tileOffset * workGroupSize * workGroupCount + gl_GlobalInvocationID.xy);
-        //    uvec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
-        ivec2 resolution = imageSize(planet_albedo);
-        if (texelCoord.x >= resolution.x || texelCoord.y >= resolution.y) return;
+    uvec2 texelCoord = ivec2(tileOffset * workGroupSize * workGroupCount + gl_GlobalInvocationID.xy);
+    //    uvec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 resolution = imageSize(albedo);
+    if (texelCoord.x >= resolution.x || texelCoord.y >= resolution.y) return;
 
-        vec2 uv = vec2(texelCoord) / vec2(resolution);
+    vec2 uv = vec2(texelCoord) / vec2(resolution);
 
-        vec3 p = polar_to_cartisan(uv);
+    vec3 p = polar_to_cartisan(uv);
 
-        vec3 col;
-        float height;
-        moon(p, col, height);
-
-        imageStore(moon_albedo, ivec2(texelCoord), vec4(col, 1));
-        imageStore(moon_displacement, ivec2(texelCoord), vec4(height, 0, 0, 0));
-    }
+    imageStore(albedo, ivec2(texelCoord), vec4(gasGiant(p, .1*time/30, .001*time/30), 1));
 }
