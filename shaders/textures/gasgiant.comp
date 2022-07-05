@@ -31,7 +31,7 @@ vec3 mix_mul(float fac, vec3 col1, vec3 col2){
 float mix_overlay(float fac, float col1, float col2){
     fac = clamp(fac, 0.0, 1.0);
     float facm = 1.0 - fac;
-    if (col1 < 0.5) return col1 * facm + 2.0 * fac * col2;
+    if (col1 < 0.5) return col1 * (facm + 2.0 * fac * col2);
     else return 1.0 - (facm + 2.0 * fac * (1.0 - col2)) * (1.0 - col1);
 }
 vec3 mix_overlay(float fac, vec3 col1, vec3 col2)
@@ -297,30 +297,27 @@ void oil(vec3 vector, float amount, float scale, float detail, float distortion,
     node_noise_texture_3d(map_noised, scale, detail, 0.5, distortion, fac, col);
 }
 
-float voronoi(vec3 coord,float scale,float smoothness,float randomness){
+float voronoi(vec3 coord,float scale,float randomness){
     randomness = clamp(randomness, 0.0, 1.0);
-    smoothness = clamp(smoothness / 2.0, 0.0, 0.5);
 
     vec3 scaledCoord = coord * scale;
     vec3 cellPosition = floor(scaledCoord);
     vec3 localPosition = scaledCoord - cellPosition;
 
-    float smoothDistance = 8.0;
-    vec3 smoothColor = vec3(0.0);
-    vec3 smoothPosition = vec3(0.0);
-    for (int k = -2; k <= 2; k++) {
-        for (int j = -2; j <= 2; j++) {
-            for (int i = -2; i <= 2; i++) {
+    float minDistance = 8.0;
+    for (int k = -1; k <= 1; k++) {
+        for (int j = -1; j <= 1; j++) {
+            for (int i = -1; i <= 1; i++) {
                 vec3 cellOffset = vec3(i, j, k);
                 vec3 pointPosition = cellOffset + hash_vec3_to_vec3(cellPosition + cellOffset) * randomness;
                 float distanceToPoint = distance(pointPosition, localPosition);
-                float h = smoothstep(0.0, 1.0, 0.5 + 0.5 * (smoothDistance - distanceToPoint) / smoothness);
-                float correctionFactor = smoothness * h * (1.0 - h);
-                smoothDistance = mix(smoothDistance, distanceToPoint, h) - correctionFactor;
+                if (distanceToPoint < minDistance) {
+                    minDistance = distanceToPoint;
+                }
             }
         }
     }
-    return smoothDistance;
+    return minDistance;
 }
 
 float wave_texture(vec3 p,float scale,float distortion,float detail,float detail_scale,float detail_roughness,float phase){
@@ -353,12 +350,12 @@ vec3 coord_gasGiant(vec3 p, float rot, float offset){
     p.x += offset;
 
     p = vector_noise(p, .074, 11, 2, 0);
-    float fac = voronoi(p, 3.23, 0, 1);
+    float fac = voronoi(p, 3.23, 1);
     fac = col_ramp(fac*fac, 0, .159, 1, 0);
     //rotating the space so that the bands will be rotated correctly
-    float rot1 = 45*pi/180;
-    float rot2 = -35*pi/180;
-    p = mat3(cos(rot1),0,-sin(rot1),0,1,0,sin(rot1),0,cos(rot1))*p;
+    float rot1 = 35*pi/180;
+    float rot2 = -50*pi/180;
+    p = mat3(cos(rot1),-sin(rot1),0,sin(rot1),cos(rot1),0,0,0,1)*p;
     p = mat3(1,0,0,0,cos(rot2),-sin(rot2),0,sin(rot2),cos(rot2))*p;
     return mix_add(.095,p, vec3(fac));
 }

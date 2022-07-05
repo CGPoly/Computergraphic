@@ -140,7 +140,8 @@ object world[num_obj] = object[num_obj](
 //    object(1, 1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 6371009, vec3(0,408000+12756270/2,0), custom(1)), //earth
 //    object(1, 1, mat3(0,-1,0,1,0,0,0,0,1), vec3(1,1,1), 6376009, vec3(0,408000+12756270/2,0), custom(2)) //clouds
 //    object(1, 10, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, vec3(397000000,408000+12756270/2,0), lambertian(vec3(.8))),  //moon
-    object(1, 1000, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., sunPosition(), emitter(vec3(100000)))  //sun
+//    object(1, 1000, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., sunPosition(), emitter(vec3(100000)))  //sun
+    object(1, 1000, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0, 0, 151600000000.), emitter(vec3(100000)))  //sun
 );
 
 uint lights[] = uint[](1);
@@ -922,9 +923,11 @@ float distObj(object obj, vec3 pos){
             return sdPlane(pos, vec3(0,1,0),1);
         case 10:
             vec3 map = texcoord_sphereProj(pos);
-            float height = texture(earth_albedo_plus_height, map.xy).w;
+            float height = texture(moon_albedo_plus_height, map.xy).w;
             height = height * 2 - 1;
-            return oDisp(sdSphere(pos,  obj.scale), height*obj.scale*0.0025);
+//            return oDisp(sdSphere(pos,  obj.scale), height*obj.scale*0.01);
+            return sdSphere(pos,  obj.scale);
+//            return oDisp(sdSphere(pos,  obj.scale), height*obj.scale*0.0025);
         case 101:
             return -sdSphere(pos,  obj.scale);
         default:
@@ -1354,7 +1357,8 @@ vec3 polar_to_cartisan(vec2 p){
 mat planet(object obj, inout vec3 p, inout vec3 normal){
     vec3 localPos = iScale(inverse(obj.rotation) * (p - obj.position), obj.scaling);
     vec3 map = texcoord_sphereProj(localPos);
-    vec3 col = texture(earth_albedo_plus_height, map.xy).xyz;
+//    vec3 col = texture(moon_albedo_plus_height, map.xy).xyz;
+    vec3 col = texture(gasgiant_albedo, map.xy).xyz;
 //    return phong(col, rough);
 //    return cook_torrance(col, rough);
     return lambertian(col);

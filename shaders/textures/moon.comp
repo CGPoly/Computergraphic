@@ -31,7 +31,7 @@ vec3 mix_mul(float fac, vec3 col1, vec3 col2){
 float mix_overlay(float fac, float col1, float col2){
     fac = clamp(fac, 0.0, 1.0);
     float facm = 1.0 - fac;
-    if (col1 < 0.5) return col1 * facm + 2.0 * fac * col2;
+    if (col1 < 0.5) return col1 * (facm + 2.0 * fac * col2);
     else return 1.0 - (facm + 2.0 * fac * (1.0 - col2)) * (1.0 - col1);
 }
 vec3 mix_overlay(float fac, vec3 col1, vec3 col2)
@@ -284,30 +284,27 @@ void node_noise_texture_3d(vec3 co,float scale,float detail,float roughness,floa
     1.0);
 }
 
-float voronoi(vec3 coord,float scale,float smoothness,float randomness){
+float voronoi(vec3 coord,float scale,float randomness){
     randomness = clamp(randomness, 0.0, 1.0);
-    smoothness = clamp(smoothness / 2.0, 0.0, 0.5);
 
     vec3 scaledCoord = coord * scale;
     vec3 cellPosition = floor(scaledCoord);
     vec3 localPosition = scaledCoord - cellPosition;
 
-    float smoothDistance = 8.0;
-    vec3 smoothColor = vec3(0.0);
-    vec3 smoothPosition = vec3(0.0);
-    for (int k = -2; k <= 2; k++) {
-        for (int j = -2; j <= 2; j++) {
-            for (int i = -2; i <= 2; i++) {
+    float minDistance = 8.0;
+    for (int k = -1; k <= 1; k++) {
+        for (int j = -1; j <= 1; j++) {
+            for (int i = -1; i <= 1; i++) {
                 vec3 cellOffset = vec3(i, j, k);
                 vec3 pointPosition = cellOffset + hash_vec3_to_vec3(cellPosition + cellOffset) * randomness;
                 float distanceToPoint = distance(pointPosition, localPosition);
-                float h = smoothstep(0.0, 1.0, 0.5 + 0.5 * (smoothDistance - distanceToPoint) / smoothness);
-                float correctionFactor = smoothness * h * (1.0 - h);
-                smoothDistance = mix(smoothDistance, distanceToPoint, h) - correctionFactor;
+                if (distanceToPoint < minDistance) {
+                    minDistance = distanceToPoint;
+                }
             }
         }
     }
-    return smoothDistance;
+    return minDistance;
 }
 
 
@@ -324,7 +321,7 @@ vec3 polar_to_cartisan(vec2 p){
 float largeCratersDisp(float gen1, float gen2){
     gen1 = col_ramp3(gen1, .127, .214, .302, 0., .568, .25);
     gen2 = col_ramp(gen2, .011, .073, 0., .5);
-    return mix(0.229, mix_overlay(1,gen1,gen2), 1.);
+    return mix(0.229, mix_overlay(1,gen1,gen2), .5);
 }
 float smallDeepCrater(float gen1, float gen2, float disp, vec3 p){
     float mult = .5*clamp(col_ramp(gen1, .005, .073, 0, 1)*col_ramp(gen2, .009, .064, 0, 1),0,1);
@@ -351,12 +348,12 @@ float light_noise(float disp, vec3 p){
     return mix(disp,disp+fac,.064);
 }
 float tinyCraters(float disp, vec3 vec){
-    float fac1 = col_ramp(voronoi(vec,128,0,1),.01,.041,0,1);
-    float fac2 = col_ramp(voronoi(vec,256,0,1),.02,.029,0,1);
-    return mix(disp,mix(fac1,fac1*fac2,.453),02);
+    float fac1 = col_ramp(voronoi(vec,128,1),.01,.041,0,1);
+    float fac2 = col_ramp(voronoi(vec,256,1),.02,.029,0,1);
+    return mix(disp,mix(fac1,fac1*fac2,.453),.02);
 }
 float hugeCraters(float disp, vec3 vec){
-    float fac = col_ramp4(voronoi(vec,4,0,1),0,.255,.343,.935,0,.101,.792,.75);
+    float fac = col_ramp4(voronoi(vec,4,1),0,.255,.343,.935,0,.101,.792,.75);
     return mix_overlay(1, disp, fac);
 }
 
@@ -379,7 +376,7 @@ vec3 smallDeepCratersCol(float gen1, float gen2, vec3 col, vec3 p){
     return clamp(mix_add(.5*fac,clamp(mix_mul(.345*fac,col,vec3(mul)),0,1),vec3(add)),0,1);
 }
 vec3 hugeCratersCol(vec3 col, vec3 vec){
-    return mix_overlay(.082,col,vec3(col_ramp4(voronoi(vec,4.6,0,1),.065,.207,.321,.527,0,.15,.726,.5)));
+    return mix_overlay(.082,col,vec3(col_ramp4(voronoi(vec,4.6,1),.065,.207,.321,.527,0,.15,.726,.5)));
 }
 vec3 colorDetail(vec3 col, vec3 p){
     float fac; vec4 rcol;
@@ -398,13 +395,13 @@ void moon(vec3 p, out vec3 col, out float height){
     vec3 p_dist = mix(p, vec3(rcol), .025);
     node_noise_texture_3d(p, 2, 8, .5, 1, fac, rcol);
     float PerlNoise = col_ramp3(fac, .255, .449, .574, 0., .1, .5);
-    float bigNoise1 = voronoi(p_dist,7.6,0,1);
-    float bigNoise2 = voronoi(p_dist,5.6,0,1);
-    float smallNoise1 = voronoi(p_dist,21,0,1);
-    float smallNoise2 = voronoi(p_dist,32,0,1);
+    float bigNoise1 = voronoi(p_dist,7.6,1);
+    float bigNoise2 = voronoi(p_dist,5.6,1);
+    float smallNoise1 = voronoi(p_dist,21,1);
+    float smallNoise2 = voronoi(p_dist,32,1);
 
     height = plato_noise(smallDeepCrater(smallNoise1,smallNoise2,largeCratersDisp(bigNoise1,bigNoise2),p),p);
-    height = .5*mix_overlay(.5,hugeCraters(tinyCraters(light_noise(height,p),p_dist),p_dist),PerlNoise);
+    height = mix_overlay(.5,hugeCraters(tinyCraters(light_noise(height,p),p_dist),p_dist),PerlNoise);
 
     col = smallDeepCratersCol(smallNoise1,smallNoise2,largeCratersColor(bigNoise1, bigNoise1, main_col, p),p);
     col = mix_overlay(.418,colorDetail(hugeCratersCol(col,p_dist),p),vec3(PerlNoise));
@@ -426,5 +423,6 @@ void main() {
         moon(p, col, height);
 
         imageStore(albedo_plus_height, ivec2(texelCoord), vec4(col, height));
+//        imageStore(albedo_plus_height, ivec2(texelCoord), vec4(vec3(voronoi(p,5,1)), 1));
     }
 }
