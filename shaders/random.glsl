@@ -2,12 +2,10 @@
 
 const float pi = 3.14159265359;
 
-// external variables
-uvec2 workGroupSize;
-uvec2 workGroupCount;
-uvec2 tileOffset;
 uniform uint rngSeed;
 
+// external variables
+uvec2 pixelCoord;
 
 uvec4 pcg4d(uvec4 v) {
     v = v * 1664525u + 1013904223u;
@@ -29,7 +27,7 @@ uvec4 pcg4d(uvec4 v) {
 
 uint localSeed = 0;
 uvec4 rand4u() {
-    return pcg4d(uvec4(tileOffset * workGroupSize * workGroupCount + gl_GlobalInvocationID.xy, localSeed++, rngSeed));
+    return pcg4d(uvec4(pixelCoord, localSeed++, rngSeed));
 }
 
 vec4 uintToFloat(uvec4 v) {

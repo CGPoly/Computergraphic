@@ -1,9 +1,5 @@
 #version 460 core
 
-//THESE NEED TO BE IDENTICAL TO THE ONES DEFINED IN pathmarching.cpp
-const uvec2 workGroupSize = uvec2(32);
-const uvec2 workGroupCount = uvec2(4);
-
 layout(local_size_x = 32, local_size_y = 32) in;
 layout(binding = 0, rgba32f) uniform image2D hdrOut;
 layout(binding = 1) uniform sampler2D earth_albedo_plus_height;
@@ -35,6 +31,7 @@ const float pi = 3.14159265359;
 const float light_phi = pi/2;
 const float light_theta = 2*pi/5;
 
+uvec2 pixelCoord = tileOffset * gl_WorkGroupSize.xy * gl_NumWorkGroups.xy + gl_GlobalInvocationID.xy;
 
 struct mat {
     uint type; // 0 lambertian; 1 metal; 2 pure Emmiter; 3 Volumetric
@@ -1438,7 +1435,7 @@ vec3 getRayDir(vec2 p, float aspect){
 }
 
 void main(){
-    uvec2 texelCoord = ivec2(tileOffset * workGroupSize * workGroupCount + gl_GlobalInvocationID.xy);
+    uvec2 texelCoord = ivec2(pixelCoord); // TODO: confusing naming
     ivec2 resolution = imageSize(hdrOut);
 
     if (texelCoord.x >= resolution.x || texelCoord.y >= resolution.y) return;
