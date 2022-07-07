@@ -6,13 +6,30 @@ float dot2(in vec3 v);
 float ndot(in vec2 a, in vec2 b);
 
 
+// random.glsl declarations
+vec4 rand4();
+vec3 rand3();
+vec2 rand2();
+float rand();
+
+
 const float pi = 3.14159265359;
 
 //external variables
 float time;
 
 
-//DE of the primitives is from https://iquilezles.org/articles/distfunctions/
+struct Dist {
+    uint primitiveId;
+    float distance;
+};
+
+
+/*
+ * PRIMITIVES
+ *
+ * from https://iquilezles.org/articles/distfunctions/
+ */
 float sdSphere(vec3 p, float s) {
     return length(p) - s;
 }
@@ -64,9 +81,12 @@ float sdEllipsoid(vec3 p, vec3 r) {
     return k0 * (k0 - 1.0) / k1;
 }
 
-// operations
-// inner (i) Operations transform the parameterspace of the primitives, 
-// while outer (o) Operations transform the primitive it self
+/*
+ * ALTERATIONS
+ *
+ * inner (i) Operations transform the parameterspace of the primitives,
+ * while outer (o) Operations transform the primitive it self
+ */
 vec3 iElongate(vec3 pos, vec3 h) {
     return max(abs(pos) - h, 0.0);
 }
@@ -94,35 +114,78 @@ vec2 iScrew(vec3 pos, float o) {
     return vec2(length(pos.xz) - o, pos.y);
 }
 
-// Boolean Operations, all of these are outer operations
+/*
+ * BOOLEAN OPERATIONS
+ *
+ * all of these are outer operations
+ */
 float bU(float d1, float d2) {
     return min(d1, d2);
 }
+Dist bU(Dist d1, Dist d2) {
+    return d1.distance > d2.distance ? d2 : d1;
+}
 float bS(float d1, float d2) {
-    return max( - d1, d2);
+    return max(d1, -d2);
+}
+Dist bS(Dist d1, Dist d2) {
+    return d1.distance < -d2.distance ? d2 : d1;
 }
 float bI(float d1, float d2) {
     return max(d1, d2);
 }
+Dist bI(Dist d1, Dist d2) {
+    return d1.distance < d2.distance ? d2 : d1;
+}
 float bD(float d1, float d2) {
-    return bS(bI(d1, d2), d1);
+    return bS(d1, bI(d1, d2));
+}
+Dist bD(Dist d1, Dist d2) {
+    return bS(d1, bI(d1, d2));
 }
 float sbU(float d1, float d2, float k) {
     float h = clamp(0.5 + 0.5 * (d2 - d1) / k, 0.0, 1.0);
     return mix(d2, d1, h) - k * h * (1.0 - h);
 }
+Dist sbU(Dist d1, Dist d2, float k) {
+    float h = clamp(0.5 + 0.5 * (d2.distance - d1.distance) / k, 0.0, 1.0);
+    return Dist(
+        rand() > h ? d2.primitiveId : d1.primitiveId,
+        mix(d2.distance, d1.distance, h) - k * h * (1.0 - h)
+    );
+}
 float sbS(float d1, float d2, float k) {
     float h = clamp(0.5 - 0.5 * (d2 + d1) / k, 0.0, 1.0);
-    return mix(d2, - d1, h) + k * h * (1.0 - h);
+    return mix(d2, -d1, h) + k * h * (1.0 - h);
+}
+Dist sbS(Dist d1, Dist d2, float k) {
+    float h = clamp(0.5 - 0.5 * (d2.distance + d1.distance) / k, 0.0, 1.0);
+    return Dist(
+        rand() > h ? d2.primitiveId : d1.primitiveId,
+        mix(d2.distance, -d1.distance, h) + k * h * (1.0 - h)
+    );
 }
 float sbI(float d1, float d2, float k) {
     float h = clamp(0.5 - 0.5 * (d2 - d1) / k, 0.0, 1.0);
     return mix(d2, d1, h) + k * h * (1.0 - h);
 }
-float sbD(float d1, float d2, float k) {
-    return sbS(sbI(d1, d2, k), d1, k);
+Dist sbI(Dist d1, Dist d2, float k) {
+    float h = clamp(0.5 - 0.5 * (d2.distance - d1.distance) / k, 0.0, 1.0);
+    return Dist(
+        rand() > h ? d2.primitiveId : d1.primitiveId,
+        mix(d2.distance, d1.distance, h) + k * h * (1.0 - h)
+    );
 }
-//Rotation and Translation
+float sbD(float d1, float d2, float k) {
+    return sbS(d1, sbI(d1, d2, k), k);
+}
+Dist sbD(Dist d1, Dist d2, float k) {
+    return sbS(d1, sbI(d1, d2, k), k);
+}
+
+/*
+ * POSITIONING
+ */
 vec3 iTrans(vec3 pos, mat4 transform) {
     vec4 tmp = inverse(transform) * vec4(pos, 1);
    //    if (tmp.w == 0) return vec3(tmp.x, tmp.y, tmp.z);
@@ -156,6 +219,7 @@ vec3 iSymXZ(vec3 p) {
 float oDisp(float dist, float disp) {
     return dist - disp;
 }
+
 
 float deManySpheres(vec3 pos) {
     pos.xy = mod((pos.xy), 1.0) - vec2(0.5);
@@ -218,15 +282,6 @@ float deJulia(vec3 p, int Iterations, float Bailout) {
     return 0.5 * z * log(z) / dz;
 }
 
-float sdEnterprise(vec3 pos) {
-    return sbU(sbU(sbU(sbU(sbU(sbU(sbU(oBevel(sdCappedCylinder(pos, 1, 0.04), 0.02), sdEllipsoid(pos, vec3(0.7, 0.2, 0.7)), 0.1), 
-    sdCappedCylinder(iTrans(pos, mat4(0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)) + vec3( -0.8, -1.1, 0), 0.2, 0.8), 0.01),
-    sdCappedCylinder(iTrans(pos, mat4(0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)) + vec3(0, -2, -0.8), 0.1, 0.8), 0.01),
-    sdCappedCylinder(iTrans(pos, mat4(0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)) + vec3(0, -2, 0.8), 0.1, 0.8), 0.01),
-    sdBox(iTrans(pos, mat4(1, 0, 0, 0, 0, cos(pi / 4), -sin(pi / 4), 0, 0, sin(pi / 4), cos(pi / 4), 0, 0, 0, 0, 1)) + vec3(-1.6, 0, 0.6), vec3(0.1, 0.6, 0.05)), 0.01),
-    sdBox(iTrans(pos, mat4(1, 0, 0, 0, 0, cos(-pi / 4), -sin(-pi / 4), 0, 0, sin(-pi / 4), cos(-pi / 4), 0, 0, 0, 0, 1)) + vec3(-1.6, 0, -0.6), vec3(0.1, 0.6, 0.05)), 0.01),
-    sdBox(iTrans(pos, mat4(cos(-pi / 5), - sin(-pi / 5), 0, 0, sin(-pi / 5), cos(-pi / 5), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)) + vec3(-0.2, 0.6, 0), vec3(0.2, 0.5, 0.05)), 0.01);
-}
 float sdRing(vec3 pos, float outer, float inner, vec3 rotation, float thickness) {
     return bI(bI(bD(sdSphere(pos,  outer), sdSphere(pos, inner)), 
     sdPlane(pos, normalize(rotation), - thickness)), - sdPlane(pos, normalize(rotation), thickness));

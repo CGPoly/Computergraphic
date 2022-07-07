@@ -1,5 +1,7 @@
 #version 460 core
 
+#define NO_UNROLL 0
+
 
 //random.glsl declarations
 vec4 rand4();
@@ -15,6 +17,11 @@ vec3 random_cosine_direction();
 
 
 //objects.glsl declarations
+struct Dist {
+    uint primitiveId;
+    float distance;
+};
+
 float sdSphere(vec3 p, float s);
 float sdBox(vec3 p, vec3 b);
 float sdRoundBox(vec3 p, vec3 b, float r);
@@ -35,13 +42,21 @@ float oExtrusion(float dist, vec3 pos, float h);
 vec2 iScrew(vec3 pos, float o);
 
 float bU(float d1, float d2);
+Dist bU(Dist d1, Dist d2);
 float bS(float d1, float d2);
+Dist bS(Dist d1, Dist d2);
 float bI(float d1, float d2);
+Dist bI(Dist d1, Dist d2);
 float bD(float d1, float d2);
+Dist bD(Dist d1, Dist d2);
 float sbU(float d1, float d2, float k);
+Dist sbU(Dist d1, Dist d2, float k);
 float sbS(float d1, float d2, float k);
+Dist sbS(Dist d1, Dist d2, float k);
 float sbI(float d1, float d2, float k);
+Dist sbI(Dist d1, Dist d2, float k);
 float sbD(float d1, float d2, float k);
+Dist sbD(Dist d1, Dist d2, float k);
 
 vec3 iTrans(vec3 pos, mat4 transform);
 vec3 iScale(vec3 pos, vec3 s);
@@ -55,7 +70,6 @@ float oDisp(float dist, float disp);
 float deManySpheres(vec3 pos);
 float deMandelbulb(vec3 pos, int Iterations, float Bailout);
 float deJulia(vec3 p, int Iterations, float Bailout);
-float sdEnterprise(vec3 pos);
 float sdRing(vec3 pos, float outer, float inner, vec3 rotation, float thickness);
 float sdWarpTunnel(vec3 pos);
 float test(vec3 pos);
@@ -65,6 +79,11 @@ float deKaliRemix(vec3 p, int Iterations);
 //util.glsl declarations
 float atan2(float y, float x);
 float cdot(vec3 a, vec3 b);
+
+vec4 ulp(vec4 value);
+vec3 ulp(vec3 value);
+vec2 ulp(vec2 value);
+float ulp(float value);
 
 
 layout(local_size_x = 32, local_size_y = 32) in;
@@ -102,7 +121,6 @@ uvec2 pixelCoord = tileOffset * gl_WorkGroupSize.xy * gl_NumWorkGroups.xy + gl_G
 
 struct mat {
     uint type; // 0 lambertian; 1 metal; 2 pure Emmiter; 3 Volumetric
-    uint custom;
     vec3 albedo;
     float fuzz;
     float IOR;
@@ -116,256 +134,174 @@ struct mat {
     vec3 spec_col;
 };
 
-mat transmission_lamb(vec3 lam_col, float alpha, vec3 transm_col){return mat(100,0,lam_col,0,1.45,alpha,transm_col,vec3(0),.3,.3,lam_col,vec3(1));}
-mat lambertian(vec3 col){return mat(0, 0, col, 0, 1.45, 1, vec3(1), vec3(0), 0.3, 0.3, col, vec3(1));}
-mat metal(vec3 col, float fuzz){return mat(1, 0, col, fuzz, 1.45, 1, vec3(1), vec3(0), 0.1, fuzz, col, col);}
-mat transmission_emm(vec3 emm_col, float alpha, vec3 transm_col){return mat(102,0,vec3(0),0,1.45,alpha,transm_col,emm_col,.3,.3,emm_col,vec3(1));}
-mat emitter(vec3 col){return mat(2, 0, vec3(0), 0, 1.45, 1, vec3(1), col, 0, 0, col, vec3(0));}
-mat phong(vec3 col, float fuzz){return mat(4, 0, col, fuzz, 1.45, 1, vec3(1),vec3(0),0.3,fuzz,col,vec3(1));}
-mat cook_torrance(vec3 col, float roughness){return mat(5, 0, col, roughness, 1.45, 1, vec3(1),vec3(0),0.3,roughness,col,vec3(1));}
-mat custom(uint index){return mat(2, index, vec3(1,0,1),0, 1.45, 1, vec3(1),vec3(1,0,1),0.3,0.3,vec3(1,0,1),vec3(1));}
-
-struct object {
-    uint obj_index;
-    float eps;
-    mat3 rotation;
-    vec3 scaling;
-    float scale;
+struct Entity {
+    uint objectId;
     vec3 position;
-    mat material;
+    mat3 rotation;
+    float scale;
 };
 
-struct hit {
-    bool hit;
-    float dist;
-    uint steps;
-    uint index;
-};
+// TODO: really stupid way of doing this, but its the best we have
+const uint O_ENTERPRISE = __LINE__;
+const uint O_EARTH = __LINE__;
+const uint O_MOON = __LINE__;
+const uint O_GASGIANT = __LINE__;
+const uint O_SUN = __LINE__;
 
-vec3 sunPosition() {
-    vec3 startPoint = normalize(vec3(0, 0.5, 1)) * 151600000000.;
-    float angle = radians(360 * time / 10);
-    vec3 rAxis = normalize(cross(startPoint, vec3(1, 0, 0)));
-    mat3 rotationMatrix;
-    rotationMatrix[0] = vec3(
-        cos(angle) + rAxis.x * rAxis.x * (1 - cos(angle)),
-        rAxis.y * rAxis.x * (1 - cos(angle)) + rAxis.z * sin(angle),
-        rAxis.z * rAxis.x * (1 - cos(angle)) - rAxis.y * sin(angle)
-    );
-    rotationMatrix[1] = vec3(
-        rAxis.x * rAxis.y * (1 - cos(angle)) - rAxis.z * sin(angle),
-        cos(angle) + rAxis.y * rAxis.y * (1 - cos(angle)),
-        rAxis.z * rAxis.y * (1 - cos(angle)) + rAxis.x * sin(angle)
-    );
-    rotationMatrix[2] = vec3(
-        rAxis.x * rAxis.z * (1 - cos(angle)) + rAxis.y * sin(angle),
-        rAxis.y * rAxis.z * (1 - cos(angle)) - rAxis.z * sin(angle),
-        cos(angle) + rAxis.z * rAxis.z * (1 - cos(angle))
-    );
-
-    return rotationMatrix * startPoint;
-}
-
-const int num_obj = 3;
-
-object world[num_obj] = object[num_obj](
-    //Box
-//    object(0, 0.005, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 500, vec3(0, -7900,0), emitter(vec3(5))),
-//    object(0, 0.005, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,1000,0), lambertian(vec3(.8))),
-//    object(0, 0.005, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 5000, vec3(10000,-3000,0), lambertian(vec3(0,.5,0))),
-//    object(0, 0.005, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 5000, vec3(-10000,-3000,0), lambertian(vec3(.5,0,0))),
-//    object(0, 0.005, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 5000, vec3(0, -3000,10000), lambertian(vec3(.5))),
-//    object(0, 0.005, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 5000, vec3(0, -3000,-10000), lambertian(vec3(.5))),
-//    object(1, 0.005, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 5000, vec3(0, 7000,0), lambertian(vec3(.5))),
-//    object(0, 0.005, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 5000, vec3(0,-13000,0), lambertian(vec3(.5)))
-
-//    object(2, 0.00001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), lambertian(vec3(.8)))
-//    object(2, 0.01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), lambertian(vec3(.8)))
-//    object(1, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,-1000,0), lambertian(vec3(.8,.8,.8))),
-//    object(8, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), metal(vec3(1), 0.3)),
-//    object(8, 0.001, mat3(0,-1,0,1,0,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), metal(vec3(1),0.2)),
-//    object(8, 0.001, mat3(1,0,0,0,0,-1,0,1,0), vec3(1,1,1), 1, vec3(0,0,0), metal(vec3(1),0.1)),
-//    object(1, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,-1000,3000), emitter(vec3(100,1.,1.))),
-//    object(1, 0.01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), lambertian(vec3(.8)))
-
-//    object(10, 0.0001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(1)),  // earth 1k
-//    object(11, 0.0001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(3)),  // moon 1k
-//    object(1, 0.0001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(4)),  // gasgiant 1k
-//    object(12, 0.00001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1500, vec3(0,0,0), lambertian(vec3(.8))),  // ring 1k
-
-//    object(1, 0.0001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), lambertian(vec3(.5,1,.5))),
-//    object(1, 0.0001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(2000,0,0), lambertian(vec3(1,1,1))),
-//    object(1, 0.0001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000., vec3(-2000,4000,0), emitter(vec3(5)))
-//    object(1, 0.0001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1020, vec3(0,0,0), custom(2))
-//    object(1, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(2000,0,0), metal(vec3(.722,.451,.20), 0.3)),
-//    object(1, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,2000), emitter(vec3(8,4,4))),
-//    object(8, 0.01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1, vec3(0,0,0), lambertian(vec3(.8,.8,0.)))
-//    object(2, 0, 0.01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,2000), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),
-
-    //solar system
-    object(3, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 157, vec3(0,0,0), lambertian(vec3(.8))),  //enterprise
-//    object(10, 1, mat3(1,0,0,0,0,-1,0,1,0), vec3(1,1,1), 6371009, vec3(0,-(408000+12756270/2),0), custom(1)), //earth
-//    object(1, 1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 6371009, vec3(0,408000+12756270/2,0), custom(1)), //earth
-//    object(1, 1, mat3(0,-1,0,1,0,0,0,0,1), vec3(1,1,1), 6376009, vec3(0,408000+12756270/2,0), custom(2)) //clouds
-//    object(11, 10, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, vec3(397000000,408000+12756270/2,0), custom(3)),  //moon relative to earth
-    object(11, 10, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, -vec3(0,1000000+1737400,0), custom(3)),  //moon orbit
-//    object(1, 1000, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., sunPosition(), emitter(vec3(100000)))  //sun
-    object(1, 1000, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0, 0, 151600000000.), emitter(vec3(100000)))  //sun
+Entity entities[] = Entity[](
+    Entity(O_SUN, vec3(0, 0, 151600000000.), mat3(1), 695700000.),
+    Entity(O_ENTERPRISE, vec3(0), mat3(1), 157),
+    Entity(O_EARTH, vec3(0, -(408000 + 12756270 / 2), 0), mat3(1, 0, 0, 0, 0, -1, 0, 1, 0), 6371009),
+    Entity(O_MOON, vec3(397000000, -(408000 + 12756270 / 2), 0), mat3(1), 1737400)
+//    Entity(O_GASGIANT, vec3(0), mat3(1), 157),
 );
 
-uint lights[] = uint[](2);
+uint lights[] = uint[](0);
 
-
-struct ONB {
-    vec3 u;
-    vec3 v;
-    vec3 w;
-};
-ONB built_onb(vec3 n){
-    n = normalize(n);
-    vec3 a = abs(n.x)>.9?vec3(0,1,0):vec3(1,0,0);
-    vec3 v = normalize(cross(n, a));
-    return ONB(normalize(cross(n, v)), v, n);
-}
-vec3 localize_to_onb(vec3 a, ONB onb){
-    return a.x*onb.u+a.y*onb.v+a.z*onb.w;
-}
-
-
-vec3 calcNormalSphere(vec3 pos, object obj){
-    int ZERO = min(int(currentSample),0); // non-constant zero
-    vec3 n = vec3(0.0);
-    for( int i=ZERO; i<4; i++) {
-        vec3 e = 0.5773*(2.0*vec3((((i+3)>>1)&1),((i>>1)&1),(i&1))-1.0);
-        //        n += e*map(pos+e*h).dist;
-        vec3 p = pos+e*obj.eps;
-        n += e*oScale(sdSphere(iScale(inverse(obj.rotation)*(p-obj.position), obj.scaling), obj.scale), obj.scaling);
-    }
-    return obj.rotation*normalize(n);
-}
 
 //Sphere UV project:
-vec2 cartesian_to_polar(vec3 p){
-    return vec2(atan2(p.y, p.x)/(2*pi), acos(p.z)/pi);
+vec2 cartesian_to_polar(vec3 p) {
+    return vec2(atan2(p.y, p.x) / (2 * pi), acos(p.z) / pi);
 }
 
-vec3 texcoord_sphereProj(vec3 p){
-    vec2 phi_theta = cartesian_to_polar(normalize(p));
-    return vec3(phi_theta, 0);
+vec2 texcoord_sphereProj(vec3 p) {
+    return cartesian_to_polar(normalize(p));
 }
 
-float distObj(object obj, vec3 pos){
-    vec3 map = texcoord_sphereProj(pos);
-    float height;
-    switch(obj.obj_index){
-        case 0:
-            return sdBox(pos,  vec3(obj.scale));
-        case 1:
-            return sdSphere(pos,  obj.scale);
-//        case 2:
-//            return deJulia(pos, 10, 1000);
-//            //return deKaliRemix(pos, 30);
-        case 3:
-            return sdEnterprise(pos/obj.scale)*obj.scale;
-//        case 4:
-//            return deKaliRemix(pos, 10);
-        case 5:
-            return deManySpheres(pos);
-        case 6:
-            return test(pos);
-        case 7:
-            return sbU(oBevel(sdBox(pos,  vec3(1,1,0.5)),0.01), sdEllipsoid(pos,  vec3(1,1,1)), 0.01);
-        case 8:
-            return sdPlane(pos, vec3(0,1,0),1);
-        case 10: // earth
-            height = texture(earth_albedo_plus_height, map.xy).w;
-            height = height * 2 - 1;
-            return oDisp(sdSphere(pos,  obj.scale), height*obj.scale*0.0025);
-        case 11: // moon
-            height = texture(moon_albedo_plus_height, map.xy).w;
-            height = height * 2 - 1;
-            return oDisp(sdSphere(pos,  obj.scale), height*obj.scale*0.01);
-        case 12: // ring
-            return sdRing(pos, obj.scale, obj.scale-obj.scale/10, vec3(0,1,1), .001);
-        case 101:
-            return -sdSphere(pos,  obj.scale);
-        default:
-            return 1.0/0.0; // maximal highp float
+vec3 toEntitySpace(uint entityIndex, vec3 pos) {
+    return (inverse(entities[entityIndex].rotation) * (pos - entities[entityIndex].position)) / entities[entityIndex].scale;
+}
+
+// TODO: could use better names, but I don't know what they represent
+// TODO: really stupid way of doing this, but its the best we have
+const uint P_ENTERPRISE_0 = __LINE__;
+const uint P_ENTERPRISE_1 = __LINE__;
+const uint P_ENTERPRISE_2 = __LINE__;
+const uint P_ENTERPRISE_3 = __LINE__;
+const uint P_ENTERPRISE_4 = __LINE__;
+const uint P_ENTERPRISE_5 = __LINE__;
+const uint P_ENTERPRISE_6 = __LINE__;
+const uint P_ENTERPRISE_7 = __LINE__;
+
+Dist sdEnterprise(vec3 pos) {
+    Dist dist0 = Dist(P_ENTERPRISE_0, oBevel(sdCappedCylinder(pos, 1, 0.04), 0.02));
+    Dist dist1 = Dist(P_ENTERPRISE_1, sdEllipsoid(pos, vec3(0.7, 0.2, 0.7)));
+    Dist dist2 = Dist(P_ENTERPRISE_2, sdCappedCylinder(iTrans(pos, mat4(0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)) + vec3( -0.8, -1.1, 0), 0.2, 0.8));
+    Dist dist3 = Dist(P_ENTERPRISE_3, sdCappedCylinder(iTrans(pos, mat4(0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)) + vec3(0, -2, -0.8), 0.1, 0.8));
+    Dist dist4 = Dist(P_ENTERPRISE_4, sdCappedCylinder(iTrans(pos, mat4(0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)) + vec3(0, -2, 0.8), 0.1, 0.8));
+    Dist dist5 = Dist(P_ENTERPRISE_5, sdBox(iTrans(pos, mat4(1, 0, 0, 0, 0, cos(pi / 4), -sin(pi / 4), 0, 0, sin(pi / 4), cos(pi / 4), 0, 0, 0, 0, 1)) + vec3(-1.6, 0, 0.6), vec3(0.1, 0.6, 0.05)));
+    Dist dist6 = Dist(P_ENTERPRISE_6, sdBox(iTrans(pos, mat4(1, 0, 0, 0, 0, cos(-pi / 4), -sin(-pi / 4), 0, 0, sin(-pi / 4), cos(-pi / 4), 0, 0, 0, 0, 1)) + vec3(-1.6, 0, -0.6), vec3(0.1, 0.6, 0.05)));
+    Dist dist7 = Dist(P_ENTERPRISE_7, sdBox(iTrans(pos, mat4(cos(-pi / 5), - sin(-pi / 5), 0, 0, sin(-pi / 5), cos(-pi / 5), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)) + vec3(-0.2, 0.6, 0), vec3(0.2, 0.5, 0.05)));
+
+    return sbU(sbU(sbU(sbU(sbU(sbU(sbU(dist0, dist1, 0.1), dist2, 0.01), dist3, 0.01), dist4, 0.01), dist5, 0.01), dist6, 0.01), dist7, 0.01);
+}
+
+float sdPlanet(vec3 pos, sampler2D planetTexture, float heightMapScale) {
+    float height = texture(planetTexture, texcoord_sphereProj(pos)).w;
+    height = height * 2 - 1;
+    return oDisp(sdSphere(pos, 1), height * heightMapScale);
+}
+
+Dist objectDistance(uint objectId, vec3 pos) {
+    switch (objectId) {
+        case O_ENTERPRISE: return sdEnterprise(pos);
+        case O_EARTH: return Dist(0, sdPlanet(pos, earth_albedo_plus_height, 0.0025));
+        case O_MOON: return Dist(0, sdPlanet(pos, moon_albedo_plus_height, 0.01));
+        case O_GASGIANT: return Dist(0, sdPlanet(pos, gasgiant_albedo, 0));
+        case O_SUN: return Dist(0, sdSphere(pos, 1));
     }
+
+    return Dist(0, 1.0 / 0.0);
 }
 
-hit map(vec3 pos){
-//    pos = iTrans(pos, viewMat);
-    hit h = hit(false, 1.0/0.0, 0, 0);
-    for (int i = 0; i < num_obj; ++i){
-//        float dist = oScale(distObj(world[i], iScale(inverse(world[i].rotation)*pos, world[i].scaling)+world[i].position), world[i].scaling);
-        float dist = oScale(distObj(world[i], iScale(inverse(world[i].rotation) * (pos - world[i].position), world[i].scaling)), world[i].scaling);
-        if (dist < h.dist){
-            h = hit(false, dist, 0, i);
+
+mat transmission_lamb(vec3 lam_col, float alpha, vec3 transm_col) { return mat(100,lam_col,0,1.45,alpha,transm_col,vec3(0),.3,.3,lam_col,vec3(1)); }
+mat lambertian(vec3 col) { return mat(0, col, 0, 1.45, 1, vec3(1), vec3(0), 0.3, 0.3, col, vec3(1)); }
+mat metal(vec3 col, float fuzz) { return mat(1, col, fuzz, 1.45, 1, vec3(1), vec3(0), 0.1, fuzz, col, col); }
+mat transmission_emm(vec3 emm_col, float alpha, vec3 transm_col) { return mat(102,vec3(0),0,1.45,alpha,transm_col,emm_col,.3,.3,emm_col,vec3(1)); }
+mat emitter(vec3 col) { return mat(2, vec3(0), 0, 1.45, 1, vec3(1), col, 0, 0, col, vec3(0)); }
+mat phong(vec3 col, float fuzz) { return mat(4, col, fuzz, 1.45, 1, vec3(1),vec3(0),0.3,fuzz,col,vec3(1)); }
+mat cook_torrance(vec3 col, float roughness) { return mat(5, col, roughness, 1.45, 1, vec3(1),vec3(0),0.3,roughness,col,vec3(1)); }
+
+mat planetMaterial(vec3 pos, vec3 normal, sampler2D planetTexture) {
+    vec2 texelCoord = texcoord_sphereProj(pos);
+    vec3 col = texture(planetTexture, texelCoord).xyz;
+    return lambertian(col);
+}
+
+mat objectMaterial(uint objectId, uint primitiveId, vec3 pos, vec3 normal) {
+    switch (objectId) {
+        case O_ENTERPRISE: return lambertian(vec3(.8));
+        case O_EARTH: return planetMaterial(pos, normal, earth_albedo_plus_height);
+        case O_MOON: return planetMaterial(pos, normal, moon_albedo_plus_height);
+        case O_GASGIANT: return planetMaterial(pos, normal, gasgiant_albedo);
+        case O_SUN: return emitter(vec3(100000));
+    }
+
+    return emitter((sin(pos * pi) + 1) * 0.5);
+}
+
+struct hit {
+    int entityIndex;
+    Dist dist;
+};
+
+hit map(vec3 pos) {
+    hit h = hit(-1, Dist(0, 1.0 / 0.0));
+    for (int i = 0; i < entities.length(); i++) {
+        Dist dist = objectDistance(entities[i].objectId, toEntitySpace(i, pos));
+        dist.distance *= entities[i].scale; // correct for scale
+
+        if (dist.distance < h.dist.distance){
+            h.dist = dist;
+            h.entityIndex = i;
         }
     }
     return h;
 }
 
-hit ray(vec3 ro, vec3 rd){
-    hit h = hit(false, 0., 0, -1);
-    for (; h.steps < steps; ++h.steps){
-        hit d = map(ro+h.dist*rd);
-        h.dist += d.dist;
-        h.index = d.index;
-        if (d.dist < world[d.index].eps) {
-            h.hit = true;
-            return h;
+hit ray(vec3 ro, vec3 rd) {
+    hit h = hit(-1, Dist(0, 0));
+    for (uint step = 0; step < steps; step++) {
+        vec3 rayEnd = ro + h.dist.distance * rd;
+
+        hit d = map(rayEnd);
+        h.dist.distance += d.dist.distance;
+
+        if (d.dist.distance < length(ulp(rayEnd)) * 1000) {
+            h.entityIndex = d.entityIndex;
+            h.dist.primitiveId = d.dist.primitiveId;
+            break;
         }
-        if (h.dist > FAR_PLANE) {
-            return h;
+        if (h.dist.distance > FAR_PLANE) {
+            break;
         }
     }
-    h.hit = false; // aproximates object. Might be innacurate but as can be let in as long it doesnt cause problems
     return h;
 }
 
-vec3 numDiff(vec3 p, float e){
-    vec2 h = vec2(e,min(int(currentSample),0));
-    return normalize(vec3(map(p+h.xyy).dist - map(p-h.xyy).dist, map(p+h.yxy).dist - map(p-h.yxy).dist, map(p+h.yyx).dist - map(p-h.yyx).dist));
-}
-vec3 tetraNormUnfix(vec3 p, float h){ // for function f(p){
-    //    const float h = eps; // replace by an appropriate value
-    const vec2 k = vec2(1,-1);
-    return normalize( k.xyy*map( p + k.xyy*h ).dist +
-    k.yyx*map( p + k.yyx*h ).dist +
-    k.yxy*map( p + k.yxy*h ).dist +
-    k.xxx*map( p + k.xxx*h ).dist );
-}
-vec3 tetraNorm(vec3 pos, float h){
-    //    const float h = eps;      // replace by an appropriate value
-    int ZERO = min(int(currentSample),0); // non-constant zero
+vec3 tetraNorm(vec3 pos) {
+    #if NO_UNROLL
+        int ZERO = min(int(currentSample), 0); // non-constant zero
+    #else
+        const int ZERO = 0;
+    #endif
+
+    float h = length(ulp(pos)) * 1000;
     vec3 n = vec3(0.0);
-    for( int i=ZERO; i<4; i++) {
-        vec3 e = 0.5773*(2.0*vec3((((i+3)>>1)&1),((i>>1)&1),(i&1))-1.0);
-        n += e*map(pos+e*h).dist;//.x;
+    for (int i = ZERO; i < 4; i++) {
+        vec3 dir = vec3(
+            ((i + 3) >> 1) & 1,
+            (i >> 1) & 1,
+            i & 1
+        );
+        vec3 e = 0.5773 * (2 * dir - 1);
+        n += e * map(pos + e * h).dist.distance;
     }
     return normalize(n);
 }
-vec3 calcNormal(vec3 p, object obj){
-    //    int n = 32;
-    //    vec3 nor = vec3(0,0,0);
-    //    for (int i=0; i< n; ++i){
-    //        nor += tetraNorm(p, eps*rand(i*2565));
-    //    }
-    //    return nor/n;
-    return tetraNorm(p,obj.eps);
-//    return normalize(p-obj.position);
-    //    return numDiff(p,obj.eps);
-    //    return numDiff(p);
-}
-
-// normal
-vec3 texcoord_nor(vec3 p, object obj){
-    //TODO: correct mapping on backside of translucent surfaces
-//    if (obj.obj_index >= 100) return inverse(mat3(viewMat))*(-calcNormal(p, obj));
-//    return inverse(mat3(viewMat))*calcNormal(p, obj);
-    return obj.rotation*calcNormal(p, obj);
+vec3 calcNormal(vec3 p) {
+    return tetraNorm(p);
 }
 
 float fresnel_dielectric_cos(float cosi, float eta){
@@ -452,14 +388,14 @@ float orennayarTerm(float lambert, vec3 n, vec3 l, float roughness) {
     return lambert * (a + (b * cdot(projected(l, n), projected(v, n)) * sin(alpha) * tan(beta)));
 }
 
-vec3 sky(vec3 direction){
+vec3 sky(vec3 direction) {
 //    float t = 0.75*(direction.x + 1.0);
 //    return vec3(1.-t) + t*vec3(0.5, 0.7, 1.0);
 //    return vec3(1.-t) + t*vec3(0.);
 //    return vec3(col_ramp(gradient(direction-vec3(.8,0,0)), 0, 0.086, 0, 1)*10);
     //    return iTrans(direction, viewMat);
     //    return vec3(1);
-    return vec3(0.);
+    return vec3(0);
 }
 
 struct path {
@@ -468,12 +404,8 @@ struct path {
     vec3 direction;
     vec3 emmission;
     bool specular;  // no importance sampling
-    bool inverted[num_obj];
+//    bool inverted[num_obj];
 };
-
-//path add(path old, path new){
-//    return path(old.stop||new.stop,old.attenuation*new.attenuation,new.direction,old.emmission+new.emmission*old.attenuation, new.pdf);
-//}
 
 vec3 reflect(vec3 v, vec3 n) {
     return v - 2*dot(v,n)*n;
@@ -483,11 +415,27 @@ vec3 sphere_to_cart(vec2 p){
     return vec3(cos(p.x)*sin(p.y), sin(p.x)*sin(p.y), cos(p.y));
 }
 
-bool[num_obj] create_false_array(){
-    bool res[num_obj];
-    for (int i = 0; i < num_obj; ++i) res[i] = false;
-    return res;
+
+struct ONB {
+    vec3 u;
+    vec3 v;
+    vec3 w;
+};
+ONB built_onb(vec3 n){
+    n = normalize(n);
+    vec3 a = abs(n.x)>.9?vec3(0,1,0):vec3(1,0,0);
+    vec3 v = normalize(cross(n, a));
+    return ONB(normalize(cross(n, v)), v, n);
 }
+vec3 localize_to_onb(vec3 a, ONB onb){
+    return a.x*onb.u+a.y*onb.v+a.z*onb.w;
+}
+
+//bool[num_obj] create_false_array(){
+//    bool res[num_obj];
+//    for (int i = 0; i < num_obj; ++i) res[i] = false;
+//    return res;
+//}
 
 //path scatter(mat material, uint index, vec3 p, vec3 origin, vec3 normal, vec3 dir_in){
 //    //how transmission works is my own idea, might not be optimal
@@ -548,7 +496,7 @@ float rough_to_expo(float rough){
     return 4500.*pow(1000000., -rough)-0.004;  // experimenteller schätzungswert
 }
 
-path scatter(mat material, uint index, vec3 p, vec3 origin, vec3 normal, vec3 dir_in, ONB onb, out float pdf){
+path scatter(mat material, uint objectId, vec3 p, vec3 origin, vec3 normal, vec3 dir_in, ONB onb, out float pdf){
 //    if (100 <= material.type){ //transmission
 ////        if (material.alpha == 0){
 ////            if (world[index].obj_index < 100) world[index].obj_index += 100;
@@ -583,7 +531,7 @@ path scatter(mat material, uint index, vec3 p, vec3 origin, vec3 normal, vec3 di
 //        if ((new_direction.x < 1e-8) && (new_direction.y < 1e-8) && (new_direction.z < 1e-8))
 //            new_direction = normal;
         pdf = dot(normal, new_direction)/pi;
-        return path(false, material.albedo, new_direction, vec3(0), false, create_false_array());
+        return path(false, material.albedo, new_direction, vec3(0), false/*, create_false_array()*/);
     }
 //    if (material.type == 1) { //metal
 //        // funktioniert nur gut für kleine fuzz, da kein importance sampling
@@ -592,7 +540,7 @@ path scatter(mat material, uint index, vec3 p, vec3 origin, vec3 normal, vec3 di
 //        return path(dot(new_direction, normal) <= 0, material.albedo, new_direction, vec3(0), true);
 //    }
     if (material.type == 2){ //emmission
-        return path(true, vec3(1), vec3(0), material.emmission, false, create_false_array());
+        return path(true, vec3(1), vec3(0), material.emmission, false/*, create_false_array()*/);
     }
 //    if (material.type == 4){ //phong
 ////        float fresnel = node_fresnel(material.IOR, normal, p, origin);
@@ -624,7 +572,7 @@ path scatter(mat material, uint index, vec3 p, vec3 origin, vec3 normal, vec3 di
         if (rand() < F){  // diffuse
             vec3 new_direction = normalize(localize_to_onb(random_cosine_direction(), onb));
             pdf = dot(normal, new_direction)/pi;
-            return path(false, material.albedo, new_direction, vec3(0), false, create_false_array());
+            return path(false, material.albedo, new_direction, vec3(0), false/*, create_false_array()*/);
         }
         else { // specular
             float z1 = rand(), z2 = rand();
@@ -634,7 +582,7 @@ path scatter(mat material, uint index, vec3 p, vec3 origin, vec3 normal, vec3 di
             vec3 o = 2*abs(dot(dir_in, m))*m-dir_in;
             vec3 new_dir = normalize(localize_to_onb(o, onb));
             float pdf = beckmannDistribution(cdot(normal, normalize(new_dir + dir_in)), roughness)*abs(dot(m, normal))/(4*abs(dot(o, m)));
-            return path(false, vec3(1), new_dir, vec3(0), true, create_false_array());
+            return path(false, vec3(1), new_dir, vec3(0), true/*, create_false_array()*/);
         }
 
 //            ONB refl_onb = built_onb(reflect(dir_in, normal));
@@ -644,16 +592,16 @@ path scatter(mat material, uint index, vec3 p, vec3 origin, vec3 normal, vec3 di
 //            pdf = (n+1)/(2*pi)*pow(dot(reflect(new_direction, normal), dir_in), n);
 //        }
     }
-    return path(true, vec3(0),vec3(0),vec3(0), false, create_false_array());
+    return path(true, vec3(0),vec3(0),vec3(0), false/*, create_false_array()*/);
 }
 
 path scatter_light(vec3 p, vec3 normal, ONB onb, out float pdf){
     float random_light = rand();
-    uint light_index = lights[uint(floor(random_light*float(lights.length())))];
-    float radius = world[light_index].scale;
-    vec3 position = world[light_index].position;
+    uint light_index = lights[uint(random_light * lights.length())];
+    vec3 position = entities[light_index].position;
+    float radius = entities[light_index].scale;
 
-    vec3 on_light = rand_in_unit_sphere()*world[light_index].scale+world[light_index].position;
+    vec3 on_light = position + radius * rand_in_unit_sphere();
     vec3 new_direction = normalize(on_light - p);
 
     float cos_theta_max = sqrt(abs(1 - radius*radius/(length(position-p)*length(position-p))));
@@ -661,10 +609,10 @@ path scatter_light(vec3 p, vec3 normal, ONB onb, out float pdf){
     if (radius/length(position-p) > 1) pdf = 0; else pdf = 1/solid_angle;
     pdf = 1/solid_angle;
 
-    return path(dot(new_direction, normal) < 0, vec3(1), new_direction, vec3(0), false, create_false_array());
+    return path(dot(new_direction, normal) < 0, vec3(1), new_direction, vec3(0), false/*, create_false_array()*/);
 }
 
-float scattering_pdf(mat material, uint index, vec3 p, vec3 origin, vec3 normal, vec3 scattered, vec3 dir_in, bool specular){
+float scattering_pdf(mat material, uint objectId, vec3 p, vec3 origin, vec3 normal, vec3 scattered, vec3 dir_in, bool specular){
 //    if (100 <= material.type) return 1;
     float cosine = dot(normal, normalize(scattered));
     if (material.type == 0) {  //lambertian
@@ -710,65 +658,20 @@ vec3 polar_to_cartisan(vec2 p){
     return vec3(cos(p.x)*sin(p.y), sin(p.x)*sin(p.y), cos(p.y));
 }
 
-mat planet(object obj, inout vec3 p, inout vec3 normal){
-    vec3 localPos = iScale(inverse(obj.rotation) * (p - obj.position), obj.scaling);
-    vec3 map = texcoord_sphereProj(localPos);
-    vec3 col = texture(earth_albedo_plus_height, map.xy).xyz;
-    return lambertian(col);
-}
-mat moon(object obj, inout vec3 p, inout vec3 normal){
-    vec3 localPos = iScale(inverse(obj.rotation) * (p - obj.position), obj.scaling);
-    vec3 map = texcoord_sphereProj(localPos);
-    vec3 col = texture(moon_albedo_plus_height, map.xy).xyz;
-    return lambertian(col);
-}
-mat gasagiant(object obj, inout vec3 p, inout vec3 normal){
-    vec3 localPos = iScale(inverse(obj.rotation) * (p - obj.position), obj.scaling);
-    vec3 map = texcoord_sphereProj(localPos);
-    vec3 col = texture(gasgiant_albedo, map.xy).xyz;
-    return lambertian(col);
-}
-mat clouds_low(object obj, inout vec3 p, inout vec3 normal){
-//    float planet_rot = 0;
-//    float wind = 0;
-//
-//    vec3 map = texcoord_nor(p, obj);
-//    map = mat3(cos(planet_rot),-sin(planet_rot),0,sin(planet_rot),cos(planet_rot),0,0,0,1)*map;
-//    map.x += wind;
-//    float cloads = cloud_mask(map);
-//    return transmission_emm(vec3(1), cloads, vec3(1));
-    return transmission_emm(vec3(1), 0.5, vec3(1));
-}
-
-mat cust_mat(object obj, vec3 p, inout vec3 normal){
-    switch(obj.material.custom){
-        case 1:  // planet
-            return planet(obj, p, normal);
-        case 2:  // low clouds
-            return clouds_low(obj, p, normal);
-        case 3: // moon
-            return moon(obj, p, normal);
-        case 4: // gas Giant
-            return gasagiant(obj, p, normal);
-        case 0:
-        default:
-            return obj.material;
-//            return scatter(obj.material, p, normal, dir_in);
-    }
-}
-
-vec3 pathtracing(vec3 origin, vec3 direction){
-    path trace = path(false, vec3(1), direction, vec3(0), false, create_false_array());
-    for (int i = 0; i < max_bounce; ++i){
+vec3 pathtracing(vec3 origin, vec3 direction) {
+    path trace = path(false, vec3(1), direction, vec3(0), false/*, create_false_array()*/);
+    for (int i = 0; i < max_bounce; i++) {
         hit r = ray(origin, trace.direction);
-        if (r.hit){
-            object obj = world[r.index];
-            vec3 p = origin + r.dist*trace.direction;
-            vec3 normal = calcNormal(p, obj);
+        if (r.entityIndex >= 0) {
+            Entity entity = entities[r.entityIndex];
+
+            vec3 p = origin + r.dist.distance * trace.direction;
+            vec3 normal = calcNormal(p);
+            mat material = objectMaterial(entity.objectId, r.dist.primitiveId, toEntitySpace(r.entityIndex, p), normal);
+
             ONB onb = built_onb(normal);
             float pdf_material = 0;
-            mat material = cust_mat(obj, p, normal);
-            path new_trace = scatter(material, r.index, p, origin, normal, trace.direction, onb, pdf_material);
+            path new_trace = scatter(material, entity.objectId, p, origin, normal, trace.direction, onb, pdf_material);
 //            if (new_trace.specular){
 //                trace = path(new_trace.stop,
 //                trace.attenuation*new_trace.attenuation,
@@ -785,7 +688,7 @@ vec3 pathtracing(vec3 origin, vec3 direction){
             path light_trace = scatter_light(p, normal, onb, pdf_light);
 
             //            int random_pdf = int(floor(rand()*2.));
-            vec3 scattered = rand()<.5?new_trace.direction:light_trace.direction;
+            vec3 scattered = rand() < .5 ? new_trace.direction : light_trace.direction;
 //            vec3 scattered = new_trace.direction;
             //            vec3 scattered = light_trace.direction;
             //            vec3 new_direction = random_pdf==0?new_trace.direction:light_trace.direction;
@@ -796,7 +699,7 @@ vec3 pathtracing(vec3 origin, vec3 direction){
             //            pdf_light = 1;
             //            return vec3(1/pdf_light);
             //            vec3 new_direction = new_trace.direction;
-            float pdf_val = .5*pdf_material+.5*pdf_light;
+            float pdf_val = .5 * pdf_material + .5 * pdf_light;
 //            float pdf_val = pdf_material;
 //                        float pdf = random_pdf==0?pdf_material:pdf_light;
             //            float pdf_val = pdf_light;
@@ -804,19 +707,25 @@ vec3 pathtracing(vec3 origin, vec3 direction){
             //            trace = path(new_trace.stop||light_trace.stop,
             //                trace.attenuation*new_trace.attenuation*scattering_pdf(material, r.index, p, origin, normal, light_trace.direction)/pdf_light,
             //                light_trace.direction, trace.emmission+new_trace.emmission*trace.attenuation);
-            trace = path(new_trace.stop, //||light_trace.stop,
-            trace.attenuation*new_trace.attenuation*scattering_pdf(material, r.index, p, origin, normal, scattered, trace.direction, new_trace.specular)/pdf_val,
-            scattered, trace.emmission+new_trace.emmission*trace.attenuation, false, trace.inverted);
-            for (int j = 0; j < num_obj; ++j) trace.inverted[j] = (trace.inverted[j] == new_trace.inverted[j]);
+            trace = path(
+                new_trace.stop, //||light_trace.stop,
+                trace.attenuation * new_trace.attenuation * scattering_pdf(material, entity.objectId, p, origin, normal, scattered, trace.direction, new_trace.specular) / pdf_val,
+                scattered,
+                trace.emmission + new_trace.emmission * trace.attenuation,
+                false/*,
+                trace.inverted*/
+            );
+//            for (int j = 0; j < num_obj; ++j) trace.inverted[j] = (trace.inverted[j] == new_trace.inverted[j]);
+//
+////            }
 
-//            }
-
-            origin = p+2*obj.eps*normalize(trace.direction+normal);
+            float eps = length(ulp(p)) * 1000;
+            origin = p + 2 * eps * normalize(trace.direction + normal);
         }
         else {
             //            vec3 col = refl*sky(iTrans(trace.direction, inverse(viewMat)));
 //            vec3 col = trace.emmission + trace.attenuation*sky(inverse(mat3(viewMat))*trace.direction);
-            vec3 col = trace.emmission + trace.attenuation*sky(trace.direction);
+            vec3 col = trace.emmission + trace.attenuation * sky(trace.direction);
             return col;
             //            emit_accum += attenuation_accum*sky(iTrans(trace.direction, inverse(viewMat)));
             //            return emit_accum;
@@ -841,47 +750,37 @@ void main(){
 
     if (texelCoord.x >= resolution.x || texelCoord.y >= resolution.y) return;
 
-    for (int i = 0; i < num_obj; ++i){
-        world[i].scale /= world_scale;
-        world[i].position /= world_scale;
+    for (int i = 0; i < entities.length(); ++i){
+        entities[i].scale /= world_scale;
+        entities[i].position /= world_scale;
     }
 
-    vec3 light_dir = vec3(cos(light_phi)*sin(light_theta),cos(light_theta),sin(light_phi)*sin(light_theta));
-//    vec3 interp_light_dir = normalize((viewMat * vec4(light_dir, 0.0)).xyz);
-    vec3 interp_light_dir = normalize(light_dir);
-
+    vec3 ro = inverse(mat3(viewMat)) * (camera_origin - viewMat[3].xyz);
     vec2 p = (vec2(texelCoord) / resolution) * 2 - 1;
     float aspect = float(resolution.x) / float(resolution.y);
 
-    vec4 col = vec4(.1,.1,.1,1);
-
-    // for noise testing
-    //    col = vec4(0,0,0,1);
-    //    for (int i = 0; i <10; ++i){
-    //        col.xyz += vec3(rand());
-    //    }
-    //    col.xyz /= 10.;
-    //    imageStore(hdrOut, ivec2(texelCoord), col);
-    //    return;
-
-    vec3 ro = inverse(mat3(viewMat))*(camera_origin-viewMat[3].xyz);
-
+    vec4 col = vec4(.1,.1,.1, 1);
     if (preview) {
-        col = vec4(float(currentSample) + float(samplesPerPass) - float(currentSample) - float(samplesPerPass) + 0.1);
-        vec3 rd = inverse(mat3(viewMat))*getRayDir(p, aspect);
+        vec3 light_dir = vec3(cos(light_phi)*sin(light_theta),cos(light_theta),sin(light_phi)*sin(light_theta));
+        //    vec3 interp_light_dir = normalize((viewMat * vec4(light_dir, 0.0)).xyz);
+        vec3 interp_light_dir = normalize(light_dir);
+
+        vec3 rd = inverse(mat3(viewMat)) * getRayDir(p, aspect);
         hit r = ray(ro, rd);
-        float t = r.dist;
-        //    col = float(r.steps)/float(steps)*vec4(1,1,1,1);
-        if (r.hit){
-            object obj = world[r.index];
-            vec3 pos = ro + t*rd;
-            vec3 nor = calcNormal(pos, obj);
-            mat material = cust_mat(obj, pos, nor);
+
+        if (r.entityIndex >= 0) {
+            Entity entity = entities[r.entityIndex];
+
+            vec3 pos = ro + r.dist.distance * rd;
+            vec3 nor = calcNormal(pos);
+            mat material = objectMaterial(entity.objectId, r.dist.primitiveId, pos, nor);
+
             float diffuseTerm = cdot(nor, interp_light_dir);
             diffuseTerm = orennayarTerm(diffuseTerm, nor, interp_light_dir, material.roughness);
             diffuseTerm = max(diffuseTerm, 0.1);
+
             float specularTerm = cooktorranceTerm(nor, interp_light_dir, material.roughness, material.refractionIndex);
-            col = clamp(vec4(material.diff_col,1) * diffuseTerm + vec4(material.spec_col,1) * specularTerm, 0.0, 1.0);
+            col = vec4(clamp(material.diff_col * diffuseTerm + material.spec_col * specularTerm, 0.0, 1.0), 1);
 
 //            vec3 diff_col = vec3(0);
 //            vec3 map = mapping(pos, obj);
@@ -894,16 +793,16 @@ void main(){
 
 //            col = clamp(vec4(diff_col,1) * diffuseTerm + vec4(obj.material.spec_col,1) * specularTerm, 0.0, 1.0);
 
-            //        hit tmp = ray(pos+nor*eps(t)*2, interp_light_dir);
-            hit tmp = ray(pos+nor*obj.eps*2, interp_light_dir);
-            float TMP = (tmp.hit) ? tmp.dist : 0;
-            float sun_sh = step(TMP, 0.0);
-            vec4 shadow = vec4(1, 1, 1, 1)*clamp(10*pow(0.18*sun_sh, 0.4545), 0.4, 1.);
-            //            col = col*shadow;
-
-            //            col = world[r.index].diff_col;
-            //            col = vec4(inverse(mat3(viewMat))*nor,1);
-            vec3 map = texcoord_nor(pos, obj);
+//            //        hit tmp = ray(pos+nor*eps(t)*2, interp_light_dir);
+//            hit tmp = ray(pos+nor*obj.eps*2, interp_light_dir);
+//            float TMP = (tmp.hit) ? tmp.dist : 0;
+//            float sun_sh = step(TMP, 0.0);
+//            vec4 shadow = vec4(1, 1, 1, 1)*clamp(10*pow(0.18*sun_sh, 0.4545), 0.4, 1.);
+//            //            col = col*shadow;
+//
+//            //            col = world[r.index].diff_col;
+//            //            col = vec4(inverse(mat3(viewMat))*nor,1);
+//            vec3 map = texcoord_nor(pos, obj);
 //            col = vec4(map,1);
         }
     }
