@@ -11,7 +11,7 @@ public:
 	Texture& operator=(Texture const&) = delete;
 	Texture& operator=(Texture&&) noexcept;
 
-	GLuint getId() const;
+	[[nodiscard]] GLuint getId() const;
 
 	static Texture immutable(GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height);
 private:

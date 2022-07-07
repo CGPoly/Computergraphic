@@ -1,37 +1,36 @@
 #include "TonemapProcessor.h"
 #include "glad/glad.h"
 #include "Texture.h"
-#include "buffer.hpp"
+#include "Buffer.hpp"
 
-TonemapProcessor::TonemapProcessor() noexcept {
-	static float const vertices[] = {
-			-1.0f, -1.0f, 0.0f,
-			1.f, -1.f, 0.0f,
-			-1.f,1.f,0.f,
-			1.0f,  1.f, 0.0f
-	};
+static float const vertices[] = {
+		-1.0f, -1.0f, 0.0f,
+		1.f, -1.f, 0.0f,
+		-1.f,1.f,0.f,
+		1.0f,  1.f, 0.0f
+};
 
-	static unsigned int const indices[] = {
-			0, 1, 2, 1, 2, 3
-	};
+static unsigned int const indices[] = {
+		0, 1, 2, 1, 2, 3
+};
+
+TonemapProcessor::TonemapProcessor() noexcept:
+		fullscreenVbo(Buffer::immutable(GL_ARRAY_BUFFER, sizeof(vertices), vertices)),
+		fullscreenIbo(Buffer::immutable(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices)) {
 
 	glGenVertexArrays(1, &fullscreenVao);
 	glBindVertexArray(fullscreenVao);
 
-	fullscreenVbo = makeBuffer(GL_ARRAY_BUFFER, GL_STATIC_DRAW, sizeof(vertices), vertices);
-	glBindBuffer(GL_ARRAY_BUFFER, fullscreenVbo);
+	glBindBuffer(GL_ARRAY_BUFFER, fullscreenVbo.getId());
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)nullptr);
 	glEnableVertexAttribArray(0);
 
-	fullscreenIbo = makeBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW, sizeof(indices), indices);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, fullscreenIbo);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, fullscreenIbo.getId());
 
 	glBindVertexArray(0);
 }
 
 TonemapProcessor::~TonemapProcessor() noexcept {
-	glDeleteBuffers(1, &fullscreenIbo);
-	glDeleteBuffers(1, &fullscreenVbo);
 	glDeleteVertexArrays(1, &fullscreenVao);
 }
 

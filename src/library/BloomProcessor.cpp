@@ -3,7 +3,6 @@
 #include "BloomProcessor.h"
 #include "ShaderProgram.h"
 #include "mathUtil.h"
-#include "buffer.hpp"
 
 BloomProcessor::BloomProcessor(unsigned int width, unsigned int height):
 		bloomTexture(Texture::immutable(1, GL_RGBA32F, 1, 1)), // <-- needed to make compiler happy

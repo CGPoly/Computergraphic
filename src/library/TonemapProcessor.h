@@ -2,6 +2,7 @@
 
 #include "ShaderProgram.h"
 #include "Texture.h"
+#include "Buffer.hpp"
 
 class TonemapProcessor {
 public:
@@ -25,8 +26,8 @@ public:
 
 private:
 	GLuint fullscreenVao = 0;
-	GLuint fullscreenVbo = 0;
-	GLuint fullscreenIbo = 0;
+	Buffer fullscreenVbo;
+	Buffer fullscreenIbo;
 
 	ShaderProgram toneMapProgram{{
 		{ "tonemap.vert", GL_VERTEX_SHADER },
