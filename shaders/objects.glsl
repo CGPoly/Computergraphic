@@ -1,16 +1,18 @@
 #version 460 core
 
+// util.glsl declarations
+float dot2(in vec2 v);
+float dot2(in vec3 v);
+float ndot(in vec2 a, in vec2 b);
+
+
 const float pi = 3.14159265359;
 
 //external variables
 float time;
 
 
-//DE of the primitives is from https : //iquilezles.org/articles/distfunctions/ 
-float dot2(in vec2 v) { return dot(v, v); }
-float dot2(in vec3 v) { return dot(v, v); }
-float ndot(in vec2 a, in vec2 b) { return a.x * b.x - a.y * b.y; }
-
+//DE of the primitives is from https://iquilezles.org/articles/distfunctions/
 float sdSphere(vec3 p, float s) {
     return length(p) - s;
 }

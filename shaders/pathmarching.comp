@@ -148,15 +148,6 @@ object world[num_obj] = object[num_obj](
 
 uint lights[] = uint[](2);
 
-float atan2(float y, float x){
-    if (x > 0) return atan(y/x);
-    if (x < 0 && y >= 0) return atan(y/x)+pi;
-    if (x < 0 && y < 0) return atan(y/x)-pi;
-    if(x == 0 && y > 0) return pi/2;
-    if(x == 0 && y < 0) return -pi/2;
-    return 0;  // this is x == 0 && y == 0 which is technically undefined
-}
-
 
 //random.glsl declarations
 vec4 rand4();
@@ -217,6 +208,12 @@ float sdRing(vec3 pos, float outer, float inner, vec3 rotation, float thickness)
 float sdWarpTunnel(vec3 pos);
 float test(vec3 pos);
 float deKaliRemix(vec3 p, int Iterations);
+
+
+//util.glsl declarations
+float atan2(float y, float x);
+float cdot(vec3 a, vec3 b);
+
 
 struct ONB {
     vec3 u;
@@ -405,9 +402,6 @@ float node_fresnel(float ior, vec3 nor, vec3 V){
     return fresnel_dielectric(V, nor, eta);
 }
 
-float cdot(vec3 a, vec3 b) {
-    return clamp(dot(a,b), 0.0, 1.0);
-}
 float beckmannDistribution(float dotNH, float roughness) {
     float sigma2 = roughness * roughness;
     float alpha = acos(dotNH);
