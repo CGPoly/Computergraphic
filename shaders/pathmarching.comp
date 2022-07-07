@@ -1,5 +1,72 @@
 #version 460 core
 
+
+//random.glsl declarations
+vec4 rand4();
+vec3 rand3();
+vec2 rand2();
+float rand();
+
+vec2 random_in_unit_disk();
+vec3 rand_in_unit_sphere();
+vec3 rand_unit_sphere();
+vec3 rand_in_hemisphere(vec3 n);
+vec3 random_cosine_direction();
+
+
+//objects.glsl declarations
+float sdSphere(vec3 p, float s);
+float sdBox(vec3 p, vec3 b);
+float sdRoundBox(vec3 p, vec3 b, float r);
+float sdPlane(vec3 p, vec3 n, float h);
+float sdInfinteCylinder(vec3 p, vec3 c);
+float sdCappedCylinder(vec3 p, float h, float r);
+float sdCappedCylinder(vec3 p, vec3 a, vec3 b, float r);
+float sdRoundedCylinder(vec3 p, float ra, float rb, float h);
+float sdSolidAngle(vec3 p, vec2 c, float ra);
+float sdEllipsoid(vec3 p, vec3 r);
+
+vec3 iElongate(vec3 pos, vec3 h);
+float oElongate(float dist, vec3 pos, vec3 h);
+float oBevel(float dist, float bevel);
+float oOnion(float dist, float thickness);
+float oMorph(float d1, float d2, float t);
+float oExtrusion(float dist, vec3 pos, float h);
+vec2 iScrew(vec3 pos, float o);
+
+float bU(float d1, float d2);
+float bS(float d1, float d2);
+float bI(float d1, float d2);
+float bD(float d1, float d2);
+float sbU(float d1, float d2, float k);
+float sbS(float d1, float d2, float k);
+float sbI(float d1, float d2, float k);
+float sbD(float d1, float d2, float k);
+
+vec3 iTrans(vec3 pos, mat4 transform);
+vec3 iScale(vec3 pos, vec3 s);
+float oScale(float dist, vec3 s);
+vec3 iSymX(vec3 p);
+vec3 iSymY(vec3 p);
+vec3 iSymZ(vec3 p);
+vec3 iSymXZ(vec3 p);
+float oDisp(float dist, float disp);
+
+float deManySpheres(vec3 pos);
+float deMandelbulb(vec3 pos, int Iterations, float Bailout);
+float deJulia(vec3 p, int Iterations, float Bailout);
+float sdEnterprise(vec3 pos);
+float sdRing(vec3 pos, float outer, float inner, vec3 rotation, float thickness);
+float sdWarpTunnel(vec3 pos);
+float test(vec3 pos);
+float deKaliRemix(vec3 p, int Iterations);
+
+
+//util.glsl declarations
+float atan2(float y, float x);
+float cdot(vec3 a, vec3 b);
+
+
 layout(local_size_x = 32, local_size_y = 32) in;
 layout(binding = 0, rgba32f) uniform image2D hdrOut;
 layout(binding = 1) uniform sampler2D earth_albedo_plus_height;
@@ -147,72 +214,6 @@ object world[num_obj] = object[num_obj](
 );
 
 uint lights[] = uint[](2);
-
-
-//random.glsl declarations
-vec4 rand4();
-vec3 rand3();
-vec2 rand2();
-float rand();
-
-vec2 random_in_unit_disk();
-vec3 rand_in_unit_sphere();
-vec3 rand_unit_sphere();
-vec3 rand_in_hemisphere(vec3 n);
-vec3 random_cosine_direction();
-
-
-//objects.glsl declarations
-float sdSphere(vec3 p, float s);
-float sdBox(vec3 p, vec3 b);
-float sdRoundBox(vec3 p, vec3 b, float r);
-float sdPlane(vec3 p, vec3 n, float h);
-float sdInfinteCylinder(vec3 p, vec3 c);
-float sdCappedCylinder(vec3 p, float h, float r);
-float sdCappedCylinder(vec3 p, vec3 a, vec3 b, float r);
-float sdRoundedCylinder(vec3 p, float ra, float rb, float h);
-float sdSolidAngle(vec3 p, vec2 c, float ra);
-float sdEllipsoid(vec3 p, vec3 r);
-
-vec3 iElongate(vec3 pos, vec3 h);
-float oElongate(float dist, vec3 pos, vec3 h);
-float oBevel(float dist, float bevel);
-float oOnion(float dist, float thickness);
-float oMorph(float d1, float d2, float t);
-float oExtrusion(float dist, vec3 pos, float h);
-vec2 iScrew(vec3 pos, float o);
-
-float bU(float d1, float d2);
-float bS(float d1, float d2);
-float bI(float d1, float d2);
-float bD(float d1, float d2);
-float sbU(float d1, float d2, float k);
-float sbS(float d1, float d2, float k);
-float sbI(float d1, float d2, float k);
-float sbD(float d1, float d2, float k);
-
-vec3 iTrans(vec3 pos, mat4 transform);
-vec3 iScale(vec3 pos, vec3 s);
-float oScale(float dist, vec3 s);
-vec3 iSymX(vec3 p);
-vec3 iSymY(vec3 p);
-vec3 iSymZ(vec3 p);
-vec3 iSymXZ(vec3 p);
-float oDisp(float dist, float disp);
-
-float deManySpheres(vec3 pos);
-float deMandelbulb(vec3 pos, int Iterations, float Bailout);
-float deJulia(vec3 p, int Iterations, float Bailout);
-float sdEnterprise(vec3 pos);
-float sdRing(vec3 pos, float outer, float inner, vec3 rotation, float thickness);
-float sdWarpTunnel(vec3 pos);
-float test(vec3 pos);
-float deKaliRemix(vec3 p, int Iterations);
-
-
-//util.glsl declarations
-float atan2(float y, float x);
-float cdot(vec3 a, vec3 b);
 
 
 struct ONB {
