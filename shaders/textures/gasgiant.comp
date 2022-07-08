@@ -346,7 +346,7 @@ vec3 polar_to_cartisan(vec2 p){
 
 vec3 coord_gasGiant(vec3 p, float rot, float offset){
     rot *= pi/180;
-    p = mat3(cos(rot),-sin(rot),0,sin(rot),cos(rot),0,0,0,1)*p;
+    p = mat3(cos(rot),0,-sin(rot),0,1,0,sin(rot),0,cos(rot))*p;
     p.x += offset;
 
     p = vector_noise(p, .074, 11, 2, 0);
