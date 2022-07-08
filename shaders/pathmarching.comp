@@ -18,13 +18,27 @@ uniform uint passSeed;
 uniform float time;
 uniform mat4 viewMat;
 
+//uniform vec3 camera_pos;
+//uniform vec4 camera_rot;
+//uniform vec3 enterprise_pos;
+//uniform vec4 enterprise_rot;
+//uniform vec3 fractal_pos;
+//uniform vec4 fractal_rot;
+//uniform vec3 julia_c;
+
+vec3 enterprise_pos = vec3(0);
+vec4 enterprise_rot = vec4(0);
+vec3 fractal_pos = vec3(3000,0,0);
+vec4 fractal_rot = vec4(0);
+
 const float world_scale = 1000;  //how big one unit in metern is (this is for easier camera control)
 
 const float FAR_PLANE = 149597870700.+696342000.*10000/world_scale;
 
 const float steps = 2000;
 
-const bool preview = true;
+const bool orbit_cam = true;
+const bool preview = false;
 const int max_bounce = 16;  // maximal number of Light bounces
 
 const float focal_length = 50;  // focal length in mm
@@ -61,6 +75,11 @@ mat emitter(vec3 col){return mat(2, 0, vec3(0), 0, 1.45, 1, vec3(1), col, 0, 0, 
 mat phong(vec3 col, float fuzz){return mat(4, 0, col, fuzz, 1.45, 1, vec3(1),vec3(0),0.3,fuzz,col,vec3(1));}
 mat cook_torrance(vec3 col, float roughness){return mat(5, 0, col, roughness, 1.45, 1, vec3(1),vec3(0),0.3,roughness,col,vec3(1));}
 mat custom(uint index){return mat(2, index, vec3(1,0,1),0, 1.45, 1, vec3(1),vec3(1,0,1),0.3,0.3,vec3(1,0,1),vec3(1));}
+mat3 quant_to_rot(vec4 q){
+    return mat3(1-2*(q.z*q.z+q.w*q.w),2*(q.y*q.z-q.x*q.w),2*(q.z*q.w+q.x*q.z),
+                2*(q.y*q.z+q.x*q.w),1-2*(q.w*q.w+q.y*q.y),2*(q.z*q.w-q.y*q.x),
+                2*(q.z*q.w-q.z*q.x),2*(q.z*q.w+q.y*q.x),1-2*(q.y*q.y+q.z*q.z));
+}
 
 struct object {
     uint obj_index;
@@ -103,8 +122,7 @@ vec3 sunPosition() {
     return rotationMatrix * startPoint;
 }
 
-const int num_obj = 2;
-
+const int num_obj = 5;
 object world[num_obj] = object[num_obj](
     //Box
 //    object(0, 0.005, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 500, vec3(0, -7900,0), emitter(vec3(5))),
@@ -127,7 +145,7 @@ object world[num_obj] = object[num_obj](
 
 //    object(10, 0.0001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(1)),  // earth 1k
 //    object(11, 0.0001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(3)),  // moon 1k
-    object(1, 0.0001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(4)),  // gasgiant 1k
+//    object(1, 0.0001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(4)),  // gasgiant 1k
 //    object(12, 0.00001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1500, vec3(0,0,0), lambertian(vec3(.8))),  // ring 1k
 
 //    object(1, 0.0001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), lambertian(vec3(.5,1,.5))),
@@ -140,17 +158,19 @@ object world[num_obj] = object[num_obj](
 //    object(2, 0, 0.01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,2000), 0.3, 0.3, vec4(1,1,1,1), vec4(1,1,1,1)),
 
     //solar system
-//    object(3, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 157, vec3(0,0,0), lambertian(vec3(.8))),  //enterprise
+    object(3, 0.001, quant_to_rot(enterprise_rot), vec3(1,1,1), 157, enterprise_pos, lambertian(vec3(.8))),  //enterprise
+    object(2, 0.001, quant_to_rot(fractal_rot), vec3(1,1,1), 1000, fractal_pos, lambertian(vec3(.5))),  //fractal
 //    object(10, 1, mat3(1,0,0,0,0,-1,0,1,0), vec3(1,1,1), 6371009, vec3(0,-(408000+12756270/2),0), custom(1)), //earth
+    object(10, 100, mat3(1,0,0,0,0,-1,0,1,0), vec3(1,1,1), 6371009, -vec3(384400000+12756270/2,800000+1737400,0), custom(1)), //earth
 //    object(1, 1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 6371009, vec3(0,408000+12756270/2,0), custom(1)), //earth
 //    object(1, 1, mat3(0,-1,0,1,0,0,0,0,1), vec3(1,1,1), 6376009, vec3(0,408000+12756270/2,0), custom(2)) //clouds
 //    object(11, 10, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, vec3(397000000,408000+12756270/2,0), custom(3)),  //moon relative to earth
-//    object(11, 10, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, -vec3(0,1000000+1737400,0), custom(3)),  //moon orbit
+    object(11, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, -vec3(0,800000+1737400,0), custom(3)),  //moon orbit
 //    object(1, 1000, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., sunPosition(), emitter(vec3(100000)))  //sun
     object(1, 1000, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0, 0, 151600000000.), emitter(vec3(100000)))  //sun
 );
 
-uint lights[] = uint[](2);
+uint lights[] = uint[](4);
 
 float atan2(float y, float x){
     if (x > 0) return atan(y/x);
@@ -918,8 +938,8 @@ float distObj(object obj, vec3 pos){
             return sdBox(pos,  vec3(obj.scale));
         case 1:
             return sdSphere(pos,  obj.scale);
-//        case 2:
-//            return deJulia(pos, 10, 1000);
+        case 2:
+            return deJulia(pos, 10, 1000);
 //            //return deKaliRemix(pos, 30);
         case 3:
             return sdEnterprise(pos/obj.scale)*obj.scale;
