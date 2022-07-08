@@ -17,9 +17,9 @@ Camera::Camera() {
 	this->dragging = false;
 
 	this->look_at = glm::vec3(0.f);
-	this->phi = 0.f;
-	this->theta = 0.f;
-	this->radius = 5.f;
+	this->phi = M_PI * 0.65f;
+	this->theta = M_PI * -0.1;
+	this->radius = 3.f;
 
 	this->view_mat = glm::identity<glm::mat4>();
 	update();
@@ -97,9 +97,9 @@ void Camera::motion(int x, int y) {
 }
 
 void Camera::scroll(int delta) {
-	this->radius += 0.5f * delta;
-	if (this->radius < 0.001f)
-		this->radius = 0.001f;
+	this->radius = exp(log(radius) + 0.5f * delta);
+	if (this->radius < 0)
+		this->radius = 0;
 
 	update();
 }
