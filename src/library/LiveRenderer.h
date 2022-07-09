@@ -9,6 +9,7 @@
 #include "common.hpp"
 #include "Profiler.h"
 #include "TonemapProcessor.h"
+#include "motion_control.h"
 
 class LiveRenderer {
 public:
@@ -31,6 +32,8 @@ private:
 	GLFWwindow* window = createWindow(windowWidth, windowHeight, "LiveRenderer");
 
 	Camera camera{};
+
+	motion_control motionControl{};
 
 	TexturesRenderer texturesRenderer{1024 * 4, 1024 * 4, 1024 * 4};
 //	TexturesRenderer texturesRenderer{256, 1024*16, 16};

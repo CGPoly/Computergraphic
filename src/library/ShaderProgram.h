@@ -40,9 +40,12 @@ public:
 
 	void e() const;
 
-	void setMatrix4f(std::string const&, glm::mat<4, 4, float> const& mat);
 	void set1i(std::string const& uniformName, int value);
 	void set1ui(std::string const& uniformName, unsigned int value);
 	void set2ui(std::string const& uniformName, unsigned int v0, unsigned int v1);
 	void set1f(std::string const& uniformName, float value);
+	void set3f(std::string const& uniformName, float v0, float v1, float v2);
+	void setVec3(std::string const& uniformName, glm::vec3 const& vec);
+	void setMat3(std::string const& string, glm::mat3 const& mat);
+	void setMat4(std::string const& string, glm::mat4 const& mat);
 };

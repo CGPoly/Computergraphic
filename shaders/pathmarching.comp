@@ -18,21 +18,14 @@ uniform uint passSeed;
 uniform float time;
 uniform mat4 viewMat;
 
-//uniform vec3 camera_pos;
-//uniform vec4 camera_rot;
-//uniform vec3 enterprise_pos;
-//uniform vec4 enterprise_rot;
-//uniform vec3 fractal_pos;
-//uniform vec4 fractal_rot;
-//uniform vec3 julia_c;
+uniform vec3 camera_pos;
+uniform mat3 camera_rot;
+uniform vec3 enterprise_pos;
+uniform mat3 enterprise_rot;
+uniform vec3 fractal_pos;
+uniform mat3 fractal_rot;
+uniform vec3 julia_c;
 
-vec3 camera_pos = vec3(0,0,-.5);
-mat3 camera_rot = mat3(1,0,0,0,1,0,0,0,1);
-vec3 enterprise_pos = vec3(0);
-mat3 enterprise_rot = mat3(1,0,0,0,1,0,0,0,1);
-vec3 fractal_pos = vec3(0,1000,2000);
-mat3 fractal_rot = mat3(1,0,0,0,1,0,0,0,1);
-vec3 julia_c = vec3(0.4,-0.4,0.6);
 const bool orbit_cam = true;
 
 const float world_scale = 1000;  //how big one unit in metern is (this is for easier camera control)

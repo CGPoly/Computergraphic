@@ -179,10 +179,18 @@ void LiveRenderer::renderPathmarcher() {
 	profiler.begin(ProfilerType::pass);
 
 	pathMarchingProgram.use();
-	pathMarchingProgram.setMatrix4f("viewMat", camera.view_matrix());
+	pathMarchingProgram.setMat4("viewMat", camera.view_matrix());
 	pathMarchingProgram.set1ui("passSeed", renderState.passSeed);
 	pathMarchingProgram.set1f("time", time.count());
 	pathMarchingProgram.set1ui("samplesPerPass", samplesPerPass);
+
+	pathMarchingProgram.setVec3("camera_pos", motionControl.get_camera_pos(time.count()));
+	pathMarchingProgram.setMat3("camera_rot", motionControl.get_camera_rot(time.count()));
+	pathMarchingProgram.setVec3("enterprise_pos", motionControl.get_enterprise_pos(time.count()));
+	pathMarchingProgram.setMat3("enterprise_rot", motionControl.get_enterprise_rot(time.count()));
+	pathMarchingProgram.setVec3("fractal_pos", motionControl.get_fractal_pos(time.count()));
+	pathMarchingProgram.setMat3("fractal_rot", motionControl.get_fractal_rot(time.count()));
+	pathMarchingProgram.setVec3("julia_c", motionControl.get_julia_c(time.count()));
 
 	glBindImageTexture(0, hdrColoTexture.getId(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 	glBindTextureUnit(1, texturesRenderer.getEarthAlbedoPlusHeight().getId());
