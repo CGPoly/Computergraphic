@@ -67,13 +67,44 @@ float cubic_splines::get_point(float t) {
 }
 
 motion_control::motion_control() {
+    camera_pos = {};
+    enterprise_pos = {};
+    fractal_pos = {};
+    julia_c = {};
     for (int i=0;i<3;++i)camera_pos.push_back(cubic_splines(camera_pos_points[i], camera_pos_points[3]));
-    for (int i=0;i<4;++i)camera_rot.push_back(cubic_splines(camera_rot_points[i], camera_rot_points[4]));
+//    for (int i=0;i<4;++i)camera_rot.push_back(cubic_splines(camera_rot_points[i], camera_rot_points[4]));
     for (int i=0;i<3;++i)enterprise_pos.push_back(cubic_splines(enterprise_pos_points[i], enterprise_pos_points[3]));
-    for (int i=0;i<4;++i)enterprise_rot.push_back(cubic_splines(enterprise_rot_points[i], enterprise_rot_points[4]));
+//    for (int i=0;i<4;++i)enterprise_rot.push_back(cubic_splines(enterprise_rot_points[i], enterprise_rot_points[4]));
     for (int i=0;i<3;++i)fractal_pos.push_back(cubic_splines(fractal_pos_points[i], fractal_pos_points[3]));
-    for (int i=0;i<4;++i)fractal_rot.push_back(cubic_splines(fractal_rot_points[i], fractal_rot_points[3]));
+//    for (int i=0;i<4;++i)fractal_rot.push_back(cubic_splines(fractal_rot_points[i], fractal_rot_points[3]));
     for (int i=0;i<3;++i)julia_c.push_back(cubic_splines(julia_c_points[i], julia_c_points[3]));
+//    camera_pos = {
+//        cubic_splines(camera_pos_points[0], camera_pos_points[3]),
+//        cubic_splines(camera_pos_points[1], camera_pos_points[3]),
+//        cubic_splines(camera_pos_points[2], camera_pos_points[3])
+//    };
+//    enterprise_pos = {
+//        cubic_splines(enterprise_pos_points[0], enterprise_pos_points[3]),
+//        cubic_splines(enterprise_pos_points[1], enterprise_pos_points[3]),
+//        cubic_splines(enterprise_pos_points[2], enterprise_pos_points[3])
+//    };
+//    fractal_pos = {
+//        cubic_splines(fractal_pos_points[0], fractal_pos_points[3]),
+//        cubic_splines(fractal_pos_points[1], fractal_pos_points[3]),
+//        cubic_splines(fractal_pos_points[2], fractal_pos_points[3])
+//    };
+//    julia_c = {
+//        cubic_splines(julia_c_points[0], julia_c_points[3]),
+//        cubic_splines(julia_c_points[1], julia_c_points[3]),
+//        cubic_splines(julia_c_points[2], julia_c_points[3])
+//    };
+//    for (int i=0;i<3;++i)camera_pos[i] = cubic_splines(camera_pos_points[i], camera_pos_points[3]);
+//    for (int i=0;i<4;++i)camera_rot[i] = cubic_splines(camera_rot_points[i], camera_rot_points[4]);
+//    for (int i=0;i<3;++i)enterprise_pos[i] = cubic_splines(enterprise_pos_points[i], enterprise_pos_points[3]);
+//    for (int i=0;i<4;++i)enterprise_rot[i] = cubic_splines(enterprise_rot_points[i], enterprise_rot_points[4]);
+//    for (int i=0;i<3;++i)fractal_pos[i] = cubic_splines(fractal_pos_points[i], fractal_pos_points[3]);
+//    for (int i=0;i<4;++i)fractal_rot[i] = cubic_splines(fractal_rot_points[i], fractal_rot_points[3]);
+//    for (int i=0;i<3;++i)julia_c[i] = cubic_splines(julia_c_points[i], julia_c_points[3]);
 }
 
 //std::vector<float> motion_control::get_camera_pos(float t) {
@@ -131,9 +162,9 @@ glm::mat3 motion_control::get_camera_rot(float t) {
 }
 
 glm::vec3 motion_control::get_enterprise_pos(float t) {
-    return {this->camera_pos[0].get_point(t),
-            this->camera_pos[1].get_point(t),
-            this->camera_pos[2].get_point(t)};
+    return {this->enterprise_pos[0].get_point(t),
+            this->enterprise_pos[1].get_point(t),
+            this->enterprise_pos[2].get_point(t)};
 }
 
 glm::mat3 motion_control::get_enterprise_rot(float t) {
@@ -141,9 +172,9 @@ glm::mat3 motion_control::get_enterprise_rot(float t) {
 }
 
 glm::vec3 motion_control::get_fractal_pos(float t) {
-    return {this->camera_pos[0].get_point(t),
-            this->camera_pos[1].get_point(t),
-            this->camera_pos[2].get_point(t)};
+    return {this->fractal_pos[0].get_point(t),
+            this->fractal_pos[1].get_point(t),
+            this->fractal_pos[2].get_point(t)};
 }
 glm::mat3 motion_control::get_fractal_rot(float t) {
     return glm::lookAt(get_fractal_pos(t), get_fractal_pos(t+epsilon), up);
@@ -168,4 +199,8 @@ glm::mat3 motion_control::quant_to_rot(glm::vec4 q){
     return {1-2*(q.z*q.z+q.w*q.w),2*(q.y*q.z-q.x*q.w),2*(q.z*q.w+q.x*q.z),
             2*(q.y*q.z+q.x*q.w),1-2*(q.w*q.w+q.y*q.y),2*(q.z*q.w-q.y*q.x),
             2*(q.z*q.w-q.z*q.x),2*(q.z*q.w+q.y*q.x),1-2*(q.y*q.y+q.z*q.z)};
+}
+
+glm::mat3 motion_control::look_at(glm::vec3 origin, glm::vec3 target) {
+    return glm::lookAt(origin, target, up);
 }
