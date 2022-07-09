@@ -1,5 +1,10 @@
 #version 460 core
 
+//util.glsl declarations
+vec4 ulp(vec4 value);
+vec3 ulp(vec3 value);
+vec2 ulp(vec2 value);
+
 //THESE NEED TO BE IDENTICAL TO THE ONES DEFINED IN pathmarching.cpp
 const uvec2 workGroupSize = uvec2(32);
 const uvec2 workGroupCount = uvec2(4);
@@ -33,6 +38,7 @@ const float world_scale = 1000;  //how big one unit in metern is (this is for ea
 const float FAR_PLANE = 149597870700.+696342000.*10000/world_scale;
 
 const float steps = 2000;
+const float epsilonFactor = 1000;
 
 const bool preview = false;
 const int max_bounce = 16;  // maximal number of Light bounces
@@ -75,7 +81,6 @@ mat4 camera_mat = orbit_cam?viewMat:mat4(vec4(camera_rot[0],0),vec4(camera_rot[1
 
 struct object {
     uint obj_index;
-    float eps;
     mat3 rotation;
     vec3 scaling;
     float scale;
@@ -116,30 +121,30 @@ vec3 sunPosition() {
 
 const int num_obj = 9;
 object world[num_obj] = object[num_obj](
-//    object(10, 0.0001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(1)),  // earth 1k
-//    object(11, 0.0001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(3)),  // moon 1k
-//    object(1, 0.0001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(4)),  // gasgiant 1k
-//    object(12, 0.00001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1500, vec3(0,0,0), lambertian(vec3(.8))),  // ring 1k
+//    object(10, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(1)),  // earth 1k
+//    object(11, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(3)),  // moon 1k
+//    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(4)),  // gasgiant 1k
+//    object(12, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1500, vec3(0,0,0), lambertian(vec3(.8))),  // ring 1k
 
     //lasers
-    object(50, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, enterprise_pos, emitter(vec3(50,0,0))),  //laser test
-    object(50, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, enterprise_pos, emitter(vec3(50,0,0))),  //laser test
-    object(50, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, enterprise_pos, emitter(vec3(50,0,0))),  //laser test
-    object(50, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, enterprise_pos, emitter(vec3(50,0,0))),  //laser test
-    object(50, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, enterprise_pos, emitter(vec3(50,0,0))),  //laser test
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, enterprise_pos, emitter(vec3(50,0,0))),  //laser test
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, enterprise_pos, emitter(vec3(50,0,0))),  //laser test
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, enterprise_pos, emitter(vec3(50,0,0))),  //laser test
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, enterprise_pos, emitter(vec3(50,0,0))),  //laser test
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, enterprise_pos, emitter(vec3(50,0,0))),  //laser test
 
     //solar system
-    object(3, 0.001, enterprise_rot, vec3(1,1,1), 157, enterprise_pos, lambertian(vec3(.8))),  //enterprise
-//    object(2, 0.0001, fractal_rot, vec3(1,1,1), 1000, fractal_pos, lambertian(vec3(.5))),  //fractal
-//    object(10, 1, mat3(1,0,0,0,0,-1,0,1,0), vec3(1,1,1), 6371009, vec3(0,-(408000+12756270/2),0), custom(1)), //earth disp
-    object(1, 100, mat3(1,0,0,0,0,-1,0,1,0), vec3(1,1,1), 6371009, -vec3(384400000+12756270/2,800000+1737400,0), custom(1)), //earth
-//    object(1, 1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 6371009, vec3(0,408000+12756270/2,0), custom(1)), //earth
-//    object(1, 1, mat3(0,-1,0,1,0,0,0,0,1), vec3(1,1,1), 6376009, vec3(0,408000+12756270/2,0), custom(2)) //clouds
-//    object(11, 10, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, vec3(397000000,408000+12756270/2,0), custom(3)),  //moon relative to earth
-    object(11, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, -vec3(0,800000+1737400,0), custom(3)),  //moon orbit
-//    object(1, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, -vec3(0,800000+1737400,0), custom(1)),  //moon orbit
-//    object(1, 1000, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., sunPosition(), emitter(vec3(100000)))  //sun
-    object(1, 1000, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0, 0, 151600000000.), emitter(vec3(100000)))  //sun
+    object(3, enterprise_rot, vec3(1,1,1), 157, enterprise_pos, lambertian(vec3(.8))),  //enterprise
+//    object(2, fractal_rot, vec3(1,1,1), 1000, fractal_pos, lambertian(vec3(.5))),  //fractal
+//    object(10, mat3(1,0,0,0,0,-1,0,1,0), vec3(1,1,1), 6371009, vec3(0,-(408000+12756270/2),0), custom(1)), //earth disp
+    object(1, mat3(1,0,0,0,0,-1,0,1,0), vec3(1,1,1), 6371009, -vec3(384400000+12756270/2,800000+1737400,0), custom(1)), //earth
+//    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 6371009, vec3(0,408000+12756270/2,0), custom(1)), //earth
+//    object(1, mat3(0,-1,0,1,0,0,0,0,1), vec3(1,1,1), 6376009, vec3(0,408000+12756270/2,0), custom(2)) //clouds
+//    object(11, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, vec3(397000000,408000+12756270/2,0), custom(3)),  //moon relative to earth
+    object(11, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, -vec3(0,800000+1737400,0), custom(3)),  //moon orbit
+//    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, -vec3(0,800000+1737400,0), custom(1)),  //moon orbit
+//    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., sunPosition(), emitter(vec3(100000)))  //sun
+    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0, 0, 151600000000.), emitter(vec3(100000)))  //sun
 );
 
 //uint num_lights = 1;
@@ -251,6 +256,10 @@ vec3 random_cosine_direction(){
     float r2 = rand();
     float phi = 2*pi*r1;
     return vec3(cos(phi)*sqrt(r2), sin(phi)*sqrt(r2), sqrt(1-r2));
+}
+
+float epsilon(vec3 pos) {
+    return length(ulp(pos)) * epsilonFactor;
 }
 
 struct ONB {
@@ -514,18 +523,6 @@ float deLaser(vec3 p, float thickness){
     return bI(sdPlane(p,vec3(0,1,0),0), sdInfinteCylinder(p, vec3(0,0,thickness)));
 }
 
-vec3 calcNormalSphere(vec3 pos, object obj){
-    int ZERO = min(int(passSeed),0); // non-constant zero
-    vec3 n = vec3(0.0);
-    for( int i=ZERO; i<4; i++) {
-        vec3 e = 0.5773*(2.0*vec3((((i+3)>>1)&1),((i>>1)&1),(i&1))-1.0);
-        //        n += e*map(pos+e*h).dist;
-        vec3 p = pos+e*obj.eps;
-        n += e*oScale(sdSphere(iScale(inverse(obj.rotation)*(p-obj.position), obj.scaling), obj.scale), obj.scaling);
-    }
-    return obj.rotation*normalize(n);
-}
-
 //Sphere UV project:
 vec2 cartesian_to_polar(vec3 p){
     return vec2(atan2(p.y, p.x)/(2*pi), acos(p.z)/pi);
@@ -590,10 +587,13 @@ hit map(vec3 pos){
 hit ray(vec3 ro, vec3 rd){
     hit h = hit(false, 0., 0, -1);
     for (; h.steps < steps; ++h.steps){
-        hit d = map(ro+h.dist*rd);
+        vec3 rayEnd = ro + h.dist * rd;
+
+        hit d = map(rayEnd);
         h.dist += d.dist;
         h.index = d.index;
-        if (d.dist < world[d.index].eps) {
+
+        if (d.dist < epsilon(rayEnd)) {
             h.hit = true;
             return h;
         }
@@ -617,8 +617,8 @@ vec3 tetraNormUnfix(vec3 p, float h){ // for function f(p){
     k.yxy*map( p + k.yxy*h ).dist +
     k.xxx*map( p + k.xxx*h ).dist );
 }
-vec3 tetraNorm(vec3 pos, float h){
-    //    const float h = eps;      // replace by an appropriate value
+vec3 tetraNorm(vec3 pos){
+    float h = epsilon(pos);
     int ZERO = min(int(passSeed),0); // non-constant zero
     vec3 n = vec3(0.0);
     for( int i=ZERO; i<4; i++) {
@@ -634,7 +634,7 @@ vec3 calcNormal(vec3 p, object obj){
     //        nor += tetraNorm(p, eps*rand(i*2565));
     //    }
     //    return nor/n;
-    return tetraNorm(p,obj.eps);
+    return tetraNorm(p);
 //    return normalize(p-obj.position);
     //    return numDiff(p,obj.eps);
     //    return numDiff(p);
@@ -1040,7 +1040,8 @@ vec3 pathtracing(vec3 origin, vec3 direction){
 
 //            }
 
-            origin = p+2*obj.eps*normalize(trace.direction+normal);
+            float eps = epsilon(p);
+            origin = p+2*eps*normalize(trace.direction+normal);
         }
         else {
             vec3 col = trace.emmission + trace.attenuation*sky(trace.direction);
@@ -1124,14 +1125,14 @@ void main(){
 //            col = clamp(vec4(diff_col,1) * diffuseTerm + vec4(obj.material.spec_col,1) * specularTerm, 0.0, 1.0);
 
             //        hit tmp = ray(pos+nor*eps(t)*2, interp_light_dir);
-            hit tmp = ray(pos+nor*obj.eps*2, interp_light_dir);
-            float TMP = (tmp.hit) ? tmp.dist : 0;
-            float sun_sh = step(TMP, 0.0);
-            vec4 shadow = vec4(1, 1, 1, 1)*clamp(10*pow(0.18*sun_sh, 0.4545), 0.4, 1.);
-            //            col = col*shadow;
-
-            //            col = world[r.index].diff_col;
-            vec3 map = texcoord_nor(pos, obj);
+//            hit tmp = ray(pos+nor*obj.eps*2, interp_light_dir);
+//            float TMP = (tmp.hit) ? tmp.dist : 0;
+//            float sun_sh = step(TMP, 0.0);
+//            vec4 shadow = vec4(1, 1, 1, 1)*clamp(10*pow(0.18*sun_sh, 0.4545), 0.4, 1.);
+//            //            col = col*shadow;
+//
+//            //            col = world[r.index].diff_col;
+//            vec3 map = texcoord_nor(pos, obj);
 //            col = vec4(map,1);
         }
     }
