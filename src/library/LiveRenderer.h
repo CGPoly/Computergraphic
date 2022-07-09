@@ -35,7 +35,7 @@ private:
 
 	motion_control motionControl{};
 
-	TexturesRenderer texturesRenderer{1024 * 4, 1024 * 4, 1024 * 4};
+	TexturesRenderer texturesRenderer{8, 1024 * 10, 8};
 //	TexturesRenderer texturesRenderer{256, 1024*16, 16};
 	BloomProcessor bloomProcessor{windowWidth, windowHeight};
 	TonemapProcessor tonemapProcessor{};

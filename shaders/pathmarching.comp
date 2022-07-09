@@ -4,6 +4,8 @@
 vec4 ulp(vec4 value);
 vec3 ulp(vec3 value);
 vec2 ulp(vec2 value);
+vec4 cubic(float v);
+vec4 textureBicubic(sampler2D sampler, vec2 texCoords);
 
 //THESE NEED TO BE IDENTICAL TO THE ONES DEFINED IN pathmarching.cpp
 const uvec2 workGroupSize = uvec2(32);
@@ -35,7 +37,7 @@ const bool orbit_cam = true;
 
 const float world_scale = 1000;  //how big one unit in metern is (this is for easier camera control)
 
-const float FAR_PLANE = 149597870700.+696342000.*10000/world_scale;
+const float FAR_PLANE = 149597870700.+696342000.*10000;
 
 const float steps = 2000;
 const float epsilonFactor = 1000;
@@ -77,7 +79,8 @@ mat emitter(vec3 col){return mat(2, 0, vec3(0), 0, 1.45, 1, vec3(1), col, 0, 0, 
 mat phong(vec3 col, float fuzz){return mat(4, 0, col, fuzz, 1.45, 1, vec3(1),vec3(0),0.3,fuzz,col,vec3(1));}
 mat cook_torrance(vec3 col, float roughness){return mat(5, 0, col, roughness, 1.45, 1, vec3(1),vec3(0),0.3,roughness,col,vec3(1));}
 mat custom(uint index){return mat(2, index, vec3(1,0,1),0, 1.45, 1, vec3(1),vec3(1,0,1),0.3,0.3,vec3(1,0,1),vec3(1));}
-mat4 camera_mat = orbit_cam?viewMat:mat4(vec4(camera_rot[0],0),vec4(camera_rot[1],0),vec4(camera_rot[2],0),vec4(camera_pos,1));
+mat4 camera_mat = orbit_cam?mat4(viewMat[0],viewMat[1],viewMat[2],vec4(world_scale*viewMat[3].xyz,1)):
+    mat4(vec4(camera_rot[0],0),vec4(camera_rot[1],0),vec4(camera_rot[2],0),vec4(camera_pos,1));
 
 struct object {
     uint obj_index;
@@ -127,11 +130,11 @@ object world[num_obj] = object[num_obj](
 //    object(12, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1500, vec3(0,0,0), lambertian(vec3(.8))),  // ring 1k
 
     //lasers
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, enterprise_pos, emitter(vec3(50,0,0))),  //laser test
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, enterprise_pos, emitter(vec3(50,0,0))),  //laser test
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, enterprise_pos, emitter(vec3(50,0,0))),  //laser test
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, enterprise_pos, emitter(vec3(50,0,0))),  //laser test
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, enterprise_pos, emitter(vec3(50,0,0))),  //laser test
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),  //laser test
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),  //laser test
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),  //laser test
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),  //laser test
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),  //laser test
 
     //solar system
     object(3, enterprise_rot, vec3(1,1,1), 157, enterprise_pos, lambertian(vec3(.8))),  //enterprise
@@ -141,10 +144,10 @@ object world[num_obj] = object[num_obj](
 //    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 6371009, vec3(0,408000+12756270/2,0), custom(1)), //earth
 //    object(1, mat3(0,-1,0,1,0,0,0,0,1), vec3(1,1,1), 6376009, vec3(0,408000+12756270/2,0), custom(2)) //clouds
 //    object(11, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, vec3(397000000,408000+12756270/2,0), custom(3)),  //moon relative to earth
-    object(11, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, -vec3(0,800000+1737400,0), custom(3)),  //moon orbit
+    object(11, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, -vec3(0,100000+1737400,0), custom(3)),  //moon orbit
 //    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, -vec3(0,800000+1737400,0), custom(1)),  //moon orbit
 //    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., sunPosition(), emitter(vec3(100000)))  //sun
-    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0, 0, 151600000000.), emitter(vec3(100000)))  //sun
+    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0, 0, 151600000000.), emitter(vec3(50000)))  //sun
 );
 
 //uint num_lights = 1;
@@ -561,7 +564,9 @@ float distObj(object obj, vec3 pos){
             height = height * 2 - 1;
             return oDisp(sdSphere(pos,  obj.scale), height*obj.scale*0.0025);
         case 11: // moon
-            height = texture(moon_albedo_plus_height, map.xy).w;
+//            height = texture(moon_albedo_plus_height, map.xy).w;
+        //textureBicubic(sampler2D sampler, vec2 texCoords)
+            height = textureBicubic(moon_albedo_plus_height, map.xy).w;
             height = height * 2 - 1;
             return oDisp(sdSphere(pos,  obj.scale), height*obj.scale*0.01);
         case 12: // ring
@@ -878,6 +883,7 @@ path scatter_light(vec3 p, vec3 normal, ONB onb, out float pdf){
 //    }
 //    uint light_index = active_lights[uint(floor(random_light*float(num_lights)))];
     uint light_index = num_obj-1;
+//    uint light_index = 6;
     float radius = world[light_index].scale;
     vec3 position = world[light_index].position;
 
@@ -1067,11 +1073,6 @@ void main(){
 
     if (texelCoord.x >= resolution.x || texelCoord.y >= resolution.y) return;
 
-    for (int i = 0; i < num_obj; ++i){
-        world[i].scale /= world_scale;
-        world[i].position /= world_scale;
-    }
-
     vec3 light_dir = vec3(cos(light_phi)*sin(light_theta),cos(light_theta),sin(light_phi)*sin(light_theta));
     vec3 interp_light_dir = normalize(light_dir);
 
@@ -1081,7 +1082,8 @@ void main(){
     vec4 col = vec4(.1,.1,.1,1);
 
     //vec3 position, mat3 rotation, float thickness, vec3 color
-    add_laser(enterprise_pos, mat3(1,0,0,0,cos(3*pi/5),-sin(3*pi/5),0,sin(3*pi/5),cos(3*pi/5))*mat3(cos(3*pi/5),-sin(3*pi/5),0,sin(3*pi/5),cos(3*pi/5),0,0,0,1)*enterprise_rot, 0.001, 10*vec3(0.45, 0.75, 0.96));
+    add_laser(enterprise_pos, mat3(1,0,0,0,cos(3*pi/5),-sin(3*pi/5),0,sin(3*pi/5),cos(3*pi/5))*mat3(cos(3*pi/5),-sin(3*pi/5),0,sin(3*pi/5),cos(3*pi/5),0,0,0,1)*enterprise_rot, 1, 200*vec3(0.45, 0.75, 0.96));
+    add_laser(enterprise_pos, enterprise_rot, 10, 1000*vec3(1,0,0));
 
     // for noise testing
     //    col = vec4(0,0,0,1);

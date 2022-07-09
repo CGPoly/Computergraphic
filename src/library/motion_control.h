@@ -47,6 +47,31 @@ public:
 
     glm::vec3 get_julia_c(float t);
 private:
+    const std::vector<std::vector<float>> camera_pos_points{
+            {0,0},
+            {0,0},
+            {-5000,-500},
+            {0,10}
+    };
+    const std::vector<std::vector<float>> enterprise_pos_points{
+            {0,0},
+            {0,0},
+            {1000,0},
+            {0,1}
+    };
+    const std::vector<std::vector<float>> fractal_pos_points{
+            {0,0},
+            {0,1000},
+            {0,0},
+            {0,1}
+    };
+    const std::vector<std::vector<float>> julia_c_points{
+            {.4,.4},
+            {-.4,-.4},
+            {.6,.6},
+            {0,1}
+    };
+
     glm::vec4 euler_to_quad(glm::vec3 euler);
     glm::mat3 quant_to_rot(glm::vec4 q);
     glm::mat3 look_at(glm::vec3 origin, glm::vec3 target);
@@ -62,75 +87,8 @@ private:
 
     std::vector<cubic_splines> julia_c;
 
-    // pos: x,y,z,time
-    // rot: quaternion,time
-    const std::vector<std::vector<float>> camera_pos_points{
-        {0,0},
-        {0,0},
-        {-5,-.5},
-        {0,10}
-    };
-//    const std::vector<float> camera_pos_points[4]{
-//        {0,0,-5,0},
-//        {0,0,-.5,10}
-//    };
-//    const std::vector<float> camera_rot_points[5]{
-//        {0,0,0,0,0},
-//        {0,0,0,0,1}
-//    };
-
-    const std::vector<std::vector<float>> enterprise_pos_points{
-        {1,0},
-        {0,0},
-        {0,0},
-        {0,1}
-//        {0,0,0,0},
-//        {1,0,0,1}
-    };
-//    const std::vector<float> enterprise_pos_points[4]{
-//        {0,0,0,0},
-//        {1,0,0,1}
-//    };
-//    const std::vector<float> enterprise_rot_points[5]{
-//        {0,0,0,0,0},
-//        {0,0,0,0,1}
-//    };
-
-    const std::vector<std::vector<float>> fractal_pos_points{
-        {0,0},
-        {0,1},
-        {0,0},
-        {0,1}
-//        {0,0,0,0},
-//        {0,1,0,1}
-    };
-//    const std::vector<float> fractal_pos_points[4]{
-//        {0,0,0,0},
-//        {0,1,0,1}
-//    };
-//    const std::vector<float> fractal_rot_points[5]{
-//        {0,0,0,0,0},
-//        {0,0,0,0,1}
-//    };
-    const std::vector<std::vector<float>> julia_c_points{
-        {.4,.4},
-        {-.4,-.4},
-        {.6,.6},
-        {0,1}
-//        {0.4,-0.4,0.6,0},
-//        {0.4,-0.4,0.6,1}
-    };
-//    const std::vector<float> julia_c_points[4]{
-//        {0.4,-0.4,0.6,0},
-//        {0.4,-0.4,0.6,1}
-//    };
-//    const std::vector<float> exponent_points[2]{
-//        {8,0},
-//        {8,1}
-//    };
-
     const float epsilon = 0.001;
-    const glm::vec3 up = {0,0,1};
+    const glm::vec3 up = {0,1,0};
 };
 
 

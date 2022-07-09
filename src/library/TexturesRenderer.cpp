@@ -12,7 +12,7 @@ TexturesRenderer::TexturesRenderer(
 		moonResolution(moonResolution),
 		gasgiantResolution(gasgiantResolution),
 		earthAlbedoPlusHeight(Texture::immutable(1, GL_RGBA8, earthResolution, earthResolution)),
-		moonAlbedoPlusHeight(Texture::immutable(1, GL_RGBA8, moonResolution, moonResolution)),
+		moonAlbedoPlusHeight(Texture::immutable(1, GL_RGBA16, moonResolution, moonResolution)),
 		gasgiantAlbedo(Texture::immutable(1, GL_RGBA8, gasgiantResolution, gasgiantResolution)) {
 
 	auto textures = {
@@ -24,6 +24,8 @@ TexturesRenderer::TexturesRenderer(
 		glBindTexture(GL_TEXTURE_2D, texture->getId());
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+//        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+//        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	}
 }
 
@@ -40,7 +42,7 @@ void TexturesRenderer::renderImpl(float time) {
 	moonTextureProgram.set1f("time", time);
 	moonTextureProgram.set1f("lastTime", lastTime);
 
-	glBindImageTexture(0, moonAlbedoPlusHeight.getId(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
+	glBindImageTexture(0, moonAlbedoPlusHeight.getId(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA16);
 	dispatchOverTexture(moonTextureProgram, moonResolution, moonResolution);
 
 

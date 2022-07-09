@@ -42,14 +42,16 @@ cubic_splines::cubic_splines(std::vector<float> x1, std::vector<float> y1) {
 }
 
 unsigned int cubic_splines::binary_search(float t, std::vector<float> x1){
-    unsigned int low = 0u, high = x1.size();
-    while (low <= high){
-        unsigned int mid = low + (unsigned int)(ceil(float(high - low)/2.));
-        if (x1[mid] == t) return mid;
-        if (x1[mid] < t) low = mid + 1;
-        else high = mid - 1;
-    }
-    return high;
+    return 1;
+//    unsigned int low = 0u;
+//    unsigned int high = x1.size();
+//    while (low < high){
+//        unsigned int mid = low + (unsigned int)(ceil(float(high - low)/2.));
+//        if (x1[mid] == t) return mid;
+//        if (x1[mid] < t) low = mid + 1;
+//        else high = mid - 1;
+//    }
+//    return high;
 }
 
 float cubic_splines::get_point(float t) {
@@ -73,13 +75,13 @@ motion_control::motion_control() {
     enterprise_pos = {};
     fractal_pos = {};
     julia_c = {};
-    for (int i=0;i<3;++i)camera_pos.push_back(cubic_splines(camera_pos_points[i], camera_pos_points[3]));
+    for (int i=0;i<3;++i)camera_pos.push_back(cubic_splines(camera_pos_points[3], camera_pos_points[i]));
 //    for (int i=0;i<4;++i)camera_rot.push_back(cubic_splines(camera_rot_points[i], camera_rot_points[4]));
-    for (int i=0;i<3;++i)enterprise_pos.push_back(cubic_splines(enterprise_pos_points[i], enterprise_pos_points[3]));
+    for (int i=0;i<3;++i)enterprise_pos.push_back(cubic_splines(enterprise_pos_points[3], enterprise_pos_points[i]));
 //    for (int i=0;i<4;++i)enterprise_rot.push_back(cubic_splines(enterprise_rot_points[i], enterprise_rot_points[4]));
-    for (int i=0;i<3;++i)fractal_pos.push_back(cubic_splines(fractal_pos_points[i], fractal_pos_points[3]));
+    for (int i=0;i<3;++i)fractal_pos.push_back(cubic_splines(fractal_pos_points[3], fractal_pos_points[i]));
 //    for (int i=0;i<4;++i)fractal_rot.push_back(cubic_splines(fractal_rot_points[i], fractal_rot_points[3]));
-    for (int i=0;i<3;++i)julia_c.push_back(cubic_splines(julia_c_points[i], julia_c_points[3]));
+    for (int i=0;i<3;++i)julia_c.push_back(cubic_splines(julia_c_points[3], julia_c_points[i]));
 //    camera_pos = {
 //        cubic_splines(camera_pos_points[0], camera_pos_points[3]),
 //        cubic_splines(camera_pos_points[1], camera_pos_points[3]),
@@ -157,10 +159,11 @@ glm::vec3 motion_control::get_camera_pos(float t) {
             this->camera_pos[2].get_point(t)};
 }
 glm::mat3 motion_control::get_camera_rot(float t) {
-    return quant_to_rot({this->camera_pos[0].get_point(t),
-                        this->camera_pos[1].get_point(t),
-                        this->camera_pos[2].get_point(t),
-                        this->camera_pos[3].get_point(t)});
+//    return quant_to_rot({this->camera_pos[0].get_point(t),
+//                        this->camera_pos[1].get_point(t),
+//                        this->camera_pos[2].get_point(t),
+//                        this->camera_pos[3].get_point(t)});
+    return quant_to_rot({1,0,0,0});
 }
 
 glm::vec3 motion_control::get_enterprise_pos(float t) {
