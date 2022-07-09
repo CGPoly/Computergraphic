@@ -8,6 +8,8 @@
 #include <vector>
 #include <math.h>
 
+#include "common.hpp"
+
 class cubic_splines {
 public:
     cubic_splines(std::vector<float> x, std::vector<float> y);
@@ -23,17 +25,31 @@ private:
 class motion_control {
 public:
     motion_control();
-    std::vector<float> get_camera_pos(float t);
-    std::vector<float> get_camera_rot(float t);
+//    std::vector<float> get_camera_pos(float t);
+//    std::vector<float> get_camera_rot(float t);
+//
+//    std::vector<float> get_enterprise_pos(float t);
+//    std::vector<float> get_enterprise_rot(float t);
+//
+//    std::vector<float> get_fractal_pos(float t);
+//    std::vector<float> get_fractal_rot(float t);
+//
+//    std::vector<float> get_julia_c(float t);
 
-    std::vector<float> get_enterprise_pos(float t);
-    std::vector<float> get_enterprise_rot(float t);
+    glm::vec3 get_camera_pos(float t);
+    glm::mat3 get_camera_rot(float t);
 
-    std::vector<float> get_fractal_pos(float t);
-    std::vector<float> get_fractal_rot(float t);
+    glm::vec3 get_enterprise_pos(float t);
+    glm::mat3 get_enterprise_rot(float t);
 
-    std::vector<float> get_julia_c(float t);
+    glm::vec3 get_fractal_pos(float t);
+    glm::mat3 get_fractal_rot(float t);
+
+    glm::vec3 get_julia_c(float t);
 private:
+    glm::vec4 euler_to_quad(glm::vec3 euler);
+    glm::mat3 quant_to_rot(glm::vec4 q);
+
     std::vector<cubic_splines> camera_pos;
     std::vector<cubic_splines> camera_rot;
 
@@ -82,6 +98,8 @@ private:
         {8,0},
         {8,1}
     };
+
+    const float epsilon = 0.001;
 };
 
 

@@ -76,44 +76,96 @@ motion_control::motion_control() {
     for (int i=0;i<3;++i)julia_c.push_back(cubic_splines(julia_c_points[i], julia_c_points[3]));
 }
 
-std::vector<float> motion_control::get_camera_pos(float t) {
+//std::vector<float> motion_control::get_camera_pos(float t) {
+//    return {this->camera_pos[0].get_point(t),
+//            this->camera_pos[1].get_point(t),
+//            this->camera_pos[2].get_point(t)};
+//}
+//std::vector<float> motion_control::get_camera_rot(float t) {
+//    return {this->camera_pos[0].get_point(t),
+//            this->camera_pos[1].get_point(t),
+//            this->camera_pos[2].get_point(t),
+//            this->camera_pos[3].get_point(t)};
+//}
+//
+//std::vector<float> motion_control::get_enterprise_pos(float t) {
+//    return {this->camera_pos[0].get_point(t),
+//            this->camera_pos[1].get_point(t),
+//            this->camera_pos[2].get_point(t)};
+//}
+//std::vector<float> motion_control::get_enterprise_rot(float t) {
+//    return {this->camera_pos[0].get_point(t),
+//            this->camera_pos[1].get_point(t),
+//            this->camera_pos[2].get_point(t),
+//            this->camera_pos[3].get_point(t)};
+//}
+//
+//std::vector<float> motion_control::get_fractal_pos(float t) {
+//    return {this->camera_pos[0].get_point(t),
+//            this->camera_pos[1].get_point(t),
+//            this->camera_pos[2].get_point(t)};
+//}
+//std::vector<float> motion_control::get_fractal_rot(float t) {
+//    return {this->camera_pos[0].get_point(t),
+//            this->camera_pos[1].get_point(t),
+//            this->camera_pos[2].get_point(t),
+//            this->camera_pos[3].get_point(t)};
+//}
+//
+//std::vector<float> motion_control::get_julia_c(float t) {
+//    return {this->julia_c[0].get_point(t),
+//            this->julia_c[1].get_point(t),
+//            this->julia_c[2].get_point(t)};
+//}
+
+glm::vec3 motion_control::get_camera_pos(float t) {
     return {this->camera_pos[0].get_point(t),
             this->camera_pos[1].get_point(t),
             this->camera_pos[2].get_point(t)};
 }
-std::vector<float> motion_control::get_camera_rot(float t) {
-    return {this->camera_pos[0].get_point(t),
-            this->camera_pos[1].get_point(t),
-            this->camera_pos[2].get_point(t),
-            this->camera_pos[3].get_point(t)};
+glm::mat3 motion_control::get_camera_rot(float t) {
+    return quant_to_rot({this->camera_pos[0].get_point(t),
+                        this->camera_pos[1].get_point(t),
+                        this->camera_pos[2].get_point(t),
+                        this->camera_pos[3].get_point(t)});
 }
 
-std::vector<float> motion_control::get_enterprise_pos(float t) {
+glm::vec3 motion_control::get_enterprise_pos(float t) {
     return {this->camera_pos[0].get_point(t),
             this->camera_pos[1].get_point(t),
             this->camera_pos[2].get_point(t)};
 }
-std::vector<float> motion_control::get_enterprise_rot(float t) {
-    return {this->camera_pos[0].get_point(t),
-            this->camera_pos[1].get_point(t),
-            this->camera_pos[2].get_point(t),
-            this->camera_pos[3].get_point(t)};
+
+glm::mat3 motion_control::get_enterprise_rot(float t) {
+    return glm::lookAt(get_enterprise_pos(t), get_enterprise_pos(t+epsilon), {1,0,0});
 }
 
-std::vector<float> motion_control::get_fractal_pos(float t) {
+glm::vec3 motion_control::get_fractal_pos(float t) {
     return {this->camera_pos[0].get_point(t),
             this->camera_pos[1].get_point(t),
             this->camera_pos[2].get_point(t)};
 }
-std::vector<float> motion_control::get_fractal_rot(float t) {
-    return {this->camera_pos[0].get_point(t),
-            this->camera_pos[1].get_point(t),
-            this->camera_pos[2].get_point(t),
-            this->camera_pos[3].get_point(t)};
+glm::mat3 motion_control::get_fractal_rot(float t) {
+    return glm::lookAt(get_fractal_pos(t), get_fractal_pos(t+epsilon), {1,0,0});
 }
 
-std::vector<float> motion_control::get_julia_c(float t) {
+glm::vec3 motion_control::get_julia_c(float t) {
     return {this->julia_c[0].get_point(t),
             this->julia_c[1].get_point(t),
             this->julia_c[2].get_point(t)};
+}
+
+glm::vec4 motion_control::euler_to_quad(glm::vec3 euler) {
+    return {
+        float(cos(euler[0]/2)*cos(euler[1]/2)*cos(euler[2]/2)+sin(euler[0]/2)*sin(euler[1]/2)*sin(euler[2]/2)),
+        float(sin(euler[0]/2)*cos(euler[1]/2)*cos(euler[2]/2)-cos(euler[0]/2)*sin(euler[1]/2)*sin(euler[2]/2)),
+        float(cos(euler[0]/2)*sin(euler[1]/2)*cos(euler[2]/2)+sin(euler[0]/2)*cos(euler[1]/2)*sin(euler[2]/2)),
+        float(cos(euler[0]/2)*cos(euler[1]/2)*sin(euler[2]/2)-sin(euler[0]/2)*sin(euler[1]/2)*cos(euler[2]/2))
+    };
+}
+
+glm::mat3 motion_control::quant_to_rot(glm::vec4 q){
+    return {1-2*(q.z*q.z+q.w*q.w),2*(q.y*q.z-q.x*q.w),2*(q.z*q.w+q.x*q.z),
+            2*(q.y*q.z+q.x*q.w),1-2*(q.w*q.w+q.y*q.y),2*(q.z*q.w-q.y*q.x),
+            2*(q.z*q.w-q.z*q.x),2*(q.z*q.w+q.y*q.x),1-2*(q.y*q.y+q.z*q.z)};
 }

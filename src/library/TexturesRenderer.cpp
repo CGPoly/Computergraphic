@@ -32,7 +32,7 @@ void TexturesRenderer::renderImpl(float time) {
 	earthTextureProgram.set1f("time", time);
 	earthTextureProgram.set1f("lastTime", lastTime);
 
-	glBindImageTexture(0, earthAlbedoPlusHeight.getId(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
+	glBindImageTexture(0, earthAlbedoPlusHeight.getId(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
 	dispatchOverTexture(earthTextureProgram, earthResolution, earthResolution);
 
 

@@ -5,7 +5,7 @@ const uvec2 workGroupSize = uvec2(32);
 const uvec2 workGroupCount = uvec2(4);
 
 layout(local_size_x = workGroupSize.x, local_size_y = workGroupSize.y) in;
-layout(rgba8, binding = 0) writeonly uniform image2D albedo_plus_height;
+layout(rgba8, binding = 0) uniform image2D albedo_plus_height;
 
 uniform uvec2 tileOffset;
 uniform float time;
@@ -468,20 +468,23 @@ void planet(vec3 p, out vec3 col, out float rough, out float height){
 }
 
 void main() {
+    uvec2 texelCoord = ivec2(tileOffset * workGroupSize * workGroupCount + gl_GlobalInvocationID.xy);
+
+    ivec2 resolution = imageSize(albedo_plus_height);
+    if (texelCoord.x >= resolution.x || texelCoord.y >= resolution.y) return;
+
+    vec2 uv = vec2(texelCoord) / vec2(resolution);
+    vec3 p = polar_to_cartisan(uv);
     if (lastTime < 0) {
-        uvec2 texelCoord = ivec2(tileOffset * workGroupSize * workGroupCount + gl_GlobalInvocationID.xy);
-        //    uvec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
-        ivec2 resolution = imageSize(albedo_plus_height);
-        if (texelCoord.x >= resolution.x || texelCoord.y >= resolution.y) return;
-
-        vec2 uv = vec2(texelCoord) / vec2(resolution);
-
-        vec3 p = polar_to_cartisan(uv);
-
         vec3 col;
         float rough, height;
         planet(p, col, rough, height);
 
         imageStore(albedo_plus_height, ivec2(texelCoord), vec4(col, height));
+//        imageStore(albedo_plus_height, ivec2(texelCoord), vec4(col, cloud_mask(p)));
     }
+
+    //clouds instead of height
+    vec3 col = imageLoad(albedo_plus_height, ivec2(texelCoord)).xyz;
+    imageStore(albedo_plus_height, ivec2(texelCoord), vec4(col, cloud_mask(p)));
 }

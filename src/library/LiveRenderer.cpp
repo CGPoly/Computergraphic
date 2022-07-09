@@ -5,6 +5,11 @@
 #include "mathUtil.h"
 #include "buffer.hpp"
 
+//for printing of glm stuff
+//#include <iostream>
+//#include <glm/glm.hpp>
+//#include <glm/gtx/io.hpp>
+
 LiveRenderer::LiveRenderer() noexcept {
 	glfwSetWindowUserPointer(window, this);
 	glfwSetFramebufferSizeCallback(window, [](GLFWwindow* window, int width, int height) {
@@ -49,6 +54,7 @@ void LiveRenderer::run() {
 			timeChanged = false;
 			renderState.reset();
 //			glClearTexImage(hdrColoTexture.getId(), 0, GL_RGBA, GL_FLOAT, nullptr);
+//            std::cout << camera.view_matrix() << std::endl;
 		}
 
 		renderTextures();
