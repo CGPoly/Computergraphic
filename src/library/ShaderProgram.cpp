@@ -117,19 +117,16 @@ void ShaderProgram::e() const {
 	out.close();
 }
 
-void ShaderProgram::setMatrix4f(std::string const& uniformName, const glm::mat<4, 4, float>& value) {
-	setGeneric(uniformName, [&value](auto location) { glUniformMatrix4fv(location, 1, GL_FALSE, &value[0][0]); });
-}
-void ShaderProgram::set1i(const std::string& uniformName, GLint value) {
+void ShaderProgram::set1i(std::string const& uniformName, GLint value) {
 	setGeneric(uniformName, [&value](auto location) { glUniform1i(location, value); });
 }
-void ShaderProgram::set1ui(const std::string& uniformName, GLuint value) {
+void ShaderProgram::set1ui(std::string const& uniformName, GLuint value) {
 	setGeneric(uniformName, [&value](auto location) { glUniform1ui(location, value); });
 }
-void ShaderProgram::set2ui(const std::string& uniformName, GLuint v0, GLuint v1) {
+void ShaderProgram::set2ui(std::string const& uniformName, GLuint v0, GLuint v1) {
 	setGeneric(uniformName, [&v0, &v1](auto location) { glUniform2ui(location, v0, v1); });
 }
-void ShaderProgram::set1f(const std::string& uniformName, GLfloat value) {
+void ShaderProgram::set1f(std::string const& uniformName, GLfloat value) {
 	setGeneric(uniformName, [&value](auto location) { glUniform1f(location, value); });
 }
 void ShaderProgram::set3f(std::string const& uniformName, float v0, float v1, float v2) {
@@ -144,8 +141,11 @@ void ShaderProgram::setVec3(std::string const& uniformName, glm::vec3 const& vec
 void ShaderProgram::setQuat(std::string const& uniformName, glm::quat const& quat) {
 	set4f(uniformName, quat.x, quat.y, quat.z, quat.w);
 }
-void ShaderProgram::setMat3(const std::string& uniformName, glm::mat3 const& mat) {
+void ShaderProgram::setMat3(std::string const& uniformName, glm::mat3 const& mat) {
 	setGeneric(uniformName, [&mat](auto location) { glUniformMatrix3fv(location, 1, GL_FALSE, &mat[0][0]); });
+}
+void ShaderProgram::setMat4(std::string const& uniformName, const glm::mat<4, 4, float>& value) {
+	setGeneric(uniformName, [&value](auto location) { glUniformMatrix4fv(location, 1, GL_FALSE, &value[0][0]); });
 }
 
 void ShaderProgram::setGeneric(std::string const& uniformName, std::function<void(GLint)> const& glCall) {

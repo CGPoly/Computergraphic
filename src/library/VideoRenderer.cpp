@@ -86,7 +86,7 @@ void VideoRenderer::renderPathmarcher(std::chrono::duration<float> time) {
 	const unsigned int samplesPerPass = 50;
 
 	pathMarchingProgram.use();
-	pathMarchingProgram.setMatrix4f("viewMat", camera.view_matrix());
+	pathMarchingProgram.setMat4("viewMat", camera.view_matrix());
 	pathMarchingProgram.set1f("time", time.count());
 	pathMarchingProgram.set1ui("samplesPerPass", samplesPerPass);
 

@@ -175,7 +175,7 @@ void LiveRenderer::renderPathmarcher() {
 	profiler.begin(ProfilerType::pass);
 
 	pathMarchingProgram.use();
-	pathMarchingProgram.setMatrix4f("viewMat", camera.view_matrix());
+	pathMarchingProgram.setMat4("viewMat", camera.view_matrix());
 	pathMarchingProgram.set1ui("rngSeed", renderState.passSeed);
 	pathMarchingProgram.set1f("time", time.count());
 	pathMarchingProgram.set1ui("samplesPerPass", samplesPerPass);
