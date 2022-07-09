@@ -6,12 +6,14 @@
 
 cubic_splines::cubic_splines(std::vector<float> x1, std::vector<float> y1) {
     num_points = x1.size();
-    std::vector<float> x_diff, y_diff;
+    std::vector<float> x_diff(num_points-1), y_diff(num_points-1);
     for (unsigned int i = 0; i < num_points-1; ++i){
+//        x_diff.push_back(x1[i+1]-x1[i]);
+//        y_diff.push_back(y1[i+1]-y1[i]);
         x_diff[i] = x1[i+1]-x1[i];
         y_diff[i] = y1[i+1]-y1[i];
     }
-    std::vector<float> li, li_1, z1;
+    std::vector<float> li(num_points), li_1(num_points), z1(num_points);
     li[0] = sqrt(2*x_diff[0]);
     li_1[0] = 0.;
     float b0 = 0.;
