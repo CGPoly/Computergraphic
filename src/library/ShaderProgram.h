@@ -8,6 +8,7 @@
 #include <set>
 #include "glad/glad.h"
 #include "glm/detail/type_mat4x4.hpp"
+#include "glm/ext/quaternion_float.hpp"
 
 class ShaderProgram {
 private:
@@ -45,4 +46,9 @@ public:
 	void set1ui(std::string const& uniformName, unsigned int value);
 	void set2ui(std::string const& uniformName, unsigned int v0, unsigned int v1);
 	void set1f(std::string const& uniformName, float value);
+	void set3f(std::string const& uniformName, float v0, float v1, float v2);
+	void set4f(std::string const& uniformName, float v0, float v1, float v2, float v3);
+	void setVec3(std::string const& uniformName, glm::vec3 const& vec);
+	void setQuat(std::string const& uniformName, glm::quat const& qua);
+	void setMat3(std::string const& string, glm::mat3 const& mat);
 };

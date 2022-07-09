@@ -99,9 +99,7 @@ uniform uint samplesPerPass;
 uniform float time;
 uniform mat4 viewMat;
 
-const float world_scale = 1000;  //how big one unit in metern is (this is for easier camera control)
-
-const float FAR_PLANE = 149597870700.+696342000.*10000/world_scale;
+const float FAR_PLANE = 149597870700.+696342000.*10000;
 
 const float steps = 2000;
 
@@ -141,20 +139,9 @@ struct Entity {
     float scale;
 };
 
-// TODO: really stupid way of doing this, but its the best we have
-const uint O_ENTERPRISE = __LINE__;
-const uint O_EARTH = __LINE__;
-const uint O_MOON = __LINE__;
-const uint O_GASGIANT = __LINE__;
-const uint O_SUN = __LINE__;
-
-Entity entities[] = Entity[](
-    Entity(O_SUN, vec3(0, 0, 151600000000.), mat3(1), 695700000.),
-    Entity(O_ENTERPRISE, vec3(0), mat3(1), 157),
-    Entity(O_EARTH, vec3(0, -(408000 + 12756270 / 2), 0), mat3(1, 0, 0, 0, 0, -1, 0, 1, 0), 6371009),
-    Entity(O_MOON, vec3(397000000, -(408000 + 12756270 / 2), 0), mat3(1), 1737400)
-//    Entity(O_GASGIANT, vec3(0), mat3(1), 157),
-);
+layout(std430, column_major, binding = 0) buffer EntitiesBlock {
+    Entity[] entities;
+};
 
 uint lights[] = uint[](0);
 
@@ -201,6 +188,12 @@ float sdPlanet(vec3 pos, sampler2D planetTexture, float heightMapScale) {
     height = height * 2 - 1;
     return oDisp(sdSphere(pos, 1), height * heightMapScale);
 }
+
+const uint O_SUN = 0;
+const uint O_EARTH = 1;
+const uint O_MOON = 2;
+const uint O_GASGIANT = 3;
+const uint O_ENTERPRISE = 4;
 
 Dist objectDistance(uint objectId, vec3 pos) {
     switch (objectId) {
@@ -749,11 +742,6 @@ void main(){
     ivec2 resolution = imageSize(hdrOut);
 
     if (texelCoord.x >= resolution.x || texelCoord.y >= resolution.y) return;
-
-    for (int i = 0; i < entities.length(); ++i){
-        entities[i].scale /= world_scale;
-        entities[i].position /= world_scale;
-    }
 
     vec3 ro = inverse(mat3(viewMat)) * (camera_origin - viewMat[3].xyz);
     vec2 p = (vec2(texelCoord) / resolution) * 2 - 1;

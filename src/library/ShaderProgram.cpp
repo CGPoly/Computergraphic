@@ -132,6 +132,21 @@ void ShaderProgram::set2ui(const std::string& uniformName, GLuint v0, GLuint v1)
 void ShaderProgram::set1f(const std::string& uniformName, GLfloat value) {
 	setGeneric(uniformName, [&value](auto location) { glUniform1f(location, value); });
 }
+void ShaderProgram::set3f(std::string const& uniformName, float v0, float v1, float v2) {
+	setGeneric(uniformName, [&v0, &v1, &v2](auto location) { glUniform3f(location, v0, v1, v2); });
+}
+void ShaderProgram::set4f(std::string const& uniformName, float v0, float v1, float v2, float v3) {
+	setGeneric(uniformName, [&v0, &v1, &v2, &v3](auto location) { glUniform4f(location, v0, v1, v2, v3); });
+}
+void ShaderProgram::setVec3(std::string const& uniformName, glm::vec3 const& vec) {
+	set3f(uniformName, vec.x, vec.y, vec.z);
+}
+void ShaderProgram::setQuat(std::string const& uniformName, glm::quat const& quat) {
+	set4f(uniformName, quat.x, quat.y, quat.z, quat.w);
+}
+void ShaderProgram::setMat3(const std::string& uniformName, glm::mat3 const& mat) {
+	setGeneric(uniformName, [&mat](auto location) { glUniformMatrix3fv(location, 1, GL_FALSE, &mat[0][0]); });
+}
 
 void ShaderProgram::setGeneric(std::string const& uniformName, std::function<void(GLint)> const& glCall) {
 	auto location = uniformLocation(uniformName);

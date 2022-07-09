@@ -44,6 +44,9 @@ void LiveRenderer::run() {
 		drawStatistic();
 		drawTimeControl();
 
+		if (timeChanged) {
+			timeline.update(time);
+		}
 		if (camera.pollChanged() || changedSamplesPerPass || timeChanged) {
 			timeChanged = false;
 			renderState.reset();
@@ -177,10 +180,16 @@ void LiveRenderer::renderPathmarcher() {
 	pathMarchingProgram.set1f("time", time.count());
 	pathMarchingProgram.set1ui("samplesPerPass", samplesPerPass);
 
+	pathMarchingProgram.setVec3("cameraPosition", timeline.getCameraPosition());
+	pathMarchingProgram.setMat3("cameraRotation", timeline.getCameraRotation());
+	pathMarchingProgram.setVec3("juliaC", timeline.getJuliaC());
+
 	glBindImageTexture(0, hdrColoTexture.getId(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 	glBindTextureUnit(1, texturesRenderer.getEarthAlbedoPlusHeight().getId());
 	glBindTextureUnit(2, texturesRenderer.getMoonAlbedoPlusHeight().getId());
 	glBindTextureUnit(3, texturesRenderer.getGasgiantAlbedo().getId());
+
+	glBindBufferRange(GL_SHADER_STORAGE_BUFFER, 0, timeline.getEntitiesSsbo().getId(), 0, timeline.getEntitiesSsboSize());
 
 	auto renderingStartTime = std::chrono::system_clock::now();
 	while (true) {

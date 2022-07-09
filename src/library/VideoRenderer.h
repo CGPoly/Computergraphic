@@ -9,6 +9,7 @@
 #include "BloomProcessor.h"
 #include "TexturesRenderer.h"
 #include "Camera.h"
+#include "Timeline.h"
 
 class VideoRenderer {
 public:
@@ -46,6 +47,8 @@ private:
 	GLFWwindow* window = createWindow(1280, 720, "LiveRenderer");
 
 	Camera camera{};
+
+	Timeline timeline{};
 
 	TexturesRenderer texturesRenderer{1024 * 4, 1024 * 4, 1024 * 4};
 	BloomProcessor bloomProcessor{width, height};

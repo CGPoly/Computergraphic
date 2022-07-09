@@ -9,6 +9,7 @@
 #include "common.hpp"
 #include "Profiler.h"
 #include "TonemapProcessor.h"
+#include "Timeline.h"
 
 class LiveRenderer {
 public:
@@ -31,6 +32,8 @@ private:
 	GLFWwindow* window = createWindow(windowWidth, windowHeight, "LiveRenderer");
 
 	Camera camera{};
+
+	Timeline timeline{};
 
 	TexturesRenderer texturesRenderer{1024 * 4, 1024 * 4, 1024 * 4};
 	BloomProcessor bloomProcessor{windowWidth, windowHeight};
@@ -69,7 +72,7 @@ private:
 	unsigned int samplesPerPass = 1;
 
 	std::chrono::duration<float> time{0};
-	bool timeChanged = false;
+	bool timeChanged = true;
 
 	struct TimeAdvance {
 		enum class Type { timed, sampleTarget };
