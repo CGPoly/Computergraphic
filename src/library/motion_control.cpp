@@ -137,7 +137,7 @@ glm::vec3 motion_control::get_enterprise_pos(float t) {
 }
 
 glm::mat3 motion_control::get_enterprise_rot(float t) {
-    return glm::lookAt(get_enterprise_pos(t), get_enterprise_pos(t+epsilon), {1,0,0});
+    return glm::lookAt(get_enterprise_pos(t), get_enterprise_pos(t+epsilon), up);
 }
 
 glm::vec3 motion_control::get_fractal_pos(float t) {
@@ -146,7 +146,7 @@ glm::vec3 motion_control::get_fractal_pos(float t) {
             this->camera_pos[2].get_point(t)};
 }
 glm::mat3 motion_control::get_fractal_rot(float t) {
-    return glm::lookAt(get_fractal_pos(t), get_fractal_pos(t+epsilon), {1,0,0});
+    return glm::lookAt(get_fractal_pos(t), get_fractal_pos(t+epsilon), up);
 }
 
 glm::vec3 motion_control::get_julia_c(float t) {

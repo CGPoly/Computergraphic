@@ -64,8 +64,8 @@ private:
     // pos: x,y,z,time
     // rot: quaternion,time
     const std::vector<float> camera_pos_points[4]{
-        {0,0,0,0},
-        {0,0,0,1}
+        {0,0,-5,0},
+        {0,0,-.5,10}
     };
     const std::vector<float> camera_rot_points[5]{
         {0,0,0,0,0},
@@ -74,7 +74,7 @@ private:
 
     const std::vector<float> enterprise_pos_points[4]{
         {0,0,0,0},
-        {0,0,0,1}
+        {1,0,0,1}
     };
     const std::vector<float> enterprise_rot_points[5]{
         {0,0,0,0,0},
@@ -83,7 +83,7 @@ private:
 
     const std::vector<float> fractal_pos_points[4]{
         {0,0,0,0},
-        {0,0,0,1}
+        {0,1,0,1}
     };
     const std::vector<float> fractal_rot_points[5]{
         {0,0,0,0,0},
@@ -91,15 +91,16 @@ private:
     };
 
     const std::vector<float> julia_c_points[4]{
-        {0,0,0,0},
-        {0,0,0,1}
+        {0.4,-0.4,0.6,0},
+        {0.4,-0.4,0.6,1}
     };
-    const std::vector<float> exponent_points[2]{
-        {8,0},
-        {8,1}
-    };
+//    const std::vector<float> exponent_points[2]{
+//        {8,0},
+//        {8,1}
+//    };
 
     const float epsilon = 0.001;
+    const glm::vec3 up = {0,0,1};
 };
 
 
