@@ -41,7 +41,7 @@ const float FAR_PLANE = 149597870700.+696342000.*10000/world_scale;
 
 const float steps = 2000;
 
-const bool preview = true;
+const bool preview = false;
 const int max_bounce = 16;  // maximal number of Light bounces
 
 const float focal_length = 50;  // focal length in mm
@@ -121,12 +121,19 @@ vec3 sunPosition() {
     return rotationMatrix * startPoint;
 }
 
-const int num_obj = 4;
+const int num_obj = 9;
 object world[num_obj] = object[num_obj](
 //    object(10, 0.0001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(1)),  // earth 1k
 //    object(11, 0.0001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(3)),  // moon 1k
 //    object(1, 0.0001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(4)),  // gasgiant 1k
 //    object(12, 0.00001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1500, vec3(0,0,0), lambertian(vec3(.8))),  // ring 1k
+
+    //lasers
+    object(50, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, enterprise_pos, emitter(vec3(50,0,0))),  //laser test
+    object(50, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, enterprise_pos, emitter(vec3(50,0,0))),  //laser test
+    object(50, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, enterprise_pos, emitter(vec3(50,0,0))),  //laser test
+    object(50, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, enterprise_pos, emitter(vec3(50,0,0))),  //laser test
+    object(50, 0.001, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, enterprise_pos, emitter(vec3(50,0,0))),  //laser test
 
     //solar system
     object(3, 0.001, enterprise_rot, vec3(1,1,1), 157, enterprise_pos, lambertian(vec3(.8))),  //enterprise
@@ -142,7 +149,27 @@ object world[num_obj] = object[num_obj](
     object(1, 1000, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0, 0, 151600000000.), emitter(vec3(100000)))  //sun
 );
 
-uint lights[] = uint[](3);
+//uint num_lights = 1;
+//int lights[] = int[](8);
+//bool active_lights[] = bool[](true,false,false,false,false,false);
+//int first_laser = 1;
+//int last_laser = 5;
+
+//assumes that the lasers are at the begin of world[]
+uint num_lasers = 5;
+uint first_usable_laser = 0;
+
+// returns the index of the laser in the world array
+void add_laser(vec3 position, mat3 rotation, float thickness, vec3 color){
+    if (first_usable_laser < num_lasers){
+        world[first_usable_laser].obj_index = 5;
+        world[first_usable_laser].rotation = rotation;
+        world[first_usable_laser].position = position;
+        world[first_usable_laser].scale = thickness;
+        world[first_usable_laser].material = emitter(color);
+        ++first_usable_laser;
+    }
+}
 
 float atan2(float y, float x){
     if (x > 0) return atan(y/x);
@@ -490,6 +517,9 @@ float deKaliRemix(vec3 p, int Iterations) {
     }
     return (length(p))*pow(Scale, -float(Iterations))*.9;
 }
+float deLaser(vec3 p, float thickness){
+    return bI(sdPlane(p,vec3(0,1,0),0), sdInfinteCylinder(p, vec3(0,0,thickness)));
+}
 
 vec3 calcNormalSphere(vec3 pos, object obj){
     int ZERO = min(int(passSeed),0); // non-constant zero
@@ -529,7 +559,7 @@ float distObj(object obj, vec3 pos){
 //        case 4:
 //            return deKaliRemix(pos, 10);
         case 5:
-            return deManySpheres(pos);
+            return deLaser(pos,obj.scale);
         case 6:
             return test(pos);
         case 7:
@@ -724,7 +754,7 @@ struct path {
     vec3 direction;
     vec3 emmission;
     bool specular;  // no importance sampling
-    bool inverted[num_obj];
+//    bool inverted[num_obj];
 };
 
 vec3 reflect(vec3 v, vec3 n) {
@@ -780,7 +810,7 @@ path scatter(mat material, uint index, vec3 p, vec3 origin, vec3 normal, vec3 di
 //        if ((new_direction.x < 1e-8) && (new_direction.y < 1e-8) && (new_direction.z < 1e-8))
 //            new_direction = normal;
         pdf = dot(normal, new_direction)/pi;
-        return path(false, material.albedo, new_direction, vec3(0), false, create_false_array());
+        return path(false, material.albedo, new_direction, vec3(0), false/*, create_false_array()*/);
     }
 //    if (material.type == 1) { //metal
 //        // funktioniert nur gut für kleine fuzz, da kein importance sampling
@@ -789,7 +819,7 @@ path scatter(mat material, uint index, vec3 p, vec3 origin, vec3 normal, vec3 di
 //        return path(dot(new_direction, normal) <= 0, material.albedo, new_direction, vec3(0), true);
 //    }
     if (material.type == 2){ //emmission
-        return path(true, vec3(1), vec3(0), material.emmission, false, create_false_array());
+        return path(true, vec3(1), vec3(0), material.emmission, false/*, create_false_array()*/);
     }
 //    if (material.type == 4){ //phong
 ////        float fresnel = node_fresnel(material.IOR, normal, p, origin);
@@ -821,7 +851,7 @@ path scatter(mat material, uint index, vec3 p, vec3 origin, vec3 normal, vec3 di
         if (rand() < F){  // diffuse
             vec3 new_direction = normalize(localize_to_onb(random_cosine_direction(), onb));
             pdf = dot(normal, new_direction)/pi;
-            return path(false, material.albedo, new_direction, vec3(0), false, create_false_array());
+            return path(false, material.albedo, new_direction, vec3(0), false/*, create_false_array()*/);
         }
         else { // specular
             float z1 = rand(), z2 = rand();
@@ -831,7 +861,7 @@ path scatter(mat material, uint index, vec3 p, vec3 origin, vec3 normal, vec3 di
             vec3 o = 2*abs(dot(dir_in, m))*m-dir_in;
             vec3 new_dir = normalize(localize_to_onb(o, onb));
             float pdf = beckmannDistribution(cdot(normal, normalize(new_dir + dir_in)), roughness)*abs(dot(m, normal))/(4*abs(dot(o, m)));
-            return path(false, vec3(1), new_dir, vec3(0), true, create_false_array());
+            return path(false, vec3(1), new_dir, vec3(0), true/*, create_false_array()*/);
         }
 
 //            ONB refl_onb = built_onb(reflect(dir_in, normal));
@@ -841,12 +871,20 @@ path scatter(mat material, uint index, vec3 p, vec3 origin, vec3 normal, vec3 di
 //            pdf = (n+1)/(2*pi)*pow(dot(reflect(new_direction, normal), dir_in), n);
 //        }
     }
-    return path(true, vec3(0),vec3(0),vec3(0), false, create_false_array());
+    return path(true, vec3(0),vec3(0),vec3(0), false/*, create_false_array()*/);
 }
 
 path scatter_light(vec3 p, vec3 normal, ONB onb, out float pdf){
-    float random_light = rand();
-    uint light_index = lights[uint(floor(random_light*float(lights.length())))];
+//    float random_light = rand();
+//    if (random_light == 1) random_light = 0.999999999999999999;
+//    random_light = floor(random_light*float(num_lights));
+//    uint light_index = -1;
+//    for (int i = 0; i < lights.length(); ++i)if (active_lights[i]){
+//        if (random_light == 0) {light_index = lights[i]; break;}
+//        else --random_light;
+//    }
+//    uint light_index = active_lights[uint(floor(random_light*float(num_lights)))];
+    uint light_index = num_obj-1;
     float radius = world[light_index].scale;
     vec3 position = world[light_index].position;
 
@@ -858,7 +896,7 @@ path scatter_light(vec3 p, vec3 normal, ONB onb, out float pdf){
     if (radius/length(position-p) > 1) pdf = 0; else pdf = 1/solid_angle;
     pdf = 1/solid_angle;
 
-    return path(dot(new_direction, normal) < 0, vec3(1), new_direction, vec3(0), false, create_false_array());
+    return path(dot(new_direction, normal) < 0, vec3(1), new_direction, vec3(0), false/*, create_false_array()*/);
 }
 
 float scattering_pdf(mat material, uint index, vec3 p, vec3 origin, vec3 normal, vec3 scattered, vec3 dir_in, bool specular){
@@ -956,7 +994,7 @@ mat cust_mat(object obj, vec3 p, inout vec3 normal){
 }
 
 vec3 pathtracing(vec3 origin, vec3 direction){
-    path trace = path(false, vec3(1), direction, vec3(0), false, create_false_array());
+    path trace = path(false, vec3(1), direction, vec3(0), false/*, create_false_array()*/);
     for (int i = 0; i < max_bounce; ++i){
         hit r = ray(origin, trace.direction);
         if (r.hit){
@@ -1004,8 +1042,8 @@ vec3 pathtracing(vec3 origin, vec3 direction){
             //                light_trace.direction, trace.emmission+new_trace.emmission*trace.attenuation);
             trace = path(new_trace.stop, //||light_trace.stop,
             trace.attenuation*new_trace.attenuation*scattering_pdf(material, r.index, p, origin, normal, scattered, trace.direction, new_trace.specular)/pdf_val,
-            scattered, trace.emmission+new_trace.emmission*trace.attenuation, false, trace.inverted);
-            for (int j = 0; j < num_obj; ++j) trace.inverted[j] = (trace.inverted[j] == new_trace.inverted[j]);
+            scattered, trace.emmission+new_trace.emmission*trace.attenuation, false/*, trace.inverted*/);
+//            for (int j = 0; j < num_obj; ++j) trace.inverted[j] = (trace.inverted[j] == new_trace.inverted[j]);
 
 //            }
 
@@ -1047,6 +1085,9 @@ void main(){
     float aspect = float(resolution.x) / float(resolution.y);
 
     vec4 col = vec4(.1,.1,.1,1);
+
+    //vec3 position, mat3 rotation, float thickness, vec3 color
+    add_laser(enterprise_pos, mat3(1,0,0,0,cos(3*pi/5),-sin(3*pi/5),0,sin(3*pi/5),cos(3*pi/5))*mat3(cos(3*pi/5),-sin(3*pi/5),0,sin(3*pi/5),cos(3*pi/5),0,0,0,1)*enterprise_rot, 0.001, 10*vec3(0.45, 0.75, 0.96));
 
     // for noise testing
     //    col = vec4(0,0,0,1);
