@@ -98,8 +98,9 @@ void VideoRenderer::renderPathmarcher(std::chrono::duration<float> time) {
 
 	glBindImageTexture(0, hdrColoTexture.getId(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 	glBindTextureUnit(1, texturesRenderer.getEarthAlbedoPlusHeight().getId());
-	glBindTextureUnit(2, texturesRenderer.getMoonAlbedoPlusHeight().getId());
-	glBindTextureUnit(3, texturesRenderer.getGasgiantAlbedo().getId());
+	glBindTextureUnit(2, texturesRenderer.getMoonAlbedo().getId());
+	glBindTextureUnit(3, texturesRenderer.getMoonHeight().getId());
+	glBindTextureUnit(4, texturesRenderer.getGasgiantAlbedo().getId());
 
 	for (int i = 0; i < passesPerFrame; ++i) {
 		pathMarchingProgram.set1ui("passSeed", passSeed++);

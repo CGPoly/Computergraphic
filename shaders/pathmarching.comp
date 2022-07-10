@@ -14,8 +14,9 @@ const uvec2 workGroupCount = uvec2(4);
 layout(local_size_x = 32, local_size_y = 32) in;
 layout(binding = 0, rgba32f) uniform image2D hdrOut;
 layout(binding = 1) uniform sampler2D earth_albedo_plus_height;
-layout(binding = 2) uniform sampler2D moon_albedo_plus_height;
-layout(binding = 3) uniform sampler2D gasgiant_albedo;
+layout(binding = 2) uniform sampler2D moon_albedo;
+layout(binding = 3) uniform sampler2D moon_height;
+layout(binding = 4) uniform sampler2D gasgiant_albedo;
 
 uniform uvec2 tileOffset;
 uniform uint currentSample;
@@ -564,9 +565,8 @@ float distObj(object obj, vec3 pos){
             height = height * 2 - 1;
             return oDisp(sdSphere(pos,  obj.scale), height*obj.scale*0.0025);
         case 11: // moon
-//            height = texture(moon_albedo_plus_height, map.xy).w;
-        //textureBicubic(sampler2D sampler, vec2 texCoords)
-            height = textureBicubic(moon_albedo_plus_height, map.xy).w;
+//            height = texture(moon_height, map.xy).w;
+            height = textureBicubic(moon_height, map.xy).x;
             height = height * 2 - 1;
             return oDisp(sdSphere(pos,  obj.scale), height*obj.scale*0.01);
         case 12: // ring
@@ -954,7 +954,7 @@ mat planet(object obj, inout vec3 p, inout vec3 normal){
 mat moon(object obj, inout vec3 p, inout vec3 normal){
     vec3 localPos = iScale(inverse(obj.rotation) * (p - obj.position), obj.scaling);
     vec3 map = texcoord_sphereProj(localPos);
-    vec3 col = texture(moon_albedo_plus_height, map.xy).xyz;
+    vec3 col = texture(moon_albedo, map.xy).rrr;
     return lambertian(col);
 }
 mat gasagiant(object obj, inout vec3 p, inout vec3 normal){

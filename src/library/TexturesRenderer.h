@@ -22,7 +22,8 @@ public:
 	void render(float time, std::optional<std::tuple<Profiler<T>&, T>> profiling = {});
 
 	[[nodiscard]] Texture const& getEarthAlbedoPlusHeight() const;
-	[[nodiscard]] Texture const& getMoonAlbedoPlusHeight() const;
+	[[nodiscard]] Texture const& getMoonAlbedo() const;
+	[[nodiscard]] Texture const& getMoonHeight() const;
 	[[nodiscard]] Texture const& getGasgiantAlbedo() const;
 private:
 	const glm::uvec2 workGroupSize{32};
@@ -34,7 +35,8 @@ private:
 	float lastTime = -1;
 
 	Texture earthAlbedoPlusHeight;
-	Texture moonAlbedoPlusHeight;
+	Texture moonAlbedo;
+	Texture moonHeight;
 	Texture gasgiantAlbedo;
 
 	ShaderProgram earthTextureProgram{{
