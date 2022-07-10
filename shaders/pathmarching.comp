@@ -130,11 +130,17 @@ object world[num_obj] = object[num_obj](
 //    object(12, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1500, vec3(0,0,0), lambertian(vec3(.8))),  // ring 1k
 
     //lasers
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),  //laser test
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),  //laser test
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),  //laser test
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),  //laser test
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),  //laser test
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),  //laser
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),  //laser
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),  //laser
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),  //laser
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),  //laser
+
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),  //laser gun
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),  //laser gun
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),  //laser gun
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),  //laser gun
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),  //laser gun
 
     //solar system
     object(3, enterprise_rot, vec3(1,1,1), 157, enterprise_pos, lambertian(vec3(.8))),  //enterprise
@@ -150,11 +156,11 @@ object world[num_obj] = object[num_obj](
     object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0, 0, 151600000000.), emitter(vec3(50000)))  //sun
 );
 
-//uint num_lights = 1;
-//int lights[] = int[](8);
-//bool active_lights[] = bool[](true,false,false,false,false,false);
-//int first_laser = 1;
-//int last_laser = 5;
+uint num_lights = 1;
+int lights[] = int[](8);
+bool active_lights[] = bool[](true,false,false,false,false,false);
+int first_laser_ = 5;
+int last_laser = 10;
 
 //assumes that the lasers are at the begin of world[]
 uint num_lasers = 5;
@@ -565,7 +571,6 @@ float distObj(object obj, vec3 pos){
             return oDisp(sdSphere(pos,  obj.scale), height*obj.scale*0.0025);
         case 11: // moon
 //            height = texture(moon_albedo_plus_height, map.xy).w;
-        //textureBicubic(sampler2D sampler, vec2 texCoords)
             height = textureBicubic(moon_albedo_plus_height, map.xy).w;
             height = height * 2 - 1;
             return oDisp(sdSphere(pos,  obj.scale), height*obj.scale*0.01);
