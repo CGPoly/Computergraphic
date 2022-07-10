@@ -5,7 +5,8 @@ const uvec2 workGroupSize = uvec2(32);
 const uvec2 workGroupCount = uvec2(4);
 
 layout(local_size_x = workGroupSize.x, local_size_y = workGroupSize.y) in;
-layout(rgba32f, binding = 0) writeonly uniform image2D albedo_plus_height;
+layout(r8, binding = 0) writeonly uniform image2D imgAlbedo;
+layout(r16, binding = 1) writeonly uniform image2D imgHeight;
 
 uniform uvec2 tileOffset;
 uniform float time;
@@ -411,7 +412,7 @@ void main() {
     if (lastTime < 0) {
         uvec2 texelCoord = ivec2(tileOffset * workGroupSize * workGroupCount + gl_GlobalInvocationID.xy);
         //    uvec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
-        ivec2 resolution = imageSize(albedo_plus_height);
+        ivec2 resolution = imageSize(imgAlbedo);
         if (texelCoord.x >= resolution.x || texelCoord.y >= resolution.y) return;
 
         vec2 uv = vec2(texelCoord) / vec2(resolution);
@@ -422,7 +423,8 @@ void main() {
         float height;
         moon(p, col, height);
 
-        imageStore(albedo_plus_height, ivec2(texelCoord), vec4(col, height));
+        imageStore(imgAlbedo, ivec2(texelCoord), vec4(col, 0));
+        imageStore(imgHeight, ivec2(texelCoord), vec4(height));
 //        imageStore(albedo_plus_height, ivec2(texelCoord), vec4(vec3(voronoi(p,5,1)), 1));
     }
 }

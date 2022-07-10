@@ -12,12 +12,14 @@ TexturesRenderer::TexturesRenderer(
 		moonResolution(moonResolution),
 		gasgiantResolution(gasgiantResolution),
 		earthAlbedoPlusHeight(Texture::immutable(1, GL_RGBA8, earthResolution, earthResolution)),
-		moonAlbedoPlusHeight(Texture::immutable(1, GL_RGBA16, moonResolution, moonResolution)),
+		moonAlbedo(Texture::immutable(1, GL_R8, moonResolution, moonResolution)),
+		moonHeight(Texture::immutable(1, GL_R16, moonResolution, moonResolution)),
 		gasgiantAlbedo(Texture::immutable(1, GL_RGBA8, gasgiantResolution, gasgiantResolution)) {
 
 	auto textures = {
 			&earthAlbedoPlusHeight,
-			&moonAlbedoPlusHeight,
+			&moonAlbedo,
+			&moonHeight,
 			&gasgiantAlbedo,
 	};
 	for (const auto &texture: textures) {
@@ -42,7 +44,8 @@ void TexturesRenderer::renderImpl(float time) {
 	moonTextureProgram.set1f("time", time);
 	moonTextureProgram.set1f("lastTime", lastTime);
 
-	glBindImageTexture(0, moonAlbedoPlusHeight.getId(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA16);
+	glBindImageTexture(0, moonAlbedo.getId(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R8);
+	glBindImageTexture(1, moonHeight.getId(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R16);
 	dispatchOverTexture(moonTextureProgram, moonResolution, moonResolution);
 
 
@@ -68,8 +71,11 @@ void TexturesRenderer::dispatchOverTexture(ShaderProgram& program, unsigned int 
 Texture const& TexturesRenderer::getEarthAlbedoPlusHeight() const {
 	return earthAlbedoPlusHeight;
 }
-Texture const& TexturesRenderer::getMoonAlbedoPlusHeight() const {
-	return moonAlbedoPlusHeight;
+Texture const& TexturesRenderer::getMoonAlbedo() const {
+	return moonAlbedo;
+}
+Texture const& TexturesRenderer::getMoonHeight() const{
+	return moonHeight;
 }
 Texture const& TexturesRenderer::getGasgiantAlbedo() const {
 	return gasgiantAlbedo;
