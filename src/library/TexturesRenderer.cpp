@@ -3,6 +3,13 @@
 #include "TexturesRenderer.h"
 #include "mathUtil.h"
 
+static Texture createTexture(GLenum format, unsigned int resolution) {
+	Texture texture = Texture::immutable(1, format, resolution, resolution);
+	glTextureParameteri(texture.getId(), GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTextureParameteri(texture.getId(), GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	return texture;
+}
+
 TexturesRenderer::TexturesRenderer(
 		unsigned int earthResolution,
 		unsigned int moonResolution,
@@ -11,30 +18,15 @@ TexturesRenderer::TexturesRenderer(
 		earthResolution(earthResolution),
 		moonResolution(moonResolution),
 		gasgiantResolution(gasgiantResolution),
-		earthAlbedoPlusHeight(Texture::immutable(1, GL_RGBA8, earthResolution, earthResolution)),
-		moonAlbedo(Texture::immutable(1, GL_R8, moonResolution, moonResolution)),
-		moonHeight(Texture::immutable(1, GL_R16, moonResolution, moonResolution)),
-		gasgiantAlbedo(Texture::immutable(1, GL_RGBA8, gasgiantResolution, gasgiantResolution)) {
-
-	auto textures = {
-			&earthAlbedoPlusHeight,
-			&moonAlbedo,
-			&moonHeight,
-			&gasgiantAlbedo,
-	};
-	for (const auto &texture: textures) {
-		glBindTexture(GL_TEXTURE_2D, texture->getId());
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-//        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-//        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	}
-}
+		earthAlbedoPlusHeight(createTexture(GL_RGBA8, earthResolution)),
+		moonAlbedo(createTexture(GL_R8, moonResolution)),
+		moonHeight(createTexture(GL_R16, moonResolution)),
+		gasgiantAlbedo(createTexture(GL_RGBA8, gasgiantResolution)) {}
 
 void TexturesRenderer::renderImpl(float time) {
 	earthTextureProgram.use();
 	earthTextureProgram.set1f("time", time);
-	earthTextureProgram.set1f("lastTime", lastTime);
+	earthTextureProgram.set1f("lastTime", earthLastTime);
 
 	glBindImageTexture(0, earthAlbedoPlusHeight.getId(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
 	dispatchOverTexture(earthTextureProgram, earthResolution, earthResolution);
@@ -42,7 +34,7 @@ void TexturesRenderer::renderImpl(float time) {
 
 	moonTextureProgram.use();
 	moonTextureProgram.set1f("time", time);
-	moonTextureProgram.set1f("lastTime", lastTime);
+	moonTextureProgram.set1f("lastTime", moonLastTime);
 
 	glBindImageTexture(0, moonAlbedo.getId(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R8);
 	glBindImageTexture(1, moonHeight.getId(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R16);
@@ -51,7 +43,7 @@ void TexturesRenderer::renderImpl(float time) {
 
 	gasgiantTextureProgram.use();
 	gasgiantTextureProgram.set1f("time", time);
-	gasgiantTextureProgram.set1f("lastTime", lastTime);
+	gasgiantTextureProgram.set1f("lastTime", gasgiantLastTime);
 
 	glBindImageTexture(0, gasgiantAlbedo.getId(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
 	dispatchOverTexture(gasgiantTextureProgram, gasgiantResolution, gasgiantResolution);
@@ -67,6 +59,33 @@ void TexturesRenderer::dispatchOverTexture(ShaderProgram& program, unsigned int 
 		}
 	}
 }
+
+void TexturesRenderer::setEarthResolution(unsigned int resolution) {
+	if (earthResolution == resolution)
+		return;
+
+	earthResolution = resolution;
+	earthAlbedoPlusHeight = createTexture(GL_R8, moonResolution);
+	earthLastTime = -1;
+}
+void TexturesRenderer::setMoonResolution(unsigned int resolution) {
+	if (moonResolution == resolution)
+		return;
+
+	moonResolution = resolution;
+	moonAlbedo = createTexture(GL_R8, moonResolution);
+	moonHeight = createTexture(GL_R16, moonResolution);
+	moonLastTime = -1;
+}
+void TexturesRenderer::setGasgiantResolution(unsigned int resolution) {
+	if (gasgiantResolution == resolution)
+		return;
+
+	gasgiantResolution = resolution;
+	gasgiantAlbedo = createTexture(GL_RGBA8, gasgiantResolution);
+	gasgiantLastTime = -1;
+}
+
 
 Texture const& TexturesRenderer::getEarthAlbedoPlusHeight() const {
 	return earthAlbedoPlusHeight;

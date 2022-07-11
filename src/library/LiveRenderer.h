@@ -10,6 +10,7 @@
 #include "Profiler.h"
 #include "TonemapProcessor.h"
 #include "motion_control.h"
+#include "Timeline.h"
 
 class LiveRenderer {
 public:
@@ -33,10 +34,13 @@ private:
 
 	Camera camera{};
 
-	motion_control motionControl{};
+	Timeline timeline{};
 
-	TexturesRenderer texturesRenderer{8, 1024 * 16, 8};
-//	TexturesRenderer texturesRenderer{256, 1024*16, 16};
+	TexturesRenderer texturesRenderer{
+		timeline.getEarthResolution(),
+		timeline.getMoonResolution(),
+		timeline.getGasgiantResolution()
+	};
 	BloomProcessor bloomProcessor{windowWidth, windowHeight};
 	TonemapProcessor tonemapProcessor{};
 

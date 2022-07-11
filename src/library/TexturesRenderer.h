@@ -21,6 +21,10 @@ public:
 	template<class T>
 	void render(float time, std::optional<std::tuple<Profiler<T>&, T>> profiling = {});
 
+	void setEarthResolution(unsigned int resolution);
+	void setMoonResolution(unsigned int resolution);
+	void setGasgiantResolution(unsigned int resolution);
+
 	[[nodiscard]] Texture const& getEarthAlbedoPlusHeight() const;
 	[[nodiscard]] Texture const& getMoonAlbedo() const;
 	[[nodiscard]] Texture const& getMoonHeight() const;
@@ -32,7 +36,10 @@ private:
 	unsigned int earthResolution;
 	unsigned int moonResolution;
 	unsigned int gasgiantResolution;
-	float lastTime = -1;
+
+	float earthLastTime = -1;
+	float moonLastTime = -1;
+	float gasgiantLastTime = -1;
 
 	Texture earthAlbedoPlusHeight;
 	Texture moonAlbedo;
@@ -59,9 +66,15 @@ void TexturesRenderer::render(float time, std::optional<std::tuple<Profiler<T>&,
 	bool moonCompile = moonTextureProgram.compile();
 	bool gasgiantCompile = gasgiantTextureProgram.compile();
 
-	if (earthCompile || moonCompile || gasgiantCompile)
-		lastTime = -1; // reset last time, because earthTextureProgram source changed
-	if (!earthTextureProgram.isValid() || !moonTextureProgram.isValid() || !gasgiantTextureProgram.isValid() || lastTime == time)
+	if (earthCompile)
+		earthLastTime = -1;
+	if (moonCompile)
+		moonLastTime = -1;
+	if (gasgiantCompile)
+		gasgiantCompile = -1;
+
+	if (!earthTextureProgram.isValid() || !moonTextureProgram.isValid() || !gasgiantTextureProgram.isValid()
+			|| (earthLastTime == time && moonLastTime == time && gasgiantLastTime == time))
 		return;
 
 	if (profiling) {
@@ -70,7 +83,10 @@ void TexturesRenderer::render(float time, std::optional<std::tuple<Profiler<T>&,
 	}
 
 	renderImpl(time);
-	lastTime = time;
+
+	earthLastTime = time;
+	moonLastTime = time;
+	gasgiantLastTime = time;
 
 	if (profiling) {
 		auto [profiler, type] = *profiling;
