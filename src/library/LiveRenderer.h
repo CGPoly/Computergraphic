@@ -35,8 +35,9 @@ private:
 
 	motion_control motionControl{};
 
-	TexturesRenderer texturesRenderer{8, 1024 * 16, 8};
+//	TexturesRenderer texturesRenderer{2, 512, 2};
 //	TexturesRenderer texturesRenderer{256, 1024*16, 16};
+	TexturesRenderer texturesRenderer{256, 1024*4, 16};
 	BloomProcessor bloomProcessor{windowWidth, windowHeight};
 	TonemapProcessor tonemapProcessor{};
 
@@ -63,9 +64,9 @@ private:
 	bool gammaCorrection = true;
 
 	bool bloomEnabled = true;
-	unsigned int bloomPasses = 6;
+	unsigned int bloomPasses = 10;
 	float bloomThreshold = 1;
-	float bloomIntensity = 1;
+	float bloomIntensity = .075;
 
 	unsigned int frameTimeTarget = 10;
 	unsigned int samplesPerPass = 1;
