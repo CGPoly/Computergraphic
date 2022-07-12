@@ -50,10 +50,9 @@ private:
 	Timeline timeline{};
 
 	TexturesRenderer texturesRenderer{
-//			timeline.getEarthResolution(),
-//			timeline.getMoonResolution(),
-//			timeline.getGasgiantResolution()
-        16, 16, 16
+			timeline.getEarthResolution(),
+			timeline.getMoonResolution(),
+			timeline.getGasgiantResolution()
 	};
 	BloomProcessor bloomProcessor{width, height};
 	TonemapProcessor tonemapProcessor{};

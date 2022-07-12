@@ -74,12 +74,9 @@ void VideoRenderer::run(
 }
 
 void VideoRenderer::renderTextures(std::chrono::duration<float> time) {
-//	texturesRenderer.setEarthResolution(timeline.getEarthResolution());
-//	texturesRenderer.setMoonResolution(timeline.getMoonResolution());
-//	texturesRenderer.setGasgiantResolution(timeline.getGasgiantResolution());
-    texturesRenderer.setEarthResolution(16);
-    texturesRenderer.setMoonResolution(16);
-    texturesRenderer.setGasgiantResolution(16);
+	texturesRenderer.setEarthResolution(timeline.getEarthResolution());
+	texturesRenderer.setMoonResolution(timeline.getMoonResolution());
+	texturesRenderer.setGasgiantResolution(timeline.getGasgiantResolution());
 
 	auto profiling = std::tuple<Profiler<ProfilerType>&, ProfilerType>(profiler, ProfilerType::texture);
 	texturesRenderer.render<ProfilerType>(time.count(), profiling);
