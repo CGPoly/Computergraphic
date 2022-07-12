@@ -40,9 +40,9 @@ private:
 //		timeline.getEarthResolution(),
 //		timeline.getMoonResolution(),
 //		timeline.getGasgiantResolution()
-        16,
+        1024,
         1024*4,
-        16
+        1024
 	};
 	BloomProcessor bloomProcessor{windowWidth, windowHeight};
 	TonemapProcessor tonemapProcessor{};

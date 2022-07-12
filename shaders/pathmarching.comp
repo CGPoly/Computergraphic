@@ -36,11 +36,11 @@ uniform vec3 julia_c;
 
 const bool orbit_cam = true;
 
-const float world_scale = 1000;  //how big one unit in metern is (this is for easier camera control)
+const float world_scale = 1000000;  //how big one unit in metern is (this is for easier camera control)
 
 const float FAR_PLANE = 149597870700.+696342000.*10000;
 
-const float steps = 2000;
+const float steps = 100;
 const float epsilonFactor = 1000;
 
 const bool preview = false;
@@ -80,8 +80,6 @@ mat emitter(vec3 col){return mat(2, 0, vec3(0), 0, 1.45, 1, vec3(1), col, 0, 0, 
 mat phong(vec3 col, float fuzz){return mat(4, 0, col, fuzz, 1.45, 1, vec3(1),vec3(0),0.3,fuzz,col,vec3(1));}
 mat cook_torrance(vec3 col, float roughness){return mat(5, 0, col, roughness, 1.45, 1, vec3(1),vec3(0),0.3,roughness,col,vec3(1));}
 mat custom(uint index){return mat(2, index, vec3(1,0,1),0, 1.45, 1, vec3(1),vec3(1,0,1),0.3,0.3,vec3(1,0,1),vec3(1));}
-mat4 camera_mat = orbit_cam?mat4(viewMat[0],viewMat[1],viewMat[2],vec4(world_scale*viewMat[3].xyz,1)):
-    mat4(vec4(camera_rot[0],0),vec4(camera_rot[1],0),vec4(camera_rot[2],0),vec4(camera_pos,1));
 
 struct object {
     uint obj_index;
@@ -123,50 +121,128 @@ vec3 sunPosition() {
     return rotationMatrix * startPoint;
 }
 
-const int num_obj = 22;
+
+//relative to the sun
+//float earth_year = time/50*pi;
+//float earth_day = time/10*pi;
+float earth_year = 0*pi;
+float earth_day = .5*pi;
+vec3 sun_earth_pos = mat3(cos(7.155*pi/180),-sin(7.155*pi/180),0,sin(7.155*pi/180),cos(7.155*pi/180),0,0,0,1)*
+    mat3(cos(earth_year),0,-sin(earth_year),0,1,0,sin(earth_year),0,cos(earth_year))*vec3(149600000000.,0,0);
+
+//float moon_year = time*pi;
+float moon_year = .6*pi;
+vec3 earth_moon_pos = mat3(cos(5.14*pi/180),-sin(5.14*pi/180),0,sin(5.14*pi/180),cos(5.14*pi/180),0,0,0,1)*
+    mat3(cos(moon_year),0,-sin(moon_year),0,1,0,sin(moon_year),0,cos(moon_year))*vec3(384400000.,0,0);
+vec3 sun_moon_pos = sun_earth_pos+earth_moon_pos;
+
+//float jupiter_year = time/10*pi;
+float jupiter_year = 1.55*pi;
+float jupiter_day = 0*pi;
+vec3 sun_jupiter_pos = mat3(cos(6.09*pi/180),-sin(6.09*pi/180),0,sin(6.09*pi/180),cos(6.09*pi/180),0,0,0,1)*
+    mat3(cos(jupiter_year),0,-sin(jupiter_year),0,1,0,sin(jupiter_year),0,cos(jupiter_year))*vec3(778510000000.,0,0);
+
+//mat3 ref_rot = mat3(0,-1,0,1,0,0,0,0,1)*mat3(1,0,0,0,-1,0,0,0,-1);  // rotation, sun left
+mat3 ref_rot = mat3(0,1,0,-1,0,0,0,0,1)*mat3(-1,0,0,0,1,0,0,0,1);  // rotation, sun right
+//mat3 ref_rot = mat3(1,0,0,0,1,0,0,0,1);
+
+vec3 ref_sunsys = -sun_moon_pos;  // moon ref
+//vec3 ref_sunsys = -sun_jupiter_pos;  //jupiter ref
+vec3 ref_earth = ref_rot*(ref_sunsys+sun_earth_pos);
+vec3 ref_moon = ref_rot*(ref_sunsys+sun_moon_pos);
+vec3 ref_jupiter = ref_rot*(ref_sunsys+sun_jupiter_pos);
+vec3 ref_sun = ref_rot*ref_sunsys;
+
+//const int num_obj = 22;
+//object world[num_obj] = object[num_obj](
+////    object(10, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(1)),  // earth 1k
+////    object(11, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(3)),  // moon 1k
+////    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(4)),  // gasgiant 1k
+////    object(12, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1500, vec3(0,0,0), lambertian(vec3(.8))),  // ring 1k
+//
+//    //lasers
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//
+//    //laser guns/targets
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))), //gun 1
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))), //target 1
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//
+//    //solar system
+//    object(3, enterprise_rot, vec3(1,1,1), 157, enterprise_pos, lambertian(vec3(.8))),  //enterprise
+//    object(1, enterprise_rot, vec3(1.), 15, enterprise_pos+enterprise_rot*vec3(435,0,126), emitter(vec3(0,0,50))),  // engine 1
+//    object(1, enterprise_rot, vec3(1.), 15, enterprise_pos+enterprise_rot*vec3(435,0,-126), emitter(vec3(0,0,50))),  // engine 2
+//    object(2, mat3(1,0,0,0,0,-1,0,1,0)*fractal_rot, vec3(1,1,1), 1000, fractal_pos, lambertian(vec3(.5))),  //fractal
+////    object(10, mat3(1,0,0,0,0,-1,0,1,0), vec3(1,1,1), 6371009, vec3(0,-(408000+12756270/2),0), custom(1)), //earth disp
+//
+////    object(1, mat3(1,0,0,0,0,-1,0,1,0), vec3(1,1,1), 6371009, -vec3(384400000+12756270/2,800000+1737400,0), custom(1)), //earth
+//
+//    object(1, mat3(1,0,0,0,0,-1,0,1,0), vec3(1,1,1), 6371009, ref_earth_pos, custom(1)), //earth
+////    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 6371009, vec3(0,408000+12756270/2,0), custom(1)), //earth
+////    object(1, mat3(0,-1,0,1,0,0,0,0,1), vec3(1,1,1), 6376009, vec3(0,408000+12756270/2,0), custom(2)) //clouds
+////    object(11, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, vec3(397000000,408000+12756270/2,0), custom(3)),  //moon relative to earth
+//    object(11, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, -vec3(0,100000+1737400,0), custom(3)),  //moon orbit
+////    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, -vec3(0,800000+1737400,0), custom(1)),  //moon orbit
+////    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., sunPosition(), emitter(vec3(100000)))  //sun
+//    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0, 100000000, 151600000000.), emitter(vec3(50000)))  //sun
+//);
+
+
+const int num_obj = 4;
 object world[num_obj] = object[num_obj](
-//    object(10, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(1)),  // earth 1k
-//    object(11, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(3)),  // moon 1k
-//    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(4)),  // gasgiant 1k
-//    object(12, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1500, vec3(0,0,0), lambertian(vec3(.8))),  // ring 1k
-
     //lasers
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
-
-    //laser guns/targets
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))), //gun 1
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))), //target 1
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//
+//    //laser guns/targets
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))), //gun 1
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))), //target 1
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 
     //solar system
-    object(3, enterprise_rot, vec3(1,1,1), 157, enterprise_pos, lambertian(vec3(.8))),  //enterprise
-    object(1, enterprise_rot, vec3(1.), 15, enterprise_pos+enterprise_rot*vec3(435,0,126), emitter(vec3(0,0,50))),  // engine 1
-    object(1, enterprise_rot, vec3(1.), 15, enterprise_pos+enterprise_rot*vec3(435,0,-126), emitter(vec3(0,0,50))),  // engine 2
-    object(2, mat3(1,0,0,0,0,-1,0,1,0)*fractal_rot, vec3(1,1,1), 1000, fractal_pos, lambertian(vec3(.5))),  //fractal
-//    object(10, mat3(1,0,0,0,0,-1,0,1,0), vec3(1,1,1), 6371009, vec3(0,-(408000+12756270/2),0), custom(1)), //earth disp
-    object(1, mat3(1,0,0,0,0,-1,0,1,0), vec3(1,1,1), 6371009, -vec3(384400000+12756270/2,800000+1737400,0), custom(1)), //earth
-//    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 6371009, vec3(0,408000+12756270/2,0), custom(1)), //earth
-//    object(1, mat3(0,-1,0,1,0,0,0,0,1), vec3(1,1,1), 6376009, vec3(0,408000+12756270/2,0), custom(2)) //clouds
-//    object(11, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, vec3(397000000,408000+12756270/2,0), custom(3)),  //moon relative to earth
-    object(11, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, -vec3(0,100000+1737400,0), custom(3)),  //moon orbit
-//    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, -vec3(0,800000+1737400,0), custom(1)),  //moon orbit
-//    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., sunPosition(), emitter(vec3(100000)))  //sun
-    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0, 100000000, 151600000000.), emitter(vec3(50000)))  //sun
+//    object(3, enterprise_rot, vec3(1,1,1), 157, enterprise_pos, lambertian(vec3(.8))),  //enterprise
+//    object(1, enterprise_rot, vec3(1.), 15, enterprise_pos+enterprise_rot*vec3(435,0,126), emitter(vec3(0,0,50))),  // engine 1
+//    object(1, enterprise_rot, vec3(1.), 15, enterprise_pos+enterprise_rot*vec3(435,0,-126), emitter(vec3(0,0,50))),  // engine 2
+//    object(2, mat3(1,0,0,0,0,-1,0,1,0)*fractal_rot, vec3(1,1,1), 1000, fractal_pos, lambertian(vec3(.5))),  //fractal
+
+    object(1, ref_rot*inverse(mat3(cos(earth_year),0,-sin(earth_year),0,1,0,sin(earth_year),0,cos(earth_year)))*
+        mat3(cos(23*pi/180),-sin(23*pi/180),0,sin(23*pi/180),cos(23*pi/180),0,0,0,1)*
+        mat3(cos(earth_day),0,-sin(earth_day),0,1,0,sin(earth_day),0,cos(earth_day))
+        , vec3(1,1,1), 6371000, ref_earth, custom(1)), //earth
+    object(11, ref_rot*mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, ref_moon, custom(3)),  //moon orbit
+    object(1, ref_rot*inverse(mat3(cos(jupiter_year),0,-sin(jupiter_year),0,1,0,sin(jupiter_year),0,cos(jupiter_year)))*
+        mat3(cos(3.13*pi/180),-sin(3.13*pi/180),0,sin(3.13*pi/180),cos(3.13*pi/180),0,0,0,1)*
+        mat3(cos(jupiter_day),0,-sin(jupiter_day),0,1,0,sin(jupiter_day),0,cos(jupiter_day)),
+        vec3(1,1,1), 69911000., ref_jupiter, custom(4)),  //jupiter
+    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 696342000., ref_sun, emitter(vec3(50000)))  //sun
 );
 
+mat4 camera_mat = orbit_cam?mat4(viewMat[0],viewMat[1],viewMat[2],vec4(world_scale*viewMat[3].xyz,1)):
+mat4(vec4(camera_rot[0],0),vec4(camera_rot[1],0),vec4(camera_rot[2],0),vec4(camera_pos,1));
+
 //uint num_lights = 1;
-int lights[] = int[](21, 8);
+int lights[] = int[](3);
 //bool active_lights[] = bool[](true,false,false,false,false,false);
 //int last_laser = 5;
 
@@ -1149,9 +1225,6 @@ void main(){
 
     if (texelCoord.x >= resolution.x || texelCoord.y >= resolution.y) return;
 
-    vec3 light_dir = vec3(cos(light_phi)*sin(light_theta),cos(light_theta),sin(light_phi)*sin(light_theta));
-    vec3 interp_light_dir = normalize(light_dir);
-
     vec2 p = (vec2(texelCoord) / resolution) * 2 - 1;
     float aspect = float(resolution.x) / float(resolution.y);
 
@@ -1161,9 +1234,13 @@ void main(){
 //    add_laser(enterprise_pos, mat3(1,0,0,0,cos(3*pi/5),-sin(3*pi/5),0,sin(3*pi/5),cos(3*pi/5))*mat3(cos(3*pi/5),-sin(3*pi/5),0,sin(3*pi/5),cos(3*pi/5),0,0,0,1)*enterprise_rot,
 //        1, 200*vec3(0.45, 0.75, 0.96), 10, 10);
 //    add_laser(enterprise_pos, mat3(1,0,0,0,cos(3*pi/5),-sin(3*pi/5),0,sin(3*pi/5),cos(3*pi/5))*mat3(cos(3*pi/5),sin(3*pi/5),0,-sin(3*pi/5),cos(3*pi/5),0,0,0,1)*enterprise_rot,
-    add_laser(enterprise_pos, mat3(1,0,0,0,cos(3*pi/5),-sin(3*pi/5),0,sin(3*pi/5),cos(3*pi/5))*mat3(cos(2*pi/5),sin(2*pi/5),0,-sin(2*pi/5),cos(2*pi/5),0,0,0,1)*enterprise_rot,
-        1, 200*vec3(0.45, 0.75, 0.96), 10, 50);
-    add_laser(fractal_pos, fractal_rot, 50, 50*vec3(1,0,0), 0, 1000);
+
+
+//    add_laser(enterprise_pos, mat3(1,0,0,0,cos(3*pi/5),-sin(3*pi/5),0,sin(3*pi/5),cos(3*pi/5))*mat3(cos(2*pi/5),sin(2*pi/5),0,-sin(2*pi/5),cos(2*pi/5),0,0,0,1)*enterprise_rot,
+//        1, 200*vec3(0.45, 0.75, 0.96), 10, 50);
+//    add_laser(fractal_pos, fractal_rot, 50, 50*vec3(1,0,0), 0, 1000);
+
+
 //object(5, fractal_rot, vec3(1,1,1), 50, fractal_pos, emitter(vec3(50,0,0))),  //fractal
     // for noise testing
     //    col = vec4(0,0,0,1);
@@ -1177,6 +1254,10 @@ void main(){
 //    vec3 ro = inverse(mat3(camera_mat))*(camera_origin-camera_mat[3].xyz);
     vec3 ro = camera_origin-camera_mat[3].xyz;
     if (orbit_cam) ro = inverse(mat3(camera_mat))*ro;
+//    ro += earth_pos;
+
+    vec3 light_dir = vec3(cos(light_phi)*sin(light_theta),cos(light_theta),sin(light_phi)*sin(light_theta));
+    vec3 interp_light_dir = normalize(light_dir);
 
     if (preview) {
         col = vec4(float(currentSample) + float(samplesPerPass) - float(currentSample) - float(samplesPerPass) + 0.1);

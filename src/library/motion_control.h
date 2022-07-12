@@ -42,6 +42,10 @@ public:
 
     glm::vec3 get_julia_c(float t);
 private:
+    //[[   -0.934,    0.000,   -0.357,    1.764]
+    // [   -0.174,    0.873,    0.456,   -0.903]
+    // [    0.311,    0.488,   -0.815,   -8.181]
+    // [    0.000,    0.000,    0.000,    1.000]]
     const std::vector<std::vector<float>> camera_pos_points{
             {0,0,0,0},
             {0,0,0,0},

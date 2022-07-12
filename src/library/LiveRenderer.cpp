@@ -6,9 +6,9 @@
 #include "buffer.hpp"
 
 //for printing of glm stuff
-//#include <iostream>
-//#include <glm/glm.hpp>
-//#include <glm/gtx/io.hpp>
+#include <iostream>
+#include <glm/glm.hpp>
+#include <glm/gtx/io.hpp>
 
 LiveRenderer::LiveRenderer() noexcept {
 	glfwSetWindowUserPointer(window, this);
@@ -60,7 +60,7 @@ void LiveRenderer::run() {
 			timeChanged = false;
 			renderState.reset();
 //			glClearTexImage(hdrColoTexture.getId(), 0, GL_RGBA, GL_FLOAT, nullptr);
-//            std::cout << camera.view_matrix() << std::endl;
+            std::cout << camera.view_matrix() << std::endl;
 		}
 
 		renderTextures();
