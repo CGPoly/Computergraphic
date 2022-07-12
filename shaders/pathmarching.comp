@@ -123,7 +123,7 @@ vec3 sunPosition() {
     return rotationMatrix * startPoint;
 }
 
-const int num_obj = 9;
+const int num_obj = 22;
 object world[num_obj] = object[num_obj](
 //    object(10, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(1)),  // earth 1k
 //    object(11, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0,0,0), custom(3)),  // moon 1k
@@ -131,15 +131,29 @@ object world[num_obj] = object[num_obj](
 //    object(12, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1500, vec3(0,0,0), lambertian(vec3(.8))),  // ring 1k
 
     //lasers
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),  //laser test
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),  //laser test
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),  //laser test
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),  //laser test
-    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),  //laser test
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+
+    //laser guns/targets
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))), //gun 1
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))), //target 1
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+    object(50, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 
     //solar system
     object(3, enterprise_rot, vec3(1,1,1), 157, enterprise_pos, lambertian(vec3(.8))),  //enterprise
-//    object(2, fractal_rot, vec3(1,1,1), 1000, fractal_pos, lambertian(vec3(.5))),  //fractal
+    object(1, enterprise_rot, vec3(1.), 15, enterprise_pos+enterprise_rot*vec3(435,0,126), emitter(vec3(0,0,50))),  // engine 1
+    object(1, enterprise_rot, vec3(1.), 15, enterprise_pos+enterprise_rot*vec3(435,0,-126), emitter(vec3(0,0,50))),  // engine 2
+    object(2, mat3(1,0,0,0,0,-1,0,1,0)*fractal_rot, vec3(1,1,1), 1000, fractal_pos, lambertian(vec3(.5))),  //fractal
 //    object(10, mat3(1,0,0,0,0,-1,0,1,0), vec3(1,1,1), 6371009, vec3(0,-(408000+12756270/2),0), custom(1)), //earth disp
     object(1, mat3(1,0,0,0,0,-1,0,1,0), vec3(1,1,1), 6371009, -vec3(384400000+12756270/2,800000+1737400,0), custom(1)), //earth
 //    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 6371009, vec3(0,408000+12756270/2,0), custom(1)), //earth
@@ -148,30 +162,18 @@ object world[num_obj] = object[num_obj](
     object(11, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, -vec3(0,100000+1737400,0), custom(3)),  //moon orbit
 //    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, -vec3(0,800000+1737400,0), custom(1)),  //moon orbit
 //    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., sunPosition(), emitter(vec3(100000)))  //sun
-    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0, 0, 151600000000.), emitter(vec3(50000)))  //sun
+    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 695700000., vec3(0, 100000000, 151600000000.), emitter(vec3(50000)))  //sun
 );
 
 //uint num_lights = 1;
-//int lights[] = int[](8);
+int lights[] = int[](21, 8);
 //bool active_lights[] = bool[](true,false,false,false,false,false);
-//int first_laser = 1;
 //int last_laser = 5;
 
 //assumes that the lasers are at the begin of world[]
 uint num_lasers = 5;
+//int first_laser_gun = 5;
 uint first_usable_laser = 0;
-
-// returns the index of the laser in the world array
-void add_laser(vec3 position, mat3 rotation, float thickness, vec3 color){
-    if (first_usable_laser < num_lasers){
-        world[first_usable_laser].obj_index = 5;
-        world[first_usable_laser].rotation = rotation;
-        world[first_usable_laser].position = position;
-        world[first_usable_laser].scale = thickness;
-        world[first_usable_laser].material = emitter(color);
-        ++first_usable_laser;
-    }
-}
 
 float atan2(float y, float x){
     if (x > 0) return atan(y/x);
@@ -181,13 +183,6 @@ float atan2(float y, float x){
     if(x == 0 && y < 0) return -pi/2;
     return 0;  // this is x == 0 && y == 0 which is technically undefined
 }
-
-struct cubic_spline4 {
-    uint size;
-    float x[4];
-    float y[4];
-    float z[4];
-};
 
 //random functions
 uvec4 pcg4d(uvec4 v) {
@@ -331,9 +326,10 @@ float sdSolidAngle(vec3 p, vec2 c, float ra){
     return max(l,m*sign(c.y*q.x-c.x*q.y));
 }
 float sdEllipsoid( vec3 p, vec3 r ){
-    float k0 = length(p/r);
-    float k1 = length(p/(r*r));
-    return k0*(k0-1.0)/k1;
+//    float k0 = length(p/r);
+//    float k1 = length(p/(r*r));
+//    return k0*(k0-1.0)/k1;
+    return (length(p/r)-1.0)*min(min(r.x,r.y),r.z);
 }
 
 // operations
@@ -432,32 +428,32 @@ float deManySpheres(vec3 pos){
     pos.xy = mod((pos.xy),1.0)-vec2(0.5);
     return length(pos)-0.4;
 }
-float deMandelbulb(vec3 pos, int Iterations, float Bailout) {
-    float t = fract(0.0001*((time * 30)+15.));
-    float y = 16.0*t*(1.0-t);
-    float maxp = 8;
-    float Power = -2*maxp*abs(t-0.5)+maxp;
-//    float Power = 4;
-    vec3 z = pos;
-    float dr = 1.0;
-    float r = 0.0;
-    for (int i = 0; i < Iterations ; i++) {
-        r = length(z);
-        if (r>Bailout) break;
-        float theta = asin( z.z/r );
-        float phi = atan( z.y,z.x );
-        dr =  pow( r, Power-1.0)*Power*dr + 1.0;
-
-        float zr = pow( r,Power);
-        theta = theta*Power;
-        phi = phi*Power;
-        z = zr*vec3( cos(theta)*cos(phi), cos(theta)*sin(phi), sin(theta) );
-        z+=pos;
-    }
-    return 0.5*log(r)*r/dr;
-}
+//float deMandelbulb(vec3 pos, int Iterations, float Bailout) {
+//    float t = fract(0.0001*((time * 30)+15.));
+//    float y = 16.0*t*(1.0-t);
+//    float maxp = 8;
+//    float Power = -2*maxp*abs(t-0.5)+maxp;
+////    float Power = 4;
+//    vec3 z = pos;
+//    float dr = 1.0;
+//    float r = 0.0;
+//    for (int i = 0; i < Iterations ; i++) {
+//        r = length(z);
+//        if (r>Bailout) break;
+//        float theta = asin( z.z/r );
+//        float phi = atan( z.y,z.x );
+//        dr =  pow( r, Power-1.0)*Power*dr + 1.0;
+//
+//        float zr = pow( r,Power);
+//        theta = theta*Power;
+//        phi = phi*Power;
+//        z = zr*vec3( cos(theta)*cos(phi), cos(theta)*sin(phi), sin(theta) );
+//        z+=pos;
+//    }
+//    return 0.5*log(r)*r/dr;
+//}
 float deJulia(vec3 p, int Iterations, float Bailout) {
-//    vec3 c = vec3(0.4,-0.4,0.6);
+//    vec3 c = vec3(0.0,-0.0,0.0);
     vec3 c = julia_c;
     float maxp = 8;
     float t = fract(0.01*((time * 30)+15.));
@@ -487,6 +483,7 @@ float deJulia(vec3 p, int Iterations, float Bailout) {
     return 0.5*z*log(z)/dz;
 }
 float sdEnterprise(vec3 pos){
+//    return sdEllipsoid(pos, vec3(2,0.1, 1));
     return sbU(sbU(sbU(sbU(sbU(sbU(sbU(oBevel(sdCappedCylinder(pos, 1, 0.04), 0.02),sdEllipsoid(pos, vec3(0.7,0.2, 0.7)), 0.1),
     sdCappedCylinder(iTrans(pos, mat4(0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1))+vec3(-0.8, -1.1, 0), 0.2, 0.8), 0.01),
     sdCappedCylinder(iTrans(pos, mat4(0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1))+vec3(0, -2, -0.8), 0.1, 0.8), 0.01),
@@ -507,22 +504,22 @@ float test(vec3 pos){
     //    float t = -2*abs(fract(0.1*(uTime+15))-0.5)+1;
     return oMorph(sdBox(pos,  vec3(1,1,1)), sdSphere(pos, 1), 0.5);
 }
-float deKaliRemix(vec3 p, int Iterations) {
-    float Scale=1.2;
-    vec3 Julia=vec3(-.2,-1.95,-.6);
-
-    p=p.zxy;  //more natural rotation
-    float alpha1 = 20;
-    float alpha2 = 20;
-    mat3 rot = mat3(cos(alpha1/180*3.14),-sin(alpha1/180*3.14),0,sin(alpha1/180*3.14),cos(alpha1/180*3.14),0,0,0,1)*mat3(cos(alpha2/180*3.14), 0, -sin(alpha2/180*3.14), 0, 1, 0, sin(alpha2/180*3.14), 0, cos(alpha2/180*3.14));
-
-    for (int i=0; i<Iterations; i++) {
-        p.xy=abs(p.xy);
-        p=p*Scale+Julia;
-        p*=rot;
-    }
-    return (length(p))*pow(Scale, -float(Iterations))*.9;
-}
+//float deKaliRemix(vec3 p, int Iterations) {
+//    float Scale=1.2;
+//    vec3 Julia=vec3(-.2,-1.95,-.6);
+//
+//    p=p.zxy;  //more natural rotation
+//    float alpha1 = 20;
+//    float alpha2 = 20;
+//    mat3 rot = mat3(cos(alpha1/180*3.14),-sin(alpha1/180*3.14),0,sin(alpha1/180*3.14),cos(alpha1/180*3.14),0,0,0,1)*mat3(cos(alpha2/180*3.14), 0, -sin(alpha2/180*3.14), 0, 1, 0, sin(alpha2/180*3.14), 0, cos(alpha2/180*3.14));
+//
+//    for (int i=0; i<Iterations; i++) {
+//        p.xy=abs(p.xy);
+//        p=p*Scale+Julia;
+//        p*=rot;
+//    }
+//    return (length(p))*pow(Scale, -float(Iterations))*.9;
+//}
 float deLaser(vec3 p, float thickness){
     return bI(sdPlane(p,vec3(0,1,0),0), sdInfinteCylinder(p, vec3(0,0,thickness)));
 }
@@ -545,11 +542,16 @@ float distObj(object obj, vec3 pos){
             return sdBox(pos,  vec3(obj.scale));
         case 1:
             return sdSphere(pos,  obj.scale);
-//        case 2:
-//            return deJulia(pos, 10, 1000);
-//            //return deKaliRemix(pos, 30);
+        case 2:
+            return deJulia(pos/obj.scale, 10, 1000)*obj.scale;
+//            return deKaliRemix(pos, 10);
         case 3:
             return sdEnterprise(pos/obj.scale)*obj.scale;
+//            return sdEllipsoid(pos/obj.scale, vec3(0.7,0.2, 0.7))*obj.scale;
+//        oScale(distObj(world[i], iScale(inverse(world[i].rotation) * (pos - world[i].position), world[i].scaling)), world[i].scaling)
+//            return oScale(sdSphere(iScale(pos, vec3(0.7,0.2, 0.7)), obj.scale), vec3(0.7,0.2, 0.7));
+//            return oScale(sdSphere(iScale(pos, vec3(1,1,1)), obj.scale), vec3(1,1,1));
+//            return sdCappedCylinder(pos, 1, 0.04);
 //        case 4:
 //            return deKaliRemix(pos, 10);
         case 5:
@@ -565,7 +567,7 @@ float distObj(object obj, vec3 pos){
             height = height * 2 - 1;
             return oDisp(sdSphere(pos,  obj.scale), height*obj.scale*0.0025);
         case 11: // moon
-//            height = texture(moon_height, map.xy).w;
+//            height = texture(moon_height, map.xy).x;
             height = textureBicubic(moon_height, map.xy).x;
             height = height * 2 - 1;
             return oDisp(sdSphere(pos,  obj.scale), height*obj.scale*0.01);
@@ -589,6 +591,21 @@ hit map(vec3 pos){
     return h;
 }
 
+hit map_shell(vec3 pos, uint exclude, float eps){
+    hit h = hit(false, 1.0/0.0, 0, 0);
+//    for (int i = 0; i < num_obj; ++i){
+    for (int i = 15; i < num_obj; ++i){
+        if (i != exclude){
+            float dist = max(0, abs(oScale(distObj(world[i], iScale(inverse(world[i].rotation) * (pos - world[i].position), world[i].scaling)), world[i].scaling))-eps);
+//            float dist = oScale(distObj(world[i], iScale(inverse(world[i].rotation) * (pos - world[i].position), world[i].scaling)), world[i].scaling);
+            if (dist < h.dist){
+                h = hit(false, dist, 0, i);
+            }
+        }
+    }
+    return h;
+}
+
 hit ray(vec3 ro, vec3 rd){
     hit h = hit(false, 0., 0, -1);
     for (; h.steps < steps; ++h.steps){
@@ -599,6 +616,28 @@ hit ray(vec3 ro, vec3 rd){
         h.index = d.index;
 
         if (d.dist < epsilon(rayEnd)) {
+            h.hit = true;
+            return h;
+        }
+        if (h.dist > FAR_PLANE) {
+            return h;
+        }
+    }
+    h.hit = false; // aproximates object. Might be innacurate but as can be let in as long it doesnt cause problems
+    return h;
+}
+
+hit ray_shell(vec3 ro, vec3 rd, uint exclude, float eps){
+    hit h = hit(false, 0., 0, -1);
+    for (; h.steps < steps; ++h.steps){
+        vec3 rayEnd = ro + h.dist * rd;
+
+        hit d = map_shell(rayEnd, exclude, eps);
+        h.dist += d.dist;
+        h.index = d.index;
+
+        if (d.dist < epsilon(rayEnd)) {
+//        if (d.dist < eps) {
             h.hit = true;
             return h;
         }
@@ -873,8 +912,8 @@ path scatter(mat material, uint index, vec3 p, vec3 origin, vec3 normal, vec3 di
 }
 
 path scatter_light(vec3 p, vec3 normal, ONB onb, out float pdf){
-//    float random_light = rand();
-//    if (random_light == 1) random_light = 0.999999999999999999;
+    float random_light = rand();
+    if (random_light == 1) random_light = 0.999999999999999999;
 //    random_light = floor(random_light*float(num_lights));
 //    uint light_index = -1;
 //    for (int i = 0; i < lights.length(); ++i)if (active_lights[i]){
@@ -882,7 +921,8 @@ path scatter_light(vec3 p, vec3 normal, ONB onb, out float pdf){
 //        else --random_light;
 //    }
 //    uint light_index = active_lights[uint(floor(random_light*float(num_lights)))];
-    uint light_index = num_obj-1;
+    uint light_index = lights[uint(floor(random_light*float(lights.length())))];
+//    uint light_index = num_obj-1;
 //    uint light_index = 6;
     float radius = world[light_index].scale;
     vec3 position = world[light_index].position;
@@ -1067,6 +1107,42 @@ vec3 getRayDir(vec2 p, float aspect){
     return normalize(vec3(p.xy,-z0));
 }
 
+void add_laser(vec3 position, mat3 rotation, float thickness, vec3 color, float gun_size, float target_size){
+    if (first_usable_laser < num_lasers){
+        world[first_usable_laser].obj_index = 5;
+        world[first_usable_laser].rotation = rotation;
+        world[first_usable_laser].position = position;
+        world[first_usable_laser].scale = thickness;
+        world[first_usable_laser].material = emitter(color);
+
+        if (gun_size + target_size != 0){
+            uint gun_index = 2*first_usable_laser+num_lasers;
+            vec3 dir = rotation*vec3(0, -1, 0);
+            float eps = 0.001;
+            hit t = ray_shell(position, dir, -1, eps);
+            if (t.hit){
+                if (gun_size != 0){
+                    world[gun_index].obj_index = 1;
+                    world[gun_index].position = position+dir*(t.dist+eps);
+                    world[gun_index].scale = gun_size;
+                    world[gun_index].material = emitter(color);
+                }
+                //target
+                if (target_size != 0) {
+                    hit t1 = ray_shell(position, dir, t.index, eps);
+                    if (t1.hit){
+                        world[gun_index+1].obj_index = 1;
+                        world[gun_index+1].position = position+dir*t1.dist;
+                        world[gun_index+1].scale = target_size;
+                        world[gun_index+1].material = emitter(color);
+                    }
+                }
+            }
+        }
+        ++first_usable_laser;
+    }
+}
+
 void main(){
     uvec2 texelCoord = ivec2(tileOffset * workGroupSize * workGroupCount + gl_GlobalInvocationID.xy);
     ivec2 resolution = imageSize(hdrOut);
@@ -1082,9 +1158,13 @@ void main(){
     vec4 col = vec4(.1,.1,.1,1);
 
     //vec3 position, mat3 rotation, float thickness, vec3 color
-    add_laser(enterprise_pos, mat3(1,0,0,0,cos(3*pi/5),-sin(3*pi/5),0,sin(3*pi/5),cos(3*pi/5))*mat3(cos(3*pi/5),-sin(3*pi/5),0,sin(3*pi/5),cos(3*pi/5),0,0,0,1)*enterprise_rot, 1, 200*vec3(0.45, 0.75, 0.96));
-    add_laser(enterprise_pos, enterprise_rot, 10, 1000*vec3(1,0,0));
-
+//    add_laser(enterprise_pos, mat3(1,0,0,0,cos(3*pi/5),-sin(3*pi/5),0,sin(3*pi/5),cos(3*pi/5))*mat3(cos(3*pi/5),-sin(3*pi/5),0,sin(3*pi/5),cos(3*pi/5),0,0,0,1)*enterprise_rot,
+//        1, 200*vec3(0.45, 0.75, 0.96), 10, 10);
+//    add_laser(enterprise_pos, mat3(1,0,0,0,cos(3*pi/5),-sin(3*pi/5),0,sin(3*pi/5),cos(3*pi/5))*mat3(cos(3*pi/5),sin(3*pi/5),0,-sin(3*pi/5),cos(3*pi/5),0,0,0,1)*enterprise_rot,
+    add_laser(enterprise_pos, mat3(1,0,0,0,cos(3*pi/5),-sin(3*pi/5),0,sin(3*pi/5),cos(3*pi/5))*mat3(cos(2*pi/5),sin(2*pi/5),0,-sin(2*pi/5),cos(2*pi/5),0,0,0,1)*enterprise_rot,
+        1, 200*vec3(0.45, 0.75, 0.96), 10, 50);
+    add_laser(fractal_pos, fractal_rot, 50, 50*vec3(1,0,0), 0, 1000);
+//object(5, fractal_rot, vec3(1,1,1), 50, fractal_pos, emitter(vec3(50,0,0))),  //fractal
     // for noise testing
     //    col = vec4(0,0,0,1);
     //    for (int i = 0; i <10; ++i){
