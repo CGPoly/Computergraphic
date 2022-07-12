@@ -41,7 +41,6 @@ const float world_scale = 1000000;  //how big one unit in metern is (this is for
 const float FAR_PLANE = 149597870700.+696342000.*10000;
 
 const float steps = 100;
-const float epsilonFactor = 1000;
 
 const bool preview = false;
 const int max_bounce = 16;  // maximal number of Light bounces
@@ -83,6 +82,7 @@ mat custom(uint index){return mat(2, index, vec3(1,0,1),0, 1.45, 1, vec3(1),vec3
 
 struct object {
     uint obj_index;
+    float epsilonFactor;
     mat3 rotation;
     vec3 scaling;
     float scale;
@@ -226,16 +226,16 @@ object world[num_obj] = object[num_obj](
 //    object(1, enterprise_rot, vec3(1.), 15, enterprise_pos+enterprise_rot*vec3(435,0,-126), emitter(vec3(0,0,50))),  // engine 2
 //    object(2, mat3(1,0,0,0,0,-1,0,1,0)*fractal_rot, vec3(1,1,1), 1000, fractal_pos, lambertian(vec3(.5))),  //fractal
 
-    object(1, ref_rot*inverse(mat3(cos(earth_year),0,-sin(earth_year),0,1,0,sin(earth_year),0,cos(earth_year)))*
+    object(1, 1, ref_rot*inverse(mat3(cos(earth_year),0,-sin(earth_year),0,1,0,sin(earth_year),0,cos(earth_year)))*
         mat3(cos(23*pi/180),-sin(23*pi/180),0,sin(23*pi/180),cos(23*pi/180),0,0,0,1)*
         mat3(cos(earth_day),0,-sin(earth_day),0,1,0,sin(earth_day),0,cos(earth_day))
         , vec3(1,1,1), 6371000, ref_earth, custom(1)), //earth
-    object(11, ref_rot*mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, ref_moon, custom(3)),  //moon orbit
-    object(1, ref_rot*inverse(mat3(cos(jupiter_year),0,-sin(jupiter_year),0,1,0,sin(jupiter_year),0,cos(jupiter_year)))*
+    object(11, 1, ref_rot*mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1737400, ref_moon, custom(3)),  //moon orbit
+    object(1, 1, ref_rot*inverse(mat3(cos(jupiter_year),0,-sin(jupiter_year),0,1,0,sin(jupiter_year),0,cos(jupiter_year)))*
         mat3(cos(3.13*pi/180),-sin(3.13*pi/180),0,sin(3.13*pi/180),cos(3.13*pi/180),0,0,0,1)*
         mat3(cos(jupiter_day),0,-sin(jupiter_day),0,1,0,sin(jupiter_day),0,cos(jupiter_day)),
         vec3(1,1,1), 69911000., ref_jupiter, custom(4)),  //jupiter
-    object(1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 696342000., ref_sun, emitter(vec3(50000)))  //sun
+    object(1, 1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 696342000., ref_sun, emitter(vec3(50000)))  //sun
 );
 
 mat4 camera_mat = orbit_cam?mat4(viewMat[0],viewMat[1],viewMat[2],vec4(world_scale*viewMat[3].xyz,1)):
@@ -334,7 +334,7 @@ vec3 random_cosine_direction(){
 }
 
 float epsilon(vec3 pos) {
-    return length(ulp(pos)) * epsilonFactor;
+    return length(ulp(pos)) * 1000;
 }
 
 struct ONB {
@@ -691,7 +691,7 @@ hit ray(vec3 ro, vec3 rd){
         h.dist += d.dist;
         h.index = d.index;
 
-        if (d.dist < epsilon(rayEnd)) {
+        if (d.dist < epsilon(rayEnd) * world[d.index].epsilonFactor) {
             h.hit = true;
             return h;
         }
@@ -712,7 +712,7 @@ hit ray_shell(vec3 ro, vec3 rd, uint exclude, float eps){
         h.dist += d.dist;
         h.index = d.index;
 
-        if (d.dist < epsilon(rayEnd)) {
+        if (d.dist < epsilon(rayEnd) * world[d.index].epsilonFactor) {
 //        if (d.dist < eps) {
             h.hit = true;
             return h;
@@ -737,8 +737,8 @@ vec3 tetraNormUnfix(vec3 p, float h){ // for function f(p){
     k.yxy*map( p + k.yxy*h ).dist +
     k.xxx*map( p + k.xxx*h ).dist );
 }
-vec3 tetraNorm(vec3 pos){
-    float h = epsilon(pos);
+vec3 tetraNorm(vec3 pos, float epsilonFactor){
+    float h = epsilon(pos) * epsilonFactor;
     int ZERO = min(int(passSeed),0); // non-constant zero
     vec3 n = vec3(0.0);
     for( int i=ZERO; i<4; i++) {
@@ -754,7 +754,7 @@ vec3 calcNormal(vec3 p, object obj){
     //        nor += tetraNorm(p, eps*rand(i*2565));
     //    }
     //    return nor/n;
-    return tetraNorm(p);
+    return tetraNorm(p, obj.epsilonFactor);
 //    return normalize(p-obj.position);
     //    return numDiff(p,obj.eps);
     //    return numDiff(p);
@@ -1162,7 +1162,7 @@ vec3 pathtracing(vec3 origin, vec3 direction){
 
 //            }
 
-            float eps = epsilon(p);
+            float eps = epsilon(p) * obj.epsilonFactor;
             origin = p+2*eps*normalize(trace.direction+normal);
         }
         else {
