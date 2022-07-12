@@ -71,7 +71,7 @@ void TexturesRenderer::render(float time, std::optional<std::tuple<Profiler<T>&,
 	if (moonCompile)
 		moonLastTime = -1;
 	if (gasgiantCompile)
-		gasgiantCompile = -1;
+		gasgiantLastTime = -1;
 
 	if (!earthTextureProgram.isValid() || !moonTextureProgram.isValid() || !gasgiantTextureProgram.isValid()
 			|| (earthLastTime == time && moonLastTime == time && gasgiantLastTime == time))
