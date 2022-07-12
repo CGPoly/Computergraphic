@@ -10,6 +10,7 @@
 #include "TexturesRenderer.h"
 #include "Camera.h"
 #include "motion_control.h"
+#include "Timeline.h"
 
 class VideoRenderer {
 public:
@@ -46,11 +47,13 @@ private:
 
 	GLFWwindow* window = createWindow(1280, 720, "LiveRenderer");
 
-	Camera camera{};
+	Timeline timeline{};
 
-	motion_control motionControl{};
-
-	TexturesRenderer texturesRenderer{1024 * 4, 1024 * 4, 1024 * 4};
+	TexturesRenderer texturesRenderer{
+			timeline.getEarthResolution(),
+			timeline.getMoonResolution(),
+			timeline.getGasgiantResolution()
+	};
 	BloomProcessor bloomProcessor{width, height};
 	TonemapProcessor tonemapProcessor{};
 

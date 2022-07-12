@@ -50,6 +50,12 @@ void LiveRenderer::run() {
 		drawStatistic();
 		drawTimeControl();
 
+		if (timeChanged) {
+			timeline.update(time);
+			texturesRenderer.setEarthResolution(timeline.getEarthResolution());
+			texturesRenderer.setMoonResolution(timeline.getMoonResolution());
+			texturesRenderer.setGasgiantResolution(timeline.getGasgiantResolution());
+		}
 		if (camera.pollChanged() || changedSamplesPerPass || timeChanged) {
 			timeChanged = false;
 			renderState.reset();
@@ -184,13 +190,13 @@ void LiveRenderer::renderPathmarcher() {
 	pathMarchingProgram.set1f("time", time.count());
 	pathMarchingProgram.set1ui("samplesPerPass", samplesPerPass);
 
-	pathMarchingProgram.setVec3("camera_pos", motionControl.get_camera_pos(time.count()));
-	pathMarchingProgram.setMat3("camera_rot", motionControl.get_camera_rot(time.count()));
-	pathMarchingProgram.setVec3("enterprise_pos", motionControl.get_enterprise_pos(time.count()));
-	pathMarchingProgram.setMat3("enterprise_rot", motionControl.get_enterprise_rot(time.count()));
-	pathMarchingProgram.setVec3("fractal_pos", motionControl.get_fractal_pos(time.count()));
-	pathMarchingProgram.setMat3("fractal_rot", motionControl.get_fractal_rot(time.count()));
-	pathMarchingProgram.setVec3("julia_c", motionControl.get_julia_c(time.count()));
+	pathMarchingProgram.setVec3("camera_pos", timeline.motionControl.get_camera_pos(time.count()));
+	pathMarchingProgram.setMat3("camera_rot", timeline.motionControl.get_camera_rot(time.count()));
+	pathMarchingProgram.setVec3("enterprise_pos", timeline.motionControl.get_enterprise_pos(time.count()));
+	pathMarchingProgram.setMat3("enterprise_rot", timeline.motionControl.get_enterprise_rot(time.count()));
+	pathMarchingProgram.setVec3("fractal_pos", timeline.motionControl.get_fractal_pos(time.count()));
+	pathMarchingProgram.setMat3("fractal_rot", timeline.motionControl.get_fractal_rot(time.count()));
+	pathMarchingProgram.setVec3("julia_c", timeline.motionControl.get_julia_c(time.count()));
 
 	glBindImageTexture(0, hdrColoTexture.getId(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 	glBindTextureUnit(1, texturesRenderer.getEarthAlbedoPlusHeight().getId());

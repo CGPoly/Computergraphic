@@ -48,6 +48,8 @@ void VideoRenderer::run(
 		if (!pathMarchingProgram.isValid())
 			return;
 
+		timeline.update(time);
+
 		renderTextures(time);
 		renderPathmarcher(time);
 		renderBloom();
@@ -72,6 +74,10 @@ void VideoRenderer::run(
 }
 
 void VideoRenderer::renderTextures(std::chrono::duration<float> time) {
+	texturesRenderer.setEarthResolution(timeline.getEarthResolution());
+	texturesRenderer.setMoonResolution(timeline.getMoonResolution());
+	texturesRenderer.setGasgiantResolution(timeline.getGasgiantResolution());
+
 	auto profiling = std::tuple<Profiler<ProfilerType>&, ProfilerType>(profiler, ProfilerType::texture);
 	texturesRenderer.render<ProfilerType>(time.count(), profiling);
 }
@@ -84,17 +90,17 @@ void VideoRenderer::renderPathmarcher(std::chrono::duration<float> time) {
 	const unsigned int samplesPerPass = 50;
 
 	pathMarchingProgram.use();
-	pathMarchingProgram.setMat4("viewMat", camera.view_matrix());
+	pathMarchingProgram.setMat4("viewMat", {}); // not actually used. This could be better but whatever
 	pathMarchingProgram.set1f("time", time.count());
 	pathMarchingProgram.set1ui("samplesPerPass", samplesPerPass);
 
-	pathMarchingProgram.setVec3("camera_pos", motionControl.get_camera_pos(time.count()));
-	pathMarchingProgram.setMat3("camera_rot", motionControl.get_camera_rot(time.count()));
-	pathMarchingProgram.setVec3("enterprise_pos", motionControl.get_enterprise_pos(time.count()));
-	pathMarchingProgram.setMat3("enterprise_rot", motionControl.get_enterprise_rot(time.count()));
-	pathMarchingProgram.setVec3("fractal_pos", motionControl.get_fractal_pos(time.count()));
-	pathMarchingProgram.setMat3("fractal_rot", motionControl.get_fractal_rot(time.count()));
-	pathMarchingProgram.setVec3("julia_c", motionControl.get_julia_c(time.count()));
+	pathMarchingProgram.setVec3("camera_pos", timeline.motionControl.get_camera_pos(time.count()));
+	pathMarchingProgram.setMat3("camera_rot", timeline.motionControl.get_camera_rot(time.count()));
+	pathMarchingProgram.setVec3("enterprise_pos", timeline.motionControl.get_enterprise_pos(time.count()));
+	pathMarchingProgram.setMat3("enterprise_rot", timeline.motionControl.get_enterprise_rot(time.count()));
+	pathMarchingProgram.setVec3("fractal_pos", timeline.motionControl.get_fractal_pos(time.count()));
+	pathMarchingProgram.setMat3("fractal_rot", timeline.motionControl.get_fractal_rot(time.count()));
+	pathMarchingProgram.setVec3("julia_c", timeline.motionControl.get_julia_c(time.count()));
 
 	glBindImageTexture(0, hdrColoTexture.getId(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 	glBindTextureUnit(1, texturesRenderer.getEarthAlbedoPlusHeight().getId());
