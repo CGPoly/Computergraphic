@@ -10,16 +10,20 @@
 
 #include "common.hpp"
 
+// Needs at minimum 4 points
 class cubic_splines {
 public:
     cubic_splines(std::vector<float> x, std::vector<float> y);
     float get_point(float t);
+    float get_derivative(float t);
 private:
+    std::vector<float> thomas_solver(std::vector<float> h, std::vector<float> v, std::vector<float> u);
     unsigned int clamp(unsigned int t, unsigned int low, unsigned int high);
     unsigned int binary_search(float t, std::vector<float> x);
     unsigned int num_points;
-    std::vector<float> x;
+    std::vector<float> t;
     std::vector<float> y;
+    std::vector<float> h;
     std::vector<float> z;
 };
 
@@ -39,51 +43,56 @@ public:
     glm::vec3 get_julia_c(float t);
 private:
     const std::vector<std::vector<float>> camera_pos_points{
-            {0,0},
-            {0,0},
-            {-5000,-500},
-            {0,10}
+            {0,0,0,0},
+            {0,0,0,0},
+            {0,0,0,0},
+            {0,1,2,3}
     };
     const std::vector<std::vector<float>> camera_rot_points{
-            {0,0},
-            {0,0},
-            {0,0},
-            {0,0},
-            {0,1}
+            {0,0,0,0},
+            {0,0,0,0},
+            {0,0,0,0},
+            {1,1,1,1},
+            {0,1,2,3}
     };
     const std::vector<std::vector<float>> enterprise_pos_points{
-            {0,0},
-            {0,0},
-            {1000,0},
-            {0,1}
+//            {500,0,-500,0},
+//            {0,0,0,500},
+//            {0,500,0,-500},
+            {-1000,0,1000,1000,1000,1000,1000},
+            {-1000,-1000,-1000,0,1000,1000,1000},
+            {-1000,-1000,-1000,-1000,-1000,0,1000},
+            {0,10,20,30,40,50,60}
     };
     const std::vector<std::vector<float>> enterprise_rot_points{
-            {0,0},
-            {0,0},
-            {0,0},
-            {0,0},
-            {0,1}
+            {0,0,0,0},
+            {0,0,0,0},
+            {0,0,0,0},
+            {1,1,1,1},
+            {0,1,2,3}
     };
     const std::vector<std::vector<float>> fractal_pos_points{
-            {0,0},
-            {0,1000},
-            {0,0},
-            {0,1}
+            {2000,2000,2000,2000},
+            {0,0,0,0},
+            {0,0,0,0},
+            {0,1,2,3}
     };
     const std::vector<std::vector<float>> fractal_rot_points{
-            {0,0},
-            {0,0},
-            {0,0},
-            {0,0},
-            {0,1}
+            {0,0,0,0},
+            {0,0,0,0},
+            {0,0,0,0},
+            {1,1,1,1},
+            {0,1,2,3}
     };
     const std::vector<std::vector<float>> julia_c_points{
-            {.4,.4},
-            {-.4,-.4},
-            {.6,.6},
-            {0,1}
+            {.4,.4,.4,.4},
+            {-.4,-.4,-.4,-.4},
+            {.6,.6,.6,.6},
+            {0,1,2,3}
     };
 
+    glm::vec4 direction_to_quant(glm::vec3 dir, glm::vec3 neutral);
+    glm::vec4 so_matrix_to_quant(glm::mat3 matrix);
     glm::vec4 euler_to_quad(glm::vec3 euler);
     glm::mat3 quant_to_rot(glm::vec4 q);
     glm::mat3 look_at(glm::vec3 origin, glm::vec3 target);
@@ -99,7 +108,7 @@ private:
 
     std::vector<cubic_splines> julia_c;
 
-    const float epsilon = 0.001;
+    const float epsilon = 0.00001;
     const glm::vec3 up = {0,1,0};
 };
 
