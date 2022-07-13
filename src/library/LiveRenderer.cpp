@@ -60,7 +60,7 @@ void LiveRenderer::run() {
 			timeChanged = false;
 			renderState.reset();
 //			glClearTexImage(hdrColoTexture.getId(), 0, GL_RGBA, GL_FLOAT, nullptr);
-            std::cout << camera.view_matrix() << std::endl;
+            std::cout << "camera matrix: " << camera.view_matrix() << std::setprecision(16) << std::endl;
 		}
 
 		renderTextures();
@@ -144,7 +144,7 @@ void LiveRenderer::drawTimeControl() {
 		ImGui::EndCombo();
 	}
 	float timeStepFloat = timeAdvance.timeStep.count();
-	if (ImGui::SliderFloat("Time step", &timeStepFloat, 1, 1000, "%.1f ms"))
+	if (ImGui::SliderFloat("Time step", &timeStepFloat, 1, 10000, "%.1f ms"))
 		timeAdvance.timeStep = std::chrono::duration<float, std::milli>(timeStepFloat);
 
 	if (timeAdvance.type == TimeAdvance::Type::sampleTarget) {

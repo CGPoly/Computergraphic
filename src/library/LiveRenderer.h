@@ -67,9 +67,9 @@ private:
 	bool gammaCorrection = true;
 
 	bool bloomEnabled = true;
-	unsigned int bloomPasses = 6;
+	unsigned int bloomPasses = 10;
 	float bloomThreshold = 1;
-	float bloomIntensity = 1;
+	float bloomIntensity = .075;
 
 	unsigned int frameTimeTarget = 10;
 	unsigned int samplesPerPass = 1;

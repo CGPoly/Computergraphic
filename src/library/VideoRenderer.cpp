@@ -169,7 +169,7 @@ int VideoRenderer::writeImage(std::chrono::duration<float, std::milli> time) {
 	glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer.data());
 
 	std::stringstream filename;
-	filename << "f" << time.count() << ".png";
+	filename << "f" << (int)(time.count()*100) << ".png";
 
 	stbi_flip_vertically_on_write(true);
 	int result = stbi_write_png(
