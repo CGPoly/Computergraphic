@@ -77,6 +77,7 @@ motion_control::motion_control() {
     for (int i=0;i<3;++i)camera_pos.emplace_back(camera_pos_points[3], camera_pos_points[i]);
     for (int i=0;i<4;++i)camera_rot.emplace_back(camera_rot_points[4], camera_rot_points[i]);
     for (int i=0;i<3;++i)enterprise_pos.emplace_back(enterprise_pos_points[3], enterprise_pos_points[i]);
+    for (int i=0;i<3;++i)enterprise_up.emplace_back(enterprise_up_points[3], enterprise_up_points[i]);
 //    for (int i=0;i<4;++i)enterprise_rot.emplace_back(enterprise_rot_points[4], enterprise_rot_points[i]);
     for (int i=0;i<3;++i)fractal_pos.emplace_back(fractal_pos_points[3], fractal_pos_points[i]);
     for (int i=0;i<4;++i)fractal_rot.emplace_back(fractal_rot_points[4], fractal_rot_points[i]);
@@ -114,15 +115,30 @@ glm::mat3 motion_control::get_enterprise_rot(float t) {
 //    glm::mat3 rot_rot= {-0.979,0.000,-0.203,-0.092,0.891,0.444,0.181,0.454,-0.873};
 //    glm::vec4 qrto = so_matrix_to_quant(rot_rot);
 //    std::cout << rot_rot << qrto << quant_to_rot(qrto) << std::endl;
-    glm::mat3 rot = quant_to_rot(direction_to_quant({
+//    glm::mat3 rot = quant_to_rot(direction_to_quant({
+//           enterprise_pos[0].get_derivative(t),
+//           enterprise_pos[1].get_derivative(t),
+//           enterprise_pos[2].get_derivative(t),
+//    },{1,0,0}));
+
+    glm::quat rot = glm::quatLookAt(
+        glm::normalize(glm::vec3({
            enterprise_pos[0].get_derivative(t),
            enterprise_pos[1].get_derivative(t),
-           enterprise_pos[2].get_derivative(t),
-    },{1,0,0}));
+           enterprise_pos[2].get_derivative(t)
+        })),
+        glm::normalize(glm::vec3({
+            enterprise_up[0].get_point(t),
+            enterprise_up[1].get_point(t),
+            enterprise_up[2].get_point(t)
+        }))
+    );
+//    },{0,1,0}));
 
+//    rot = glm::mat3(0,0,1,0,1,0,-1,0,0)*rot;
 //    rot = rot * glm::mat3({-1,0,0,0,1,0,0,0,1});
-//    rot = rot * glm::mat3({1,0,0,0,-1,0,0,0,-1});
-    return rot;
+//    rot = rot * glm::mat3({-1,0,0,0,1,0,0,0,-1});
+    return glm::mat3(rot);
 }
 
 glm::vec3 motion_control::get_fractal_pos(float t) {
@@ -149,11 +165,13 @@ glm::vec3 motion_control::get_julia_c(float t) {
 glm::vec4 motion_control::direction_to_quant(glm::vec3 dir, glm::vec3 neutral) {
     if (dir == glm::vec3({0,0,0})) return {0,0,0,1};
     dir = glm::normalize(dir);
+    neutral = glm::normalize(neutral);
     glm::vec3 a = glm::cross(dir, neutral);
     return glm::normalize(glm::vec4({
         a[0],a[1],a[2],
         sqrt(glm::length(dir)*glm::length(dir)*glm::length(neutral)*glm::length(neutral))+glm::dot(dir,neutral)
     }));
+//    return so_matrix_to_quant(glm::lookAt({0,0,0}, dir, neutral));
 }
 glm::vec4 motion_control::so_matrix_to_quant(glm::mat3 m){
     float qw = sqrt(1+m[0][0]+m[1][1]+m[2][2])/2;

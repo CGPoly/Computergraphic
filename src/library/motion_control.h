@@ -16,6 +16,7 @@ public:
     cubic_splines(std::vector<float> x, std::vector<float> y);
     float get_point(float t);
     float get_derivative(float t);
+    float get_second_derivative(float t);
 private:
     std::vector<float> thomas_solver(std::vector<float> h, std::vector<float> v, std::vector<float> u);
     unsigned int clamp(unsigned int t, unsigned int low, unsigned int high);
@@ -62,10 +63,20 @@ private:
             {0,3,3.429,10}
     };
     const std::vector<std::vector<float>> enterprise_pos_points{
+//            {1000,-1000,-1000,-1000},
+//            {1000,1000,-1000,-1000},
+//            {1000,1000,1000,-1000},
+//            {0,10,20,30}
             {1757471.250,1757471.250,1747471.250,1757471.250},
             {625787.812,625787.812,567787.812,567787.812},
             {-150000.000,-137000.000,0,0},
             {0,3,20,30}
+    };
+    const std::vector<std::vector<float>> enterprise_up_points{
+            {0,0,0,0},
+            {1,1,1,1},
+            {0,0,0,0},
+            {0,10,20,30}
     };
 //    const std::vector<std::vector<float>> enterprise_rot_points{
 //            {0,0,0,0},
@@ -98,6 +109,7 @@ private:
     std::vector<cubic_splines> camera_rot;
 
     std::vector<cubic_splines> enterprise_pos;
+    std::vector<cubic_splines> enterprise_up;
 //    std::vector<cubic_splines> enterprise_rot;
 
     std::vector<cubic_splines> fractal_pos;

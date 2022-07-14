@@ -237,10 +237,17 @@ mat3 rot_enter(){
 // [   -0.071,    0.997,   -0.001,    0.000]
 // [   -0.997,   -0.071,   -0.012,   -5.000]
 // [    0.000,    0.000,    0.000,    1.000]]
-mat3 cam_rot = mat3(0,0,1,0,1,0,-1,0,0)*rot_enter();
+//mat3 cam_rot = mat3(0,-1,0,1,0,0,0,0,1)*rot_enter();
+//mat3 cam_rot = rot_enter()*mat3(1,0,0,0,0,1,0,-1,0);
+//mat3 cam_rot = rot_enter()*mat3(0,0,1,0,1,0,-1,0,0)*inverse(mat3(viewMat));
+//mat3 cam_rot = mat3(viewMat);
+//mat3 cam_rot = rot_enter()*mat3(0,0,-1,0,1,0,1,0,0);
+mat3 cam_rot = rot_enter();
 
 //vec3 cam_pos = pos_enter()+rot_enter()*vec3(1500,200,0);
-vec3 cam_pos = pos_enter()+rot_enter()*vec3(-1500,0,0);
+//vec3 cam_pos = pos_enter()+rot_enter()*vec3(1500,0,0);
+//vec3 cam_pos = vec3(5000,5000,5000);
+vec3 cam_pos = pos_enter()+rot_enter()*vec3(0,200,1500);
 //vec3 cam_pos = pos_enter()+rot_enter()*vec3(5000,0,0);
 
 const int num_obj = 23;
@@ -265,9 +272,9 @@ object world[num_obj] = object[num_obj](
     object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 
     //solar system
-    object(3, .01, rot_enter()*mat3(-1,0,0,0,1,0,0,0,1), vec3(1,1,1), 157, pos_enter(), lambertian(vec3(.8))),  //enterprise
-    object(1, .01, rot_enter(), vec3(1.), 15, pos_enter()+rot_enter()*vec3(-435,0,126), emitter(vec3(0,0,50))),  // engine 1
-    object(1, .01, rot_enter(), vec3(1.), 15, pos_enter()+rot_enter()*vec3(-435,0,-126), emitter(vec3(0,0,50))),  // engine 2
+    object(3, .005, rot_enter()*mat3(0,0,1,0,1,0,-1,0,0), vec3(1,1,1), 157, pos_enter(), lambertian(vec3(.8))),  //enterprise
+    object(1, .01, rot_enter(), vec3(1.), 15, pos_enter()+rot_enter()*vec3(126,0,435), emitter(vec3(0,0,50))),  // engine 1
+    object(1, .01, rot_enter(), vec3(1.), 15, pos_enter()+rot_enter()*vec3(-126,0,435), emitter(vec3(0,0,50))),  // engine 2
 
     object(2, eps_fractal(), rot_fractal()*mat3(1,0,0,0,0,-1,0,1,0), vec3(1,1,1), 2000, pos_fractal(), lambertian(vec3(.5))),  //fractal
 //    object(2, 0.5, frac_rot*mat3(1,0,0,0,0,-1,0,1,0)*fractal_rot, vec3(1,1,1), 1000, ref_frac, lambertian(vec3(.5))),  //fractal
@@ -282,7 +289,10 @@ object world[num_obj] = object[num_obj](
         mat3(cos(jupiter_day),0,-sin(jupiter_day),0,1,0,sin(jupiter_day),0,cos(jupiter_day)),
         vec3(1,1,1), 69911000., ref_jupiter, custom(4)),  //jupiter
     object(1, 1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 696342000., ref_sun, emitter(vec3(50000)))  //sun
-//    ,object(1, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1), 500., pos_enter(), emitter(vec3(50,0,0)))
+
+//    ,object(1, .05, rot_enter()*mat3(0,0,1,0,1,0,-1,0,0), vec3(1,1,1), 500., pos_enter()+rot_enter()*vec3(1500,0,0), custom(5))
+//    ,object(1, .05, mat3(viewMat)*mat3(0,0,1,0,1,0,-1,0,0), vec3(1,1,1), 500., pos_enter()+rot_enter()*vec3(1500,0,0), custom(5))
+//    ,object(1, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1),30., pos_enter(), emitter(vec3(50,0,0)))
 );
 
 //uint num_lights = 1;
@@ -870,7 +880,7 @@ float geometricAttenuation(float dotNH, float dotVN, float dotVH, float dotNL) {
 }
 float cooktorranceTerm(vec3 n, vec3 l, float roughness, float refractionIndex) {
 //    vec3 v = inverse(mat3(camera_mat)) * vec3(0.0, 0.0, 1.0); // in eye space direction towards viewer simply is the Z axis
-    vec3 v = inverse(cam_rot) * vec3(0.0, 0.0, 1.0); // in eye space direction towards viewer simply is the Z axis
+    vec3 v = cam_rot * vec3(0.0, 0.0, 1.0); // in eye space direction towards viewer simply is the Z axis
     vec3 h = normalize(l + v); // half-vector between V and L
 
     // precompute to avoid redundant computation
@@ -1149,6 +1159,8 @@ mat cust_mat(object obj, vec3 p, inout vec3 normal){
             return moon(obj, p, normal);
         case 4: // gas Giant
             return gasagiant(obj, p, normal);
+        case 5:
+            return lambertian(texcoord_nor(p, obj));
         case 0:
         default:
             return obj.material;
@@ -1287,8 +1299,9 @@ void main(){
 //    add_laser(enterprise_pos, mat3(1,0,0,0,cos(3*pi/5),-sin(3*pi/5),0,sin(3*pi/5),cos(3*pi/5))*mat3(cos(2*pi/5),sin(2*pi/5),0,-sin(2*pi/5),cos(2*pi/5),0,0,0,1)*enterprise_rot,
 //        1, 200*vec3(0.45, 0.75, 0.96), 10, 50);
 //    add_laser(frac_rot*vec3(0,100000+1737400,0), frac_rot*fractal_rot, 50, 50*vec3(1,0,0), 0, 1000);
-    if (time > .5 && time < 16)
-        add_laser(rot_fractal()*vec3(0,100000+1737400,0), rot_fractal(), 50, 50*vec3(1,0,0), 0, 4000, 20);
+
+    if (time > .5 && time < 16) add_laser(rot_fractal()*vec3(0,100000+1737400,0), rot_fractal(), 50, 50*vec3(1,0,0), 0, 4000, 20);
+
     //first laser Enterprise at frame 1
     // deactivate fractal laser short after frame 1
 
@@ -1314,7 +1327,8 @@ void main(){
     if (preview) {
         col = vec4(float(currentSample) + float(samplesPerPass) - float(currentSample) - float(samplesPerPass) + 0.1);
 //        vec3 rd = inverse(mat3(camera_mat))*getRayDir(p, aspect);
-        vec3 rd = inverse(cam_rot)*getRayDir(p, aspect);
+//        vec3 rd = inverse(cam_rot)*getRayDir(p, aspect);
+        vec3 rd = cam_rot*getRayDir(p, aspect);
         hit r = ray(ro, rd);
         float t = r.dist;
         //    col = float(r.steps)/float(steps)*vec4(1,1,1,1);
@@ -1356,7 +1370,8 @@ void main(){
         vec3 pathTraceCol = vec3(0);
         for (int i = 0; i < samplesPerPass; i++) {
 //            vec3 rd = inverse(mat3(camera_mat)) * getRayDir(p + (rand2() / resolution) * 2, aspect);
-            vec3 rd = inverse(cam_rot) * getRayDir(p + (rand2() / resolution) * 2, aspect);
+//            vec3 rd = inverse(cam_rot) * getRayDir(p + (rand2() / resolution) * 2, aspect);
+            vec3 rd = cam_rot * getRayDir(p + (rand2() / resolution) * 2, aspect);
             pathTraceCol += pathtracing(ro, rd);
             if (isnan(pathTraceCol.x) || isnan(pathTraceCol.y) || isnan(pathTraceCol.z)) pathTraceCol = vec3(0);
             if (isinf(pathTraceCol.x) || isinf(pathTraceCol.y) || isinf(pathTraceCol.z)) pathTraceCol = vec3(0);
