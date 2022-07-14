@@ -16,16 +16,16 @@ public:
     cubic_splines(std::vector<float> x, std::vector<float> y);
     float get_point(float t);
     float get_derivative(float t);
-    float get_second_derivative(float t);
+//    float get_second_derivative(float t);
 private:
-    std::vector<float> thomas_solver(std::vector<float> h, std::vector<float> v, std::vector<float> u);
-    unsigned int clamp(unsigned int t, unsigned int low, unsigned int high);
-    unsigned int binary_search(float t, std::vector<float> x);
-    unsigned int num_points;
+//    std::vector<float> thomas_solver(std::vector<float> h, std::vector<float> v, std::vector<float> u);
+    std::vector<float> thomas_solver(std::vector<float> a, std::vector<float> b, std::vector<float> c, std::vector<float> d);
+    int find_interval(std::vector<float> x, float x_val);
     std::vector<float> t;
-    std::vector<float> y;
-    std::vector<float> h;
-    std::vector<float> z;
+    std::vector<float> c3;
+    std::vector<float> c2;
+    std::vector<float> c1;
+    std::vector<float> c0;
 };
 
 class motion_control {
@@ -50,33 +50,34 @@ public:
 //    glm::mat3 look_at(glm::vec3 origin, glm::vec3 target);
 private:
     const std::vector<std::vector<float>> camera_pos_points{
-            {3837471.250,1757471.250,1755825.375,1757436.750},
-            {3322787.750,627787.812,625594.062,625845.250},
-            {-6540000.000,-140000.000,-133653.859,-135182.922},
-            {0,3,3.429,10}
+            {3837471.250,1757471.250,1757387.625,1756587.625,1747471.250},
+            {3322787.750,627787.812,627167.500,621886.250,567787.812},
+            {-6540000.000,-140000.000,-138265.828,-124140.445,0},
+            {0,10,10.1,11,30}
     };
     const std::vector<std::vector<float>> camera_rot_points{
-            {0.084,-0.030,0.106,0.106},
-            {0.966,0.968,0.974,0.974},
-            {0.223,0.207,0.118,0.118},
-            {0.117,0.142,0.049,0.049},
-            {0,3,3.429,10}
+            {-0.084,0.030,0.921,0.921},
+            {-0.966,-0.968, -0.360, -0.360},
+            {-0.223,-0.207,-0.027,-0.027},
+            {0.117,0.142,0.149,0.149},
+            {0,10,11,20}
     };
     const std::vector<std::vector<float>> enterprise_pos_points{
+        //[1757471.250,625787.812,-137000.000]
 //            {1000,-1000,-1000,-1000},
 //            {1000,1000,-1000,-1000},
 //            {1000,1000,1000,-1000},
 //            {0,10,20,30}
             {1757471.250,1757471.250,1747471.250,1757471.250},
             {625787.812,625787.812,567787.812,567787.812},
-            {-150000.000,-137000.000,0,0},
-            {0,3,20,30}
+            {-244000,-137000.000,0,0},
+            {0,10,20,30}
     };
     const std::vector<std::vector<float>> enterprise_up_points{
             {0,0,0,0},
             {1,1,1,1},
             {0,0,0,0},
-            {0,10,20,30}
+            {0,10,20,300}
     };
 //    const std::vector<std::vector<float>> enterprise_rot_points{
 //            {0,0,0,0},
@@ -102,7 +103,7 @@ private:
             {.4,.4,.4,.4},
             {-.4,-.4,-.4,-.4},
             {.6,.6,.6,.6},
-            {0,1,2,3}
+            {0,1,2,300}
     };
 
     std::vector<cubic_splines> camera_pos;

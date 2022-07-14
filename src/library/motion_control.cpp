@@ -3,74 +3,115 @@
 
 # define M_PI 3.14159265358979323846
 
-std::vector<float> cubic_splines::thomas_solver(std::vector<float> h, std::vector<float> v, std::vector<float> u) {
-    unsigned int n = u.size()+1;
-    std::vector<float> h_ = std::vector<float>(n-2);
-    h_[0] = h[0]/v[0];
-    for (unsigned int i = 1; i < n-2; ++i) h_[i] = h[i]/(v[i]-h_[i-1]*h[i-1]);
-    std::vector<float> u_ = std::vector<float>(n-1);
-    u_[0] = u[0]/v[0];
-    for (unsigned int i = 1; i < n-1; ++i) u_[i] = (u[i]-u_[i-1]*h[i-1])/(v[i]-h_[i-1]*h[i-1]);
-    std::vector<float> z1 = std::vector<float>(n+1);
-    z1[0] = 0;
-    z1[n] = 0;
-    z1[n-1] = u_[n-2];
-    for (unsigned int i = n-2; i > 0; --i) z1[i] = u_[i-1]-h_[i-1]*z1[i+1];
-    return z1;
+std::vector<float> cubic_splines::thomas_solver(std::vector<float> a, std::vector<float> b, std::vector<float> c, std::vector<float> d){
+    unsigned int n = d.size();
+    std::vector<float> x(n);
+    for (unsigned int i = 1; i < n-1; ++i){
+        float w = a[i-1]/b[i-1];
+        b[i] = b[i] - w*c[i-1];
+        d[i] = d[i] - w*d[i-1];
+    }
+    x[n-1] = d[n-1]/b[n-1];
+    for (int i = (int)n-2; i > -1; --i) {
+        x[i] = (d[i] - c[i] * x[i + 1]) / b[i];
+    }
+    return x;
 }
 
 cubic_splines::cubic_splines(std::vector<float> x, std::vector<float> y) {
     this->t = x;
-    this->y = y;
-    num_points = x.size();
-    this->h = std::vector<float>(num_points - 1);
-    std::vector<float> b = std::vector<float>(num_points - 1);
-    for (unsigned int i = 0; i < num_points-1; ++i) {
-        h[i] = t[i + 1] - t[i];
-        b[i] = (y[i + 1] - y[i]) / h[i];
+    unsigned int n = x.size();
+    std::vector<float> dx(n-1);
+    std::vector<float> slope(n-1);
+    for (int i = 0; i < n-1; ++i){
+        dx[i] = x[i+1]-x[i];
+        slope[i] = (y[i+1]-y[i])/dx[i];
     }
-    std::vector<float> v = std::vector<float>(num_points - 2);
-    std::vector<float> u = std::vector<float>(num_points - 2);
-    for (unsigned int i = 0; i < num_points-2;++i) {
-        v[i] = 2 * (h[i] + h[i + 1]);
-        u[i] = 6 * (b[i + 1] - b[i]);
+    std::vector<float> b(n);
+    b[0] = 3*(y[1]-y[0]);
+    for (int i = 1; i < n-1; ++i) b[i] = 3 * (dx[i] * slope[i-1] + dx[i-1] * slope[i]);
+    b[n-1] = 3*(y[n-1]-y[n-2]);
+
+    std::vector<float> du(n-1);
+    std::vector<float> dl(n-1);
+    std::vector<float> d(n);
+
+    for (int i = 1; i < n-1; ++i) {
+        d[i] = 2*(dx[i-1]+dx[i]);
+        du[i] = dx[i];
+        dl[i-1] = dx[i];
     }
-    this->z = thomas_solver(h, v, u);
+    d[0] = 2 * dx[0];
+    du[0] = dx[0];
+    d[n-1] = 2 * dx[n-2];
+    dl[n-2] = dx[n-2];
+
+    std::vector<float> dy_dx = thomas_solver(dl, d, du, b);
+    std::vector<float> tmp(n-1);
+    for (int i = 0; i < n-1; ++i) tmp[i] = (dy_dx[i]+dy_dx[i+1]-2*slope[i])/dx[i];
+    std::vector<float> c3(n-1), c2(n-1), c1(n-1), c0(n-1);
+    for (int i = 0; i < n-1; ++i){
+        c3[i] = t[i]/dx[i];
+        c2[i] = (slope[i]-dy_dx[i])/dx[i]-t[i];
+        c1[i] = dy_dx[i];
+        c0[i] = y[i];
+    }
+    this->c3 = c3;
+    this->c2 = c2;
+    this->c1 = c1;
+    this->c0 = c0;
 }
 
-unsigned int cubic_splines::clamp(unsigned int x0, unsigned int low, unsigned int high){
-    return low>x0?low:(high<x0?high:x0);
-}
-
-unsigned int cubic_splines::binary_search(float x0, std::vector<float> x1){
-    unsigned int low = 0u;
-    unsigned int high = x1.size()-1;
-    while (low < high){
-        unsigned int mid = low + (unsigned int)(floor(float(high - low)/2.));
-        if (x1[mid] <= x0) low = mid + 1;
-        else high = mid;
+int cubic_splines::find_interval(std::vector<float> x, float x_val) {
+    unsigned int nx = x.size();
+    float a = x[0];
+    float b = x[nx-1];
+    int interval = 0;
+    if (!(a <= x_val < b)){
+        // Out-of-bounds (or nan)
+        if(x_val < a) return 0;
+        else if(x_val >= b) return nx-2;
+        else return -1;
     }
-    return high;
+    else {
+        int low = -1;
+        int high = -1;
+        // binary search
+        if (x_val >= x[interval]) {
+            low = interval;
+            high = (int)(nx - 2);
+        }
+        else {
+            low = 0;
+            high = interval;
+        }
+        if (x_val < x[low + 1]) high = low;
+        while (low < high) {
+            int mid = (high + low) / 2;
+            if (x_val < x[mid]) high = mid;
+            else if (x_val >= x[mid + 1])low = mid + 1;
+            else {
+                low = mid;
+                break;
+            }
+        }
+        interval = low;
+    }
+    return interval;
 }
 
 float cubic_splines::get_point(float x0) {
-    unsigned int index = binary_search(x0, t);
-    index = clamp(index,1,t.size()-1);
-    index -= 1;
-    return z[index + 1] / (6 * h[index]) * (x0 - t[index]) * (x0 - t[index]) * (x0 - t[index]) +
-           z[index] / (6 * h[index]) * (t[index+1] - x0) * (t[index+1] - x0) * (t[index+1] - x0) +
-           (y[index+1]/h[index]-z[index+1]*h[index]/6) * (x0-t[index]) +
-           (y[index]/h[index]-h[index]*z[index]/6)*(t[index+1]-x0);
+    int i = find_interval(this->t,x0);
+    if (i < 0) return NAN;
+    float z = x0-(this->t[i]);
+    return c0[i] + c1[i]*z + c2[i]*z*z + c3[i]*z*z*z;
 }
 
 float cubic_splines::get_derivative(float x0) {
-    unsigned int index = binary_search(x0, t);
-    index = clamp(index,1,t.size()-1);
-    index -= 1;
-    return z[index + 1] / (2 * h[index]) * (x0 - t[index]) * (x0 - t[index]) -
-           z[index] / (2 * h[index]) * (t[index+1] - x0) * (t[index+1] - x0) +
-           (y[index+1]/h[index]-z[index+1]*h[index]/6) -
-           (y[index]/h[index]-h[index]*z[index]/6);
+    int i = find_interval(this->t,x0);
+    if (i < 0) return NAN;
+    float z = x0-(this->t[i]);
+    return c1[i] + 2*c2[i]*z + 3*c3[i]*z*z;
 }
 
 motion_control::motion_control() {
@@ -90,10 +131,24 @@ glm::vec3 motion_control::get_camera_pos(float t) {
             this->camera_pos[2].get_point(t)};
 }
 glm::mat3 motion_control::get_camera_rot(float t) {
-    return quant_to_rot({this->camera_rot[0].get_point(t),
-                        this->camera_rot[1].get_point(t),
-                        this->camera_rot[2].get_point(t),
-                        this->camera_rot[3].get_point(t)});
+    if (t < 10.1) {
+        return quant_to_rot({this->camera_rot[0].get_point(t),
+                             this->camera_rot[1].get_point(t),
+                             this->camera_rot[2].get_point(t),
+                             this->camera_rot[3].get_point(t)});
+    }
+    glm::quat rot = glm::quatLookAt(
+            glm::normalize(glm::vec3({
+                                             enterprise_pos[0].get_point(t)-camera_pos[0].get_point(t),
+                                             enterprise_pos[1].get_point(t)-camera_pos[1].get_point(t),
+                                             enterprise_pos[2].get_point(t)-camera_pos[2].get_point(t)
+                                     })),
+            glm::normalize(glm::vec3({
+                                             enterprise_up[0].get_point(t),
+                                             enterprise_up[1].get_point(t),
+                                             enterprise_up[2].get_point(t)}))
+    );
+    return glm::mat3(rot);
 }
 
 glm::vec3 motion_control::get_enterprise_pos(float t) {
@@ -103,23 +158,6 @@ glm::vec3 motion_control::get_enterprise_pos(float t) {
 }
 
 glm::mat3 motion_control::get_enterprise_rot(float t) {
-
-    //[[   -0.979,    0.000,   -0.203]
-    // [   -0.092,    0.891,    0.444]
-    // [    0.181,    0.454,   -0.873]
-//    float frac_angl = 2*M_PI/5;
-//    glm::mat3 camrot = glm::mat3(glm::vec3({-0.979,-0.092,0.181}),glm::vec3({0.000,0.891,0.454}),glm::vec3({-0.203,0.444,-0.873}));
-//    glm::mat3 frac_rot = glm::mat3({cos(frac_angl),-sin(frac_angl),0,sin(frac_angl),cos(frac_angl),0,0,0,1});
-//    std::cout <<
-//        glm::mat4(glm::vec4(camrot[0],0),glm::vec4(camrot[1],0),glm::vec4(camrot[2],0),glm::vec4(glm::inverse(camrot)*glm::vec3(-25000,2000,-170000) - frac_rot*glm::vec3(0,100000+1737400,0),1)) << std::endl;
-//    glm::mat3 rot_rot= {-0.979,0.000,-0.203,-0.092,0.891,0.444,0.181,0.454,-0.873};
-//    glm::vec4 qrto = so_matrix_to_quant(rot_rot);
-//    std::cout << rot_rot << qrto << quant_to_rot(qrto) << std::endl;
-//    glm::mat3 rot = quant_to_rot(direction_to_quant({
-//           enterprise_pos[0].get_derivative(t),
-//           enterprise_pos[1].get_derivative(t),
-//           enterprise_pos[2].get_derivative(t),
-//    },{1,0,0}));
 
     glm::quat rot = glm::quatLookAt(
         glm::normalize(glm::vec3({
@@ -133,11 +171,6 @@ glm::mat3 motion_control::get_enterprise_rot(float t) {
             enterprise_up[2].get_point(t)
         }))
     );
-//    },{0,1,0}));
-
-//    rot = glm::mat3(0,0,1,0,1,0,-1,0,0)*rot;
-//    rot = rot * glm::mat3({-1,0,0,0,1,0,0,0,1});
-//    rot = rot * glm::mat3({-1,0,0,0,1,0,0,0,-1});
     return glm::mat3(rot);
 }
 
