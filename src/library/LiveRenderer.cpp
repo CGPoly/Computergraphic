@@ -187,7 +187,7 @@ void LiveRenderer::renderPathmarcher() {
 	pathMarchingProgram.use();
 	pathMarchingProgram.setMat4("viewMat", camera.view_matrix());
 	pathMarchingProgram.set1ui("passSeed", renderState.passSeed);
-	pathMarchingProgram.set1f("time", time.count());
+	pathMarchingProgram.set1f("time", timeline.spline_time(time.count()));
 	pathMarchingProgram.set1ui("samplesPerPass", samplesPerPass);
 
 	pathMarchingProgram.setVec3("camera_pos", timeline.motionControl.get_camera_pos(timeline.spline_time(time.count())));

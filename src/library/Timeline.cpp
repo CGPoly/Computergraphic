@@ -23,7 +23,7 @@ unsigned int Timeline::getGasgiantResolution() const {
 }
 
 float Timeline::spline_time(float time) {
-    return constant_time(time, 0, 100, 0);
+    return constant_time(time, 0, 2, 0)+ease(time, 2, 3, 0, 1)+ constant_time(time, 3, 100, 1);
 }
 
 float Timeline::constant_time(float t, float start_t, float end_t, float speed) {
@@ -42,10 +42,10 @@ float Timeline::ease(float time, float start_t, float end_t, float start_speed, 
     float t = c*(time-d);
     if (t < 0) return 0;
     auto F1 = [&a,&b,&c](float t){return 1.f/c*(2.f/3.f*(b-a)*t*t*t+a*t);};
-    auto F2 = [&a,&b,&c,&d,&F1](float t){
-        return 1.f/c*((b-a)*(t-1.f/2.f*(2.f/3.f*t*t*t-2.f*t*t+2.f*t)+1.f/12.f-1.f/2.f+1.f)+a*t-a/2.f)+F1(1.f/(2.f*c)+d);
+    auto F2 = [&a,&b,&c,&F1](float t){
+        return 1.f/c*((b-a)*(t-1.f/2.f-(2.f/3.f*t*t*t-2.f*t*t+2.f*t)+1.f/12.f-1.f/2.f+1.f)+a*t-a/2.f)+F1(.5f);
     };
     if (0 <= t && t <= 0.5) return F1(t);
     if (0.5 < t && t <= 1) return F2(t);
-    return F2(1/c+d);
+    return F2(1.f);
 }

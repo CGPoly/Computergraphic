@@ -91,7 +91,7 @@ void VideoRenderer::renderPathmarcher(std::chrono::duration<float> time) {
 
 	pathMarchingProgram.use();
 	pathMarchingProgram.setMat4("viewMat", {}); // not actually used. This could be better but whatever
-	pathMarchingProgram.set1f("time", time.count());
+	pathMarchingProgram.set1f("time", timeline.spline_time(time.count()));
 	pathMarchingProgram.set1ui("samplesPerPass", samplesPerPass);
 
 	pathMarchingProgram.setVec3("camera_pos", timeline.motionControl.get_camera_pos(timeline.spline_time(time.count())));
