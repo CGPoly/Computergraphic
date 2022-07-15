@@ -57,9 +57,9 @@ void VideoRenderer::run(
 		int result = writeImage(time);
 
 		if (result) {
-			std::cout << "Successfully wrote frame " << time.count() << "ms" << std::endl;
+			std::cout << "Successfully wrote frame " << time.count() << "s" << std::endl;
 		} else {
-			std::cout << "Failed to write frame " << time.count() << "ms" << std::endl;
+			std::cout << "Failed to write frame " << time.count() << "s" << std::endl;
 			return;
 		}
 		std::cout << "Texture: " << profiler.getTime(ProfilerType::texture).count() << "ms" << std::endl;
@@ -117,6 +117,7 @@ void VideoRenderer::renderPathmarcher(std::chrono::duration<float> time) {
 			for (int x = 0; x < divCeil(width, workGroupSize.y * workGroupCount.y); ++x) {
 				pathMarchingProgram.set2ui("tileOffset", x, y);
 				glDispatchCompute(workGroupCount.x, workGroupCount.y, 1);
+				glFlush();
 			}
 		}
 	}
