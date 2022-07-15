@@ -110,6 +110,7 @@ void VideoRenderer::renderPathmarcher(std::chrono::duration<float> time) {
 	glBindTextureUnit(4, texturesRenderer.getGasgiantAlbedo().getId());
 
 	for (int i = 0; i < passesPerFrame; ++i) {
+		pathMarchingProgram.set1ui("currentSample", i * samplesPerPass);
 		pathMarchingProgram.set1ui("passSeed", passSeed++);
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 		for (int y = 0; y < divCeil(height, workGroupSize.y * workGroupCount.y); ++y) {
