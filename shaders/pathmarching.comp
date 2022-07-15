@@ -34,15 +34,13 @@ uniform vec3 fractal_pos;
 uniform mat3 fractal_rot;
 uniform vec3 julia_c;
 
-//const bool orbit_cam = true;
-
 const float world_scale = 1000;  //how big one unit in metern is (this is for easier camera control)
 
 const float FAR_PLANE = 149597870700.+696342000.*10000;
 
 const float steps = 500;
 
-const bool preview = true;
+const bool preview = false;
 const int max_bounce = 8;  // maximal number of Light bounces
 
 const float focal_length = 50;  // focal length in mm
@@ -97,54 +95,23 @@ struct hit {
     uint index;
 };
 
-//vec3 sunPosition() {
-//    vec3 startPoint = normalize(vec3(0, 0.5, 1)) * 151600000000.;
-//    float angle = radians(360 * time / 10);
-//    vec3 rAxis = normalize(cross(startPoint, vec3(1, 0, 0)));
-//    mat3 rotationMatrix;
-//    rotationMatrix[0] = vec3(
-//        cos(angle) + rAxis.x * rAxis.x * (1 - cos(angle)),
-//        rAxis.y * rAxis.x * (1 - cos(angle)) + rAxis.z * sin(angle),
-//        rAxis.z * rAxis.x * (1 - cos(angle)) - rAxis.y * sin(angle)
-//    );
-//    rotationMatrix[1] = vec3(
-//        rAxis.x * rAxis.y * (1 - cos(angle)) - rAxis.z * sin(angle),
-//        cos(angle) + rAxis.y * rAxis.y * (1 - cos(angle)),
-//        rAxis.z * rAxis.y * (1 - cos(angle)) + rAxis.x * sin(angle)
-//    );
-//    rotationMatrix[2] = vec3(
-//        rAxis.x * rAxis.z * (1 - cos(angle)) + rAxis.y * sin(angle),
-//        rAxis.y * rAxis.z * (1 - cos(angle)) - rAxis.z * sin(angle),
-//        cos(angle) + rAxis.z * rAxis.z * (1 - cos(angle))
-//    );
-//
-//    return rotationMatrix * startPoint;
-//}
-
-
 //relative to the sun
-//float earth_year = time/50*pi;
-//float earth_day = time/10*pi;
 float earth_year = 0*pi;
 float earth_day = .5*pi;
 vec3 sun_earth_pos = mat3(cos(7.155*pi/180),-sin(7.155*pi/180),0,sin(7.155*pi/180),cos(7.155*pi/180),0,0,0,1)*
     mat3(cos(earth_year),0,-sin(earth_year),0,1,0,sin(earth_year),0,cos(earth_year))*vec3(149600000000.,0,0);
 
-//float moon_year = time*pi;
 float moon_year = .6*pi;
 vec3 earth_moon_pos = mat3(cos(5.14*pi/180),-sin(5.14*pi/180),0,sin(5.14*pi/180),cos(5.14*pi/180),0,0,0,1)*
     mat3(cos(moon_year),0,-sin(moon_year),0,1,0,sin(moon_year),0,cos(moon_year))*vec3(384400000.,0,0);
 vec3 sun_moon_pos = sun_earth_pos+earth_moon_pos;
 
-//float jupiter_year = time/10*pi;
 float jupiter_year = 1.55*pi;
 float jupiter_day = 0*pi;
 vec3 sun_jupiter_pos = mat3(cos(6.09*pi/180),-sin(6.09*pi/180),0,sin(6.09*pi/180),cos(6.09*pi/180),0,0,0,1)*
     mat3(cos(jupiter_year),0,-sin(jupiter_year),0,1,0,sin(jupiter_year),0,cos(jupiter_year))*vec3(778510000000.,0,0);
 
-//mat3 ref_rot = mat3(0,-1,0,1,0,0,0,0,1)*mat3(1,0,0,0,-1,0,0,0,-1);  // rotation, sun left
 mat3 ref_rot = mat3(0,1,0,-1,0,0,0,0,1)*mat3(-1,0,0,0,1,0,0,0,1);  // rotation, sun right
-//mat3 ref_rot = mat3(1,0,0,0,1,0,0,0,1);
 
 
 vec3 ref_sunsys = -sun_moon_pos;  // moon ref
@@ -156,14 +123,11 @@ vec3 ref_sun = ref_rot*ref_sunsys;
 
 
 float eps_fractal(){
-//    float far_time = 1./0.;
-//    if (time < far_time) return 0.5;
     return 0.05;
 }
 
 float exp_fractal(){
     return 8;
-//    return time*1+2;
 }
 
 vec3 pos_fractal(){
@@ -174,10 +138,6 @@ mat3 rot_fractal(){
 }
 
 vec3 pos_enter(){
-    //short before frame 1
-//    return vec3(10000,58000,-136000)+mat3(cos(2*pi/5),-sin(2*pi/5),0,sin(2*pi/5),cos(2*pi/5),0,0,0,1)*vec3(0,100000+1737400,0);
-    //frame 1
-//    return vec3(10000,58000,-137000)+mat3(cos(2*pi/5),-sin(2*pi/5),0,sin(2*pi/5),cos(2*pi/5),0,0,0,1)*vec3(0,100000+1737400,0);
     return enterprise_pos;
 
 }
@@ -193,60 +153,10 @@ vec3 pos_cam(){//return camera_pos;
     return pos_enter()+rot_enter()*vec3(0,200,1500);
 }
 
-//frame 0
-//mat3 cam_rot = mat3(cos(-0.075*pi),sin(-0.075*pi),0,-sin(-0.075*pi),cos(-0.075*pi),0,0,0,1)*mat3(-0.958,-0.118,0.263,0,0.913,0.408,-0.288,0.391,-0.874);
-//vec3 cam_pos = vec3(2090000,2755000,-6540000)+mat3(cos(2*pi/5),-sin(2*pi/5),0,sin(2*pi/5),cos(2*pi/5),0,0,0,1)*vec3(0,100000+1737400,0);
-
-//frame 1
-//mat3 cam_rot = mat3(-0.958,-0.118,0.263,0,0.913,0.408,-0.288,0.391,-0.874);
-//vec3 cam_pos = vec3(10000,60000,-140000)+mat3(cos(2*pi/5),-sin(2*pi/5),0,sin(2*pi/5),cos(2*pi/5),0,0,0,1)*vec3(0,100000+1737400,0);
-
-//mat3 cam_rot = mat3(viewMat);
-//mat3 cam_rot = mat3(-0.958,-0.118,0.263,0,0.913,0.408,-0.288,0.391,-0.874);
-//left, up, forward
-//vec3 cam_pos = vec3(10000,60000,-140000)+mat3(cos(2*pi/5),-sin(2*pi/5),0,sin(2*pi/5),cos(2*pi/5),0,0,0,1)*vec3(0,100000+1737400,0);
-
-//mat3 cam_rot = camera_rot;
-//vec3 cam_pos = camera_pos;
-//[[    0.051,    0.000,   -0.999,    0.000]
-// [   -0.010,    1.000,   -0.001,    0.000]
-// [    0.999,    0.010,    0.051,   -4.500]
-// [    0.000,    0.000,    0.000,    1.000]]
-
-//mat3 cam_rot = mat3(viewMat);
-//float tor = 0.01;
-//mat3 cam_rot = mat3(1,0,0,0,cos(tor*pi),sin(tor*pi),0,-sin(tor*pi),cos(tor*pi))*mat3(cos(-0.075*pi),sin(-0.075*pi),0,-sin(-0.075*pi),cos(-0.075*pi),0,0,0,1)*mat3(-0.993,-0.023,0.116,0,0.980,0.199,-0.118,0.197,-0.973);
-//mat3 cam_rot = rot_cam();
-
-//mat3 cam_rot = mat3(0,0,1,0,1,0,-1,0,0)*rot_enter();
-//mat3 cam_rot = mat3(viewMat);
-//vec3 cam_pos = pos_enter()+rot_enter()*vec3(1500,200,0);
-//vec3 cam_pos = pos_enter()+rot_enter()*vec3(1500,200,0);
-//vec3 cam_pos = pos_enter()+vec3(1000,1000,1000);
-
-//mat3 cam_rot = rot_cam();
-//float r1 = -29./360.*pi;
-//float r2 = 350./360.*pi;
-//float r3 = 28./360.*pi;
-//mat3 cam_rot = mat3(cos(r1),sin(r1),0,-sin(r1),cos(r1),0,0,0,1)*mat3(cos(r2),0,sin(r2),0,1,0,-sin(r2),0,cos(r2))*mat3(1,0,0,0,cos(r3),sin(r3),0,-sin(r3),cos(r3));
-//mat3 cam_rot = mat3(cos(r1),sin(r1),0,-sin(r1),cos(r1),0,0,0,1)*mat3(1,0,0,0,cos(r3),sin(r3),0,-sin(r3),cos(r3))*mat3(cos(r2),0,sin(r2),0,1,0,-sin(r2),0,cos(r2));
-//mat3 cam_rot = mat3(viewMat)*rot_enter();
-//[[   -0.012,    0.000,    1.000,    0.000]
-// [   -0.071,    0.997,   -0.001,    0.000]
-// [   -0.997,   -0.071,   -0.012,   -5.000]
-// [    0.000,    0.000,    0.000,    1.000]]
-//mat3 cam_rot = mat3(0,-1,0,1,0,0,0,0,1)*rot_enter();
-//mat3 cam_rot = rot_enter()*mat3(1,0,0,0,0,1,0,-1,0);
-//mat3 cam_rot = rot_enter()*mat3(0,0,1,0,1,0,-1,0,0)*inverse(mat3(viewMat));
-//mat3 cam_rot = mat3(viewMat);
-//mat3 cam_rot = rot_enter()*mat3(0,0,-1,0,1,0,1,0,0);
-
-//mat3 cam_rot = rot_enter();
-//vec3 cam_pos = pos_enter()+rot_enter()*vec3(0,200,1500);
 mat3 cam_rot = rot_cam();
 vec3 cam_pos = pos_cam();
 
-const int num_obj = 9;
+const int num_obj = 11;
 object world[num_obj] = object[num_obj](
     //lasers
     object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
@@ -273,7 +183,6 @@ object world[num_obj] = object[num_obj](
     object(1, .01, rot_enter(), vec3(1.), 15, pos_enter()+rot_enter()*vec3(-126,0,435), emitter(vec3(0,0,50))),  // engine 2
 
     object(2, eps_fractal(), rot_fractal()*mat3(1,0,0,0,0,-1,0,1,0), vec3(1,1,1), 2000, pos_fractal(), lambertian(vec3(.5))),  //fractal
-//    object(2, 0.5, frac_rot*mat3(1,0,0,0,0,-1,0,1,0)*fractal_rot, vec3(1,1,1), 1000, ref_frac, lambertian(vec3(.5))),  //fractal
 
     object(1, 1, ref_rot*inverse(mat3(cos(earth_year),0,-sin(earth_year),0,1,0,sin(earth_year),0,cos(earth_year)))*
         mat3(cos(23*pi/180),-sin(23*pi/180),0,sin(23*pi/180),cos(23*pi/180),0,0,0,1)*
@@ -281,27 +190,18 @@ object world[num_obj] = object[num_obj](
         , vec3(1,1,1), 6371000, ref_earth, custom(1)), //earth
     object(11, (preview)?1:.005,
         ref_rot*mat3(cos(pi/200),-sin(pi/200),0,sin(pi/200),cos(pi/200),0,0,0,1)*
-        mat3(cos(-pi/25),0,-sin(-pi/25),0,1,0,sin(-pi/25),0,cos(-pi/25)), vec3(1,1,1), 1737400, ref_moon, custom(3))  //moon orbit
-//    object(1, 1, ref_rot*inverse(mat3(cos(jupiter_year),0,-sin(jupiter_year),0,1,0,sin(jupiter_year),0,cos(jupiter_year)))*
-//        mat3(cos(3.13*pi/180),-sin(3.13*pi/180),0,sin(3.13*pi/180),cos(3.13*pi/180),0,0,0,1)*
-//        mat3(cos(jupiter_day),0,-sin(jupiter_day),0,1,0,sin(jupiter_day),0,cos(jupiter_day)),
-//        vec3(1,1,1), 69911000., ref_jupiter, custom(4)),  //jupiter
-//    object(1, 1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 696342000., ref_sun, emitter(vec3(50000)))  //sun
-
-//    ,object(1, .05, rot_enter()*mat3(0,0,1,0,1,0,-1,0,0), vec3(1,1,1), 500., pos_enter()+rot_enter()*vec3(1500,0,0), custom(5))
-//    ,object(1, .05, mat3(viewMat)*mat3(0,0,1,0,1,0,-1,0,0), vec3(1,1,1), 500., pos_enter()+rot_enter()*vec3(1500,0,0), custom(5))
-//    ,object(1, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1),30., pos_enter(), emitter(vec3(50,0,0)))
+        mat3(cos(-pi/25),0,-sin(-pi/25),0,1,0,sin(-pi/25),0,cos(-pi/25)), vec3(1,1,1), 1737400, ref_moon, custom(3)),  //moon orbit
+    object(1, 1, ref_rot*inverse(mat3(cos(jupiter_year),0,-sin(jupiter_year),0,1,0,sin(jupiter_year),0,cos(jupiter_year)))*
+        mat3(cos(3.13*pi/180),-sin(3.13*pi/180),0,sin(3.13*pi/180),cos(3.13*pi/180),0,0,0,1)*
+        mat3(cos(jupiter_day),0,-sin(jupiter_day),0,1,0,sin(jupiter_day),0,cos(jupiter_day)),
+        vec3(1,1,1), 69911000., ref_jupiter, custom(4)),  //jupiter
+    object(1, 1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 696342000., ref_sun, emitter(vec3(50000)))  //sun
 );
 
-//uint num_lights = 1;
-//int lights[] = int[](22,6);
-int lights[] = int[](num_obj-1);
-//bool active_lights[] = bool[](true,false,false,false,false,false);
-//int last_laser = 5;
+int lights[] = int[](num_obj-1,2);
 
 //assumes that the lasers are at the begin of world[]
 uint num_lasers = 1;
-//int first_laser_gun = 5;
 uint first_usable_laser = 0;
 
 float atan2(float y, float x){
@@ -677,13 +577,6 @@ float distObj(object obj, vec3 pos){
 //            return deKaliRemix(pos, 10);
         case 3:
             return sdEnterprise(pos/obj.scale)*obj.scale;
-//            return sdEllipsoid(pos/obj.scale, vec3(0.7,0.2, 0.7))*obj.scale;
-//        oScale(distObj(world[i], iScale(inverse(world[i].rotation) * (pos - world[i].position), world[i].scaling)), world[i].scaling)
-//            return oScale(sdSphere(iScale(pos, vec3(0.7,0.2, 0.7)), obj.scale), vec3(0.7,0.2, 0.7));
-//            return oScale(sdSphere(iScale(pos, vec3(1,1,1)), obj.scale), vec3(1,1,1));
-//            return sdCappedCylinder(pos, 1, 0.04);
-//        case 4:
-//            return deKaliRemix(pos, 10);
         case 5:
             return deLaser(pos,obj.scale);
         case 6:
@@ -1012,34 +905,27 @@ path scatter(mat material, uint index, vec3 p, vec3 origin, vec3 normal, vec3 di
 //            return path(false, vec3(1), new_direction, vec3(0), true);
 //        }
 //    }
-    if (material.type == 5){ //cook_torrance
-        float roughness = .1;
-        float IOR = 1.45;
-//        float F = schlickApprox(cdot(vec3(), normalize(dir_in)), 1.0, IOR);
-        float F = .5;
-        if (rand() < F){  // diffuse
-            vec3 new_direction = normalize(localize_to_onb(random_cosine_direction(), onb));
-            pdf = dot(normal, new_direction)/pi;
-            return path(false, material.albedo, new_direction, vec3(0), false/*, create_false_array()*/);
-        }
-        else { // specular
-            float z1 = rand(), z2 = rand();
-            float theta_m = atan(sqrt(-roughness*roughness*log(1-z1)));
-            float phi_m = 2*pi*z2;
-            vec3 m = sphere_to_cart(vec2(theta_m, phi_m));
-            vec3 o = 2*abs(dot(dir_in, m))*m-dir_in;
-            vec3 new_dir = normalize(localize_to_onb(o, onb));
-            float pdf = beckmannDistribution(cdot(normal, normalize(new_dir + dir_in)), roughness)*abs(dot(m, normal))/(4*abs(dot(o, m)));
-            return path(false, vec3(1), new_dir, vec3(0), true/*, create_false_array()*/);
-        }
-
-//            ONB refl_onb = built_onb(reflect(dir_in, normal));
-//            vec3 new_direction = sphere_to_cart(vec2(acos(pow(rand(), 1/float(n+1))), 2*pi*rand()));
-//            new_direction = normalize(localize_to_onb(random_cosine_direction(), refl_onb));
-//            //            pdf = (n+1)/(2*pi)*pow(dot(reflect(dir_in, normal), new_direction), n);
-//            pdf = (n+1)/(2*pi)*pow(dot(reflect(new_direction, normal), dir_in), n);
+//    if (material.type == 5){ //cook_torrance
+//        float roughness = .1;
+//        float IOR = 1.45;
+////        float F = schlickApprox(cdot(vec3(), normalize(dir_in)), 1.0, IOR);
+//        float F = .5;
+//        if (rand() < F){  // diffuse
+//            vec3 new_direction = normalize(localize_to_onb(random_cosine_direction(), onb));
+//            pdf = dot(normal, new_direction)/pi;
+//            return path(false, material.albedo, new_direction, vec3(0), false/*, create_false_array()*/);
 //        }
-    }
+//        else { // specular
+//            float z1 = rand(), z2 = rand();
+//            float theta_m = atan(sqrt(-roughness*roughness*log(1-z1)));
+//            float phi_m = 2*pi*z2;
+//            vec3 m = sphere_to_cart(vec2(theta_m, phi_m));
+//            vec3 o = 2*abs(dot(dir_in, m))*m-dir_in;
+//            vec3 new_dir = normalize(localize_to_onb(o, onb));
+//            float pdf = beckmannDistribution(cdot(normal, normalize(new_dir + dir_in)), roughness)*abs(dot(m, normal))/(4*abs(dot(o, m)));
+//            return path(false, vec3(1), new_dir, vec3(0), true/*, create_false_array()*/);
+//        }
+//    }
     return path(true, vec3(0),vec3(0),vec3(0), false/*, create_false_array()*/);
 }
 
@@ -1098,16 +984,16 @@ float scattering_pdf(mat material, uint index, vec3 p, vec3 origin, vec3 normal,
 //        float brdf = kd/pi+ks*(n+2)/(2*pi)*pow(dot(reflect(scattered, normal), dir_in), n);
 //        return brdf*cosine;
 //    }
-    if (material.type == 5){ //cook-torrance
-        float roughness = .1;
-        float IOR = 1.45;
-        vec3 h = normalize(dir_in+scattered);
-        float F = schlickApprox(cdot(h, normalize(dir_in)), 1.0, IOR);
-        return (cosine < 0 ? 0 : cosine/pi)*(1-F)+
-            F*beckmannDistribution(cdot(normal, h), roughness)*
-            geometricAttenuation(cdot(normal, h), cdot(dir_in, normal), cdot(dir_in, h), cdot(normal, scattered))/
-            (4*abs(dot(dir_in, normal))*abs(dot(scattered, normal)));
-    }
+//    if (material.type == 5){ //cook-torrance
+//        float roughness = .1;
+//        float IOR = 1.45;
+//        vec3 h = normalize(dir_in+scattered);
+//        float F = schlickApprox(cdot(h, normalize(dir_in)), 1.0, IOR);
+//        return (cosine < 0 ? 0 : cosine/pi)*(1-F)+
+//            F*beckmannDistribution(cdot(normal, h), roughness)*
+//            geometricAttenuation(cdot(normal, h), cdot(dir_in, normal), cdot(dir_in, h), cdot(normal, scattered))/
+//            (4*abs(dot(dir_in, normal))*abs(dot(scattered, normal)));
+//    }
     return 0;
 }
 
@@ -1135,24 +1021,24 @@ mat gasagiant(object obj, inout vec3 p, inout vec3 normal){
     vec3 col = texture(gasgiant_albedo, map.xy).xyz;
     return lambertian(col);
 }
-mat clouds_low(object obj, inout vec3 p, inout vec3 normal){
-//    float planet_rot = 0;
-//    float wind = 0;
-//
-//    vec3 map = texcoord_nor(p, obj);
-//    map = mat3(cos(planet_rot),-sin(planet_rot),0,sin(planet_rot),cos(planet_rot),0,0,0,1)*map;
-//    map.x += wind;
-//    float cloads = cloud_mask(map);
-//    return transmission_emm(vec3(1), cloads, vec3(1));
-    return transmission_emm(vec3(1), 0.5, vec3(1));
-}
+//mat clouds_low(object obj, inout vec3 p, inout vec3 normal){
+////    float planet_rot = 0;
+////    float wind = 0;
+////
+////    vec3 map = texcoord_nor(p, obj);
+////    map = mat3(cos(planet_rot),-sin(planet_rot),0,sin(planet_rot),cos(planet_rot),0,0,0,1)*map;
+////    map.x += wind;
+////    float cloads = cloud_mask(map);
+////    return transmission_emm(vec3(1), cloads, vec3(1));
+//    return transmission_emm(vec3(1), 0.5, vec3(1));
+//}
 
 mat cust_mat(object obj, vec3 p, inout vec3 normal){
     switch(obj.material.custom){
         case 1:  // planet
             return planet(obj, p, normal);
-        case 2:  // low clouds
-            return clouds_low(obj, p, normal);
+//        case 2:  // low clouds
+//            return clouds_low(obj, p, normal);
         case 3: // moon
             return moon(obj, p, normal);
         case 4: // gas Giant
@@ -1178,16 +1064,6 @@ vec3 pathtracing(vec3 origin, vec3 direction){
             float pdf_material = 0;
             mat material = cust_mat(obj, p, normal);
             path new_trace = scatter(material, r.index, p, origin, normal, trace.direction, onb, pdf_material);
-//            if (new_trace.specular){
-//                trace = path(new_trace.stop,
-//                trace.attenuation*new_trace.attenuation,
-//                new_trace.direction, trace.emmission+new_trace.emmission*trace.attenuation, false);
-//            }
-//            else {
-                //sampling all directions
-                //            vec3 a_new = new_trace.attenuation*scattering_pdf(material, r.index, p, origin, normal, new_trace.direction)/pdf;
-                //            trace = path(trace.stop||new_trace.stop, trace.attenuation*a_new, new_trace.direction, trace.emmission+new_trace.emmission*trace.attenuation);
-                //            origin = p+2*obj.eps*normalize(trace.direction+normal);
 
                 //sampling only light
             float pdf_light = 0;
@@ -1195,31 +1071,12 @@ vec3 pathtracing(vec3 origin, vec3 direction){
 
             //            int random_pdf = int(floor(rand()*2.));
             vec3 scattered = rand()<.5?new_trace.direction:light_trace.direction;
-//            vec3 scattered = new_trace.direction;
-            //            vec3 scattered = light_trace.direction;
-            //            vec3 new_direction = random_pdf==0?new_trace.direction:light_trace.direction;
-            //            pdf_light = 1/pdf_light*10;
-            //            pdf_light = pdf_light;
-            //            pdf_light = 10000000;
             if (isnan(pdf_light)) return vec3(1, 0, 0);
-            //            pdf_light = 1;
-            //            return vec3(1/pdf_light);
-            //            vec3 new_direction = new_trace.direction;
             float pdf_val = .5*pdf_material+.5*pdf_light;
-//            float pdf_val = pdf_material;
-//                        float pdf = random_pdf==0?pdf_material:pdf_light;
-            //            float pdf_val = pdf_light;
 
-            //            trace = path(new_trace.stop||light_trace.stop,
-            //                trace.attenuation*new_trace.attenuation*scattering_pdf(material, r.index, p, origin, normal, light_trace.direction)/pdf_light,
-            //                light_trace.direction, trace.emmission+new_trace.emmission*trace.attenuation);
             trace = path(new_trace.stop, //||light_trace.stop,
             trace.attenuation*new_trace.attenuation*scattering_pdf(material, r.index, p, origin, normal, scattered, trace.direction, new_trace.specular)/pdf_val,
             scattered, trace.emmission+new_trace.emmission*trace.attenuation, false/*, trace.inverted*/);
-//            for (int j = 0; j < num_obj; ++j) trace.inverted[j] = (trace.inverted[j] == new_trace.inverted[j]);
-
-//            }
-
             float eps = epsilon(p) * obj.epsilonFactor;
             origin = p+2*eps*normalize(trace.direction+normal);
         }
@@ -1300,9 +1157,6 @@ void main(){
 
     if (time > .5 && time < 16) add_laser(rot_fractal()*vec3(0,100000+1737400,0), rot_fractal(), 50, 50*vec3(1,0,0), 0, 4000, 20);
 
-    //first laser Enterprise at frame 1
-    // deactivate fractal laser short after frame 1
-
     // for noise testing
     //    col = vec4(0,0,0,1);
     //    for (int i = 0; i <10; ++i){
@@ -1340,35 +1194,11 @@ void main(){
             diffuseTerm = max(diffuseTerm, 0.1);
             float specularTerm = cooktorranceTerm(nor, interp_light_dir, material.roughness, material.refractionIndex);
             col = clamp(vec4(material.diff_col,1) * diffuseTerm + vec4(material.spec_col,1) * specularTerm, 0.0, 1.0);
-
-//            vec3 diff_col = vec3(0);
-//            vec3 map = mapping(pos, obj);
-            //            diff_col = vec3(fade(.1));
-            //            diff_col = vec3(perlin_noise_p(map.x,map.y,map.z));
-//            float val;
-//            vec4 coll;
-//            node_noise_texture_3d(map, 10., 2., 0.5, 0., val, coll);
-//            diff_col = coll.xyz;
-
-//            col = clamp(vec4(diff_col,1) * diffuseTerm + vec4(obj.material.spec_col,1) * specularTerm, 0.0, 1.0);
-
-            //        hit tmp = ray(pos+nor*eps(t)*2, interp_light_dir);
-//            hit tmp = ray(pos+nor*obj.eps*2, interp_light_dir);
-//            float TMP = (tmp.hit) ? tmp.dist : 0;
-//            float sun_sh = step(TMP, 0.0);
-//            vec4 shadow = vec4(1, 1, 1, 1)*clamp(10*pow(0.18*sun_sh, 0.4545), 0.4, 1.);
-//            //            col = col*shadow;
-//
-//            //            col = world[r.index].diff_col;
-//            vec3 map = texcoord_nor(pos, obj);
-//            col = vec4(map,1);
         }
     }
     else {
         vec3 pathTraceCol = vec3(0);
         for (int i = 0; i < samplesPerPass; i++) {
-//            vec3 rd = inverse(mat3(camera_mat)) * getRayDir(p + (rand2() / resolution) * 2, aspect);
-//            vec3 rd = inverse(cam_rot) * getRayDir(p + (rand2() / resolution) * 2, aspect);
             vec3 rd = cam_rot * getRayDir(p + (rand2() / resolution) * 2, aspect);
             pathTraceCol += pathtracing(ro, rd);
             if (isnan(pathTraceCol.x) || isnan(pathTraceCol.y) || isnan(pathTraceCol.z)) pathTraceCol = vec3(0);
