@@ -24,9 +24,11 @@ unsigned int Timeline::getGasgiantResolution() const {
 
 float Timeline::spline_time(float time) {
     // zoom from orbit to fractal
-    return constant_time(time, 0, 2, 0)+ease(time, 2, 3, 0, 1) + constant_time(time, 3, 12., 1)+
+    return constant_time(time, 0, 2, 0)+ease(time, 2, 3, 0, 1) + constant_time(time, 3, 12, 1)
     // dramatic laser
-    ease(time,12., 13, 1, 0.1)+ ease(time, 13, 14, 0.1, 0.7)+constant_time(time, 14, 100, .7);
+    + ease(time,12, 13, 1, 0.015) + constant_time(time, 13, 14, 0.015) + ease(time, 14, 15, 0.015, 0.65)
+    // docking
+    + constant_time(time, 15, 17.5, .65) + ease(time, 17.5, 18, .65, 1) + constant_time(time, 18, 100, 1);
 }
 
 float Timeline::constant_time(float t, float start_t, float end_t, float speed) {

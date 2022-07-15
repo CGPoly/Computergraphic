@@ -57,3 +57,51 @@ vec4 textureBicubic(sampler2D sampler, vec2 texCoords){
     mix(sample3, sample2, sx), mix(sample1, sample0, sx)
     , sy);
 }
+
+//mat3 LookAt(vec3 eye, vec3 at, vec3 up){
+//    vec3 zaxis = normalize(at - eye);
+//    vec3 xaxis = normalize(cross(zaxis, up));
+//    vec3 yaxis = cross(xaxis, zaxis);
+//
+////    negate(zaxis);
+////    zaxis = -zaxis;
+////    mat4 viewMatrix = {
+////    vec4(xaxis.x, xaxis.y, xaxis.z, -dot(xaxis, eye)),
+////    vec4(yaxis.x, yaxis.y, yaxis.z, -dot(yaxis, eye)),
+////    vec4(zaxis.x, zaxis.y, zaxis.z, -dot(zaxis, eye)),
+////    vec4(0, 0, 0, 1)
+////    };
+//    mat3 viewMatrix = {
+////    xaxis,yaxis,zaxis
+//    vec3(xaxis.x, xaxis.y, xaxis.z),
+//    vec3(yaxis.x, yaxis.y, yaxis.z),
+//    vec3(zaxis.x, zaxis.y, zaxis.z),
+//    };
+//
+//    return viewMatrix;
+//}
+
+vec4 direction_to_quant(vec3 dir, vec3 neutral) {
+    if (dir == vec3(0,0,0)) return vec4(0,0,0,1);
+    dir = normalize(dir);
+    neutral = normalize(neutral);
+    vec3 a = cross(dir, neutral);
+    return normalize(vec4(
+        a[0],a[1],a[2],
+        sqrt(length(dir)*length(dir)*length(neutral)*length(neutral))+dot(dir,neutral)
+    ));
+//    return so_matrix_to_quant(glm::lookAt({0,0,0}, dir, neutral));
+}
+
+mat3 quant_to_rot(vec4 q){
+    q = normalize(q);
+    return mat3(
+        1-2*(q.y*q.y+q.z*q.z),2*(q.x*q.y-q.w*q.z),2*(q.x*q.z+q.w*q.y),
+        2*(q.x*q.y+q.w*q.z),1-2*(q.x*q.x+q.z*q.z),2*(q.y*q.z-q.w*q.x),
+        2*(q.x*q.z-q.w*q.y),2*(q.y*q.z+q.w*q.x),1-2*(q.x*q.x+q.y*q.y)
+    );
+}
+
+mat3 lookAt(vec3 eye, vec3 target, vec3 up){
+    return quant_to_rot(direction_to_quant(normalize(eye-target), up));
+}

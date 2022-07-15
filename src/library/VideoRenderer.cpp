@@ -87,12 +87,13 @@ void VideoRenderer::renderPathmarcher(std::chrono::duration<float> time) {
 
 	const glm::uvec2 workGroupSize{32};
 	const glm::uvec2 workGroupCount{4};
-	const unsigned int samplesPerPass = 50;
+	const unsigned int samplesPerPass = 1;
 
 	pathMarchingProgram.use();
 	pathMarchingProgram.setMat4("viewMat", {}); // not actually used. This could be better but whatever
 	pathMarchingProgram.set1f("time", timeline.spline_time(time.count()));
-	pathMarchingProgram.set1ui("samplesPerPass", samplesPerPass);
+    pathMarchingProgram.set1f("time_frac", time.count());
+    pathMarchingProgram.set1ui("samplesPerPass", samplesPerPass);
 
 	pathMarchingProgram.setVec3("camera_pos", timeline.motionControl.get_camera_pos(timeline.spline_time(time.count())));
 	pathMarchingProgram.setMat3("camera_rot", timeline.motionControl.get_camera_rot(timeline.spline_time(time.count())));

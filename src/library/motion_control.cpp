@@ -137,16 +137,20 @@ glm::mat3 motion_control::get_camera_rot(float t) {
                              this->camera_rot[2].get_point(t),
                              this->camera_rot[3].get_point(t)});
     }
+
+    if (t > 11) return {1,0,0,0,1,0,0,0,1};
+    glm::vec3 trans = {0,200.f/0.9f*(t-10.1f),0};
+    trans = get_enterprise_rot(t)*trans;
     glm::quat rot = glm::quatLookAt(
+        glm::normalize(glm::vec3({
+             (enterprise_pos[0].get_point(t)+trans[0])-camera_pos[0].get_point(t),
+             (enterprise_pos[1].get_point(t)+trans[1])-camera_pos[1].get_point(t),
+             (enterprise_pos[2].get_point(t)+trans[2])-camera_pos[2].get_point(t)
+         })),
             glm::normalize(glm::vec3({
-                                             enterprise_pos[0].get_point(t)-camera_pos[0].get_point(t),
-                                             enterprise_pos[1].get_point(t)-camera_pos[1].get_point(t),
-                                             enterprise_pos[2].get_point(t)-camera_pos[2].get_point(t)
-                                     })),
-            glm::normalize(glm::vec3({
-                                             enterprise_up[0].get_point(t),
-                                             enterprise_up[1].get_point(t),
-                                             enterprise_up[2].get_point(t)}))
+                 enterprise_up[0].get_point(t),
+                 enterprise_up[1].get_point(t),
+                 enterprise_up[2].get_point(t)}))
     );
     return glm::mat3(rot);
 }

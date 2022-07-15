@@ -6,6 +6,7 @@ vec3 ulp(vec3 value);
 vec2 ulp(vec2 value);
 vec4 cubic(float v);
 vec4 textureBicubic(sampler2D sampler, vec2 texCoords);
+mat3 lookAt(vec3 eye, vec3 at, vec3 up);
 
 //THESE NEED TO BE IDENTICAL TO THE ONES DEFINED IN pathmarching.cpp
 const uvec2 workGroupSize = uvec2(32);
@@ -24,6 +25,7 @@ uniform uint samplesPerPass;
 
 uniform uint passSeed;
 uniform float time;
+uniform float time_frac;
 uniform mat4 viewMat;
 
 uniform vec3 camera_pos;
@@ -41,7 +43,7 @@ const float FAR_PLANE = 149597870700.+696342000.*10000;
 const float steps = 500;
 
 const bool preview = false;
-const int max_bounce = 8;  // maximal number of Light bounces
+const int max_bounce = 16;  // maximal number of Light bounces
 
 const float focal_length = 50;  // focal length in mm
 //const vec3 ro = vec3(0.,0.,1.); // render origin
@@ -127,7 +129,9 @@ float eps_fractal(){
 }
 
 float exp_fractal(){
-    return 8;
+    if (time_frac < 11) return 2;
+    if (time_frac > 21.6) return 16;
+    return 14/10.6*(time_frac-11)+2;
 }
 
 vec3 pos_fractal(){
@@ -156,11 +160,11 @@ vec3 pos_cam(){//return camera_pos;
 mat3 cam_rot = rot_cam();
 vec3 cam_pos = pos_cam();
 
-const int num_obj = 11;
+const int num_obj = 14;
 object world[num_obj] = object[num_obj](
     //lasers
     object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
-//    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
@@ -168,8 +172,8 @@ object world[num_obj] = object[num_obj](
     //laser guns/targets
     object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))), //gun 1
     object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))), //target 1
-//    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
-//    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
@@ -196,13 +200,16 @@ object world[num_obj] = object[num_obj](
         mat3(cos(jupiter_day),0,-sin(jupiter_day),0,1,0,sin(jupiter_day),0,cos(jupiter_day)),
         vec3(1,1,1), 69911000., ref_jupiter, custom(4)),  //jupiter
     object(1, 1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 696342000., ref_sun, emitter(vec3(50000)))  //sun
+
+//    ,object(1, .01, rot_enter(), vec3(1.), 15, pos_enter()+rot_enter()*vec3(0,200,0), emitter(vec3(0,0,50)))
 );
-
-int lights[] = int[](num_obj-1,2);
-
 //assumes that the lasers are at the begin of world[]
-uint num_lasers = 1;
+const uint num_lasers = 2;
 uint first_usable_laser = 0;
+
+int num_lights = 1;
+bool active_lights[] = bool[](true, false,false,false,false,false);
+int lights[] = int[](num_obj-1,num_lasers+1,num_lasers+3,num_lasers+5,num_lasers+7,num_lasers+9);
 
 float atan2(float y, float x){
     if (x > 0) return atan(y/x);
@@ -932,14 +939,14 @@ path scatter(mat material, uint index, vec3 p, vec3 origin, vec3 normal, vec3 di
 path scatter_light(vec3 p, vec3 normal, ONB onb, out float pdf){
     float random_light = rand();
     if (random_light == 1) random_light = 0.999999999999999999;
-//    random_light = floor(random_light*float(num_lights));
-//    uint light_index = -1;
-//    for (int i = 0; i < lights.length(); ++i)if (active_lights[i]){
-//        if (random_light == 0) {light_index = lights[i]; break;}
-//        else --random_light;
-//    }
+    random_light = floor(random_light*float(num_lights));
+    uint light_index = -1;
+    for (int i = 0; i < lights.length(); ++i)if (active_lights[i]){
+        if (random_light == 0) {light_index = lights[i]; break;}
+        else --random_light;
+    }
 //    uint light_index = active_lights[uint(floor(random_light*float(num_lights)))];
-    uint light_index = lights[uint(floor(random_light*float(lights.length())))];
+//    uint light_index = lights[uint(floor(random_light*float(lights.length())))];
 //    uint light_index = num_obj-1;
 //    uint light_index = 6;
     float radius = world[light_index].scale;
@@ -1054,25 +1061,39 @@ mat cust_mat(object obj, vec3 p, inout vec3 normal){
 
 vec3 pathtracing(vec3 origin, vec3 direction){
     path trace = path(false, vec3(1), direction, vec3(0), false/*, create_false_array()*/);
-    for (int i = 0; i < max_bounce; ++i){
+    for (int i = 0; i <= max_bounce+1; ++i){
         hit r = ray(origin, trace.direction);
         if (r.hit){
             object obj = world[r.index];
             vec3 p = origin + r.dist*trace.direction;
             vec3 normal = calcNormal(p, obj);
             ONB onb = built_onb(normal);
-            float pdf_material = 0;
+            // sends last ray directly to light source. Not physical accurrate but reduces noise by a huge factor without getting to inacurat
+            vec3 scattered;
+            float pdf_val;
+            path new_trace;
             mat material = cust_mat(obj, p, normal);
-            path new_trace = scatter(material, r.index, p, origin, normal, trace.direction, onb, pdf_material);
+            if (i == max_bounce-1){
+                float pdf_material = 0;
+                new_trace = scatter(material, r.index, p, origin, normal, trace.direction, onb, pdf_material);
+
+                float pdf_light = 0;
+                path light_trace = scatter_light(p, normal, onb, pdf_light);
+                scattered = light_trace.direction;
+                pdf_val = pdf_light;
+            }
+            else {
+                float pdf_material = 0;
+                new_trace = scatter(material, r.index, p, origin, normal, trace.direction, onb, pdf_material);
 
                 //sampling only light
-            float pdf_light = 0;
-            path light_trace = scatter_light(p, normal, onb, pdf_light);
+                float pdf_light = 0;
+                path light_trace = scatter_light(p, normal, onb, pdf_light);
 
-            //            int random_pdf = int(floor(rand()*2.));
-            vec3 scattered = rand()<.5?new_trace.direction:light_trace.direction;
-            if (isnan(pdf_light)) return vec3(1, 0, 0);
-            float pdf_val = .5*pdf_material+.5*pdf_light;
+                //            int random_pdf = int(floor(rand()*2.));
+                scattered = rand()<.5?new_trace.direction:light_trace.direction;
+                pdf_val = .5*pdf_material+.5*pdf_light;
+            }
 
             trace = path(new_trace.stop, //||light_trace.stop,
             trace.attenuation*new_trace.attenuation*scattering_pdf(material, r.index, p, origin, normal, scattered, trace.direction, new_trace.specular)/pdf_val,
@@ -1086,6 +1107,7 @@ vec3 pathtracing(vec3 origin, vec3 direction){
         }
         if (trace.stop) return trace.emmission;
     }
+
     return vec3(0);
 }
 
@@ -1098,7 +1120,7 @@ vec3 getRayDir(vec2 p, float aspect){
     return normalize(vec3(p.xy,-z0));
 }
 
-void add_laser(vec3 position, mat3 rotation, float thickness, vec3 color, float gun_size, float target_size, float target_bright){
+void add_laser(vec3 position, mat3 rotation, float thickness, vec3 color, float gun_size, float target_size, float target_bright, bool importance_sampling){
     if (first_usable_laser < num_lasers){
         world[first_usable_laser].obj_index = 5;
         world[first_usable_laser].rotation = rotation;
@@ -1126,6 +1148,10 @@ void add_laser(vec3 position, mat3 rotation, float thickness, vec3 color, float 
                         world[gun_index+1].position = position+dir*t1.dist;
                         world[gun_index+1].scale = target_size;
                         world[gun_index+1].material = emitter(color*target_bright);
+                        if (importance_sampling) {
+                            num_lights++;
+                            active_lights[first_usable_laser+1] = true;
+                        }
                     }
                 }
             }
@@ -1155,7 +1181,10 @@ void main(){
 //        1, 200*vec3(0.45, 0.75, 0.96), 10, 50);
 //    add_laser(frac_rot*vec3(0,100000+1737400,0), frac_rot*fractal_rot, 50, 50*vec3(1,0,0), 0, 1000);
 
-    if (time > .5 && time < 16) add_laser(rot_fractal()*vec3(0,100000+1737400,0), rot_fractal(), 50, 50*vec3(1,0,0), 0, 4000, 20);
+//    if (time > .5 && time < 16) add_laser(rot_fractal()*vec3(0,100000+1737400,0), rot_fractal(), 50, 50*vec3(1,0,0), 0, 4000, 20);
+    if (time > .5 && time < 16) add_laser(pos_fractal(), rot_fractal(), 50, 500*vec3(1,0,0), 0, 4000, 2, (time > 7.5 && time < 10.2));
+    if (time > 15.5 && time < 15.9) add_laser(pos_enter(), lookAt(pos_enter(), pos_fractal()+vec3(700,200,0), vec3(0,1,0)),
+        1, 200*vec3(0.45, 0.75, 0.96), 10, 250, 1, false);
 
     // for noise testing
     //    col = vec4(0,0,0,1);

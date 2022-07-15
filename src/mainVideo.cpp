@@ -3,7 +3,7 @@
 #include "library/VideoRenderer.h"
 
 int main() {
-	static const std::filesystem::path outputDir = "../output/";
+	static const std::filesystem::path outputDir = "../output1/";
 
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -13,10 +13,10 @@ int main() {
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 	glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 
-	static VideoRenderer videoRenderer{1280/4, 720/4, 1, outputDir};
+	static VideoRenderer videoRenderer{1280, 720, 20, outputDir};
 	videoRenderer.run(
 			std::chrono::duration<float>(0),
-	        std::chrono::duration<float>(20),
+	        std::chrono::duration<float>(0+1.f/20.f),
 			std::chrono::duration<float>(1.0f / 20)
 	);
 
