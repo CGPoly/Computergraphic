@@ -13,7 +13,7 @@ int main() {
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 	glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 
-	static VideoRenderer videoRenderer{1280/2, 720/2, 1, outputDir};
+	static VideoRenderer videoRenderer{1280/4, 720/4, 1, outputDir};
 	videoRenderer.run(
 			std::chrono::duration<float>(0),
 	        std::chrono::duration<float>(20),

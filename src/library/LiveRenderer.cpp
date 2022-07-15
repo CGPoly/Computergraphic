@@ -55,6 +55,7 @@ void LiveRenderer::run() {
 			texturesRenderer.setEarthResolution(timeline.getEarthResolution());
 			texturesRenderer.setMoonResolution(timeline.getMoonResolution());
 			texturesRenderer.setGasgiantResolution(timeline.getGasgiantResolution());
+            std::cout << timeline.spline_time(time.count()) << std::endl;
 		}
 		if (camera.pollChanged() || changedSamplesPerPass || timeChanged) {
 			timeChanged = false;

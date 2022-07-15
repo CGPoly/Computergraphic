@@ -23,7 +23,10 @@ unsigned int Timeline::getGasgiantResolution() const {
 }
 
 float Timeline::spline_time(float time) {
-    return constant_time(time, 0, 2, 0)+ease(time, 2, 3, 0, 1)+ constant_time(time, 3, 100, 1);
+    // zoom from orbit to fractal
+    return constant_time(time, 0, 2, 0)+ease(time, 2, 3, 0, 1) + constant_time(time, 3, 12., 1)+
+    // dramatic laser
+    ease(time,12., 13, 1, 0.1)+ ease(time, 13, 14, 0.1, 0.7)+constant_time(time, 14, 100, .7);
 }
 
 float Timeline::constant_time(float t, float start_t, float end_t, float speed) {
@@ -32,7 +35,7 @@ float Timeline::constant_time(float t, float start_t, float end_t, float speed) 
     return speed*t-speed*start_t;
 }
 
-//integral of an quadratic ease function
+//integral of a quadratic ease function
 float Timeline::ease(float time, float start_t, float end_t, float start_speed, float end_speed) {
     float a = start_speed;
     float b = end_speed;
