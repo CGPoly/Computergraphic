@@ -43,7 +43,7 @@ const float FAR_PLANE = 149597870700.+696342000.*10000;
 const float steps = 500;
 
 const bool preview = false;
-const int max_bounce = 16;  // maximal number of Light bounces
+const int max_bounce = 8;  // maximal number of Light bounces
 
 const float focal_length = 50;  // focal length in mm
 //const vec3 ro = vec3(0.,0.,1.); // render origin
@@ -160,7 +160,7 @@ vec3 pos_cam(){//return camera_pos;
 mat3 cam_rot = rot_cam();
 vec3 cam_pos = pos_cam();
 
-const int num_obj = 14;
+const int num_obj = 13;
 object world[num_obj] = object[num_obj](
     //lasers
     object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
@@ -195,10 +195,10 @@ object world[num_obj] = object[num_obj](
     object(11, (preview)?1:.005,
         ref_rot*mat3(cos(pi/200),-sin(pi/200),0,sin(pi/200),cos(pi/200),0,0,0,1)*
         mat3(cos(-pi/25),0,-sin(-pi/25),0,1,0,sin(-pi/25),0,cos(-pi/25)), vec3(1,1,1), 1737400, ref_moon, custom(3)),  //moon orbit
-    object(1, 1, ref_rot*inverse(mat3(cos(jupiter_year),0,-sin(jupiter_year),0,1,0,sin(jupiter_year),0,cos(jupiter_year)))*
-        mat3(cos(3.13*pi/180),-sin(3.13*pi/180),0,sin(3.13*pi/180),cos(3.13*pi/180),0,0,0,1)*
-        mat3(cos(jupiter_day),0,-sin(jupiter_day),0,1,0,sin(jupiter_day),0,cos(jupiter_day)),
-        vec3(1,1,1), 69911000., ref_jupiter, custom(4)),  //jupiter
+//    object(1, 1, ref_rot*inverse(mat3(cos(jupiter_year),0,-sin(jupiter_year),0,1,0,sin(jupiter_year),0,cos(jupiter_year)))*
+//        mat3(cos(3.13*pi/180),-sin(3.13*pi/180),0,sin(3.13*pi/180),cos(3.13*pi/180),0,0,0,1)*
+//        mat3(cos(jupiter_day),0,-sin(jupiter_day),0,1,0,sin(jupiter_day),0,cos(jupiter_day)),
+//        vec3(1,1,1), 69911000., ref_jupiter, custom(4)),  //jupiter
     object(1, 1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 696342000., ref_sun, emitter(vec3(50000)))  //sun
 
 //    ,object(1, .01, rot_enter(), vec3(1.), 15, pos_enter()+rot_enter()*vec3(0,200,0), emitter(vec3(0,0,50)))
@@ -208,8 +208,10 @@ const uint num_lasers = 2;
 uint first_usable_laser = 0;
 
 int num_lights = 1;
-bool active_lights[] = bool[](true, false,false,false,false,false);
-int lights[] = int[](num_obj-1,num_lasers+1,num_lasers+3,num_lasers+5,num_lasers+7,num_lasers+9);
+//bool active_lights[] = bool[](true, false,false,false,false,false);
+bool active_lights[] = bool[](true, false, false);
+//int lights[] = int[](num_obj-1,num_lasers+1,num_lasers+3,num_lasers+5,num_lasers+7,num_lasers+9);
+int lights[] = int[](num_obj-1,num_lasers+1,num_lasers+3);
 
 float atan2(float y, float x){
     if (x > 0) return atan(y/x);

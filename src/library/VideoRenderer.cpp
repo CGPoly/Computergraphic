@@ -129,7 +129,7 @@ void VideoRenderer::renderPathmarcher(std::chrono::duration<float> time) {
 void VideoRenderer::renderBloom() {
 	profiler.begin(ProfilerType::bloom);
 
-	bloomProcessor.process(hdrColoTexture, width, height, 8, 1, 1);
+	bloomProcessor.process(hdrColoTexture, width, height, 10, 1, .075);
 
 	profiler.end(ProfilerType::bloom);
 	profiler.commit(ProfilerType::bloom);
