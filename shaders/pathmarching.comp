@@ -40,10 +40,10 @@ const float world_scale = 1000;  //how big one unit in metern is (this is for ea
 
 const float FAR_PLANE = 149597870700.+696342000.*10000;
 
-const float steps = 500;
+const float steps = 250;
 
 const bool preview = false;
-const int max_bounce = 8;  // maximal number of Light bounces
+const int max_bounce = 4;  // maximal number of Light bounces
 
 const float focal_length = 50;  // focal length in mm
 //const vec3 ro = vec3(0.,0.,1.); // render origin
@@ -125,13 +125,14 @@ vec3 ref_sun = ref_rot*ref_sunsys;
 
 
 float eps_fractal(){
-    return 0.05;
+    return 1;
 }
 
 float exp_fractal(){
     if (time_frac < 11) return 2;
-    if (time_frac > 21.6) return 16;
-    return 14/10.6*(time_frac-11)+2;
+    if (time_frac < 21.6) return 14/10.6*(time_frac-11)+2;
+    if (time_frac < 25) return (4-16)/(25-21.6)*(time_frac-21.6)+16;
+    return 4;
 }
 
 vec3 pos_fractal(){
@@ -160,20 +161,20 @@ vec3 pos_cam(){//return camera_pos;
 mat3 cam_rot = rot_cam();
 vec3 cam_pos = pos_cam();
 
-const int num_obj = 13;
+/*TODO: update num_lasers, light importance sampling, update index fractal*/ const int num_obj = 7;
 object world[num_obj] = object[num_obj](
     //lasers
-    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
-    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 
     //laser guns/targets
-    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))), //gun 1
-    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))), //target 1
-    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
-    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))), //gun 1
+//    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))), //target 1
+//    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
@@ -182,36 +183,38 @@ object world[num_obj] = object[num_obj](
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 
     //solar system
-    object(3, .005, rot_enter()*mat3(0,0,1,0,1,0,-1,0,0), vec3(1,1,1), 157, pos_enter(), lambertian(vec3(.8))),  //enterprise
-    object(1, .01, rot_enter(), vec3(1.), 15, pos_enter()+rot_enter()*vec3(126,0,435), emitter(vec3(0,0,50))),  // engine 1
-    object(1, .01, rot_enter(), vec3(1.), 15, pos_enter()+rot_enter()*vec3(-126,0,435), emitter(vec3(0,0,50))),  // engine 2
+    object(3, 1, rot_enter()*mat3(0,0,1,0,1,0,-1,0,0), vec3(1,1,1), 157, pos_enter(), lambertian(vec3(.8))),  //enterprise
+    object(1, 5, rot_enter(), vec3(1.), 15, pos_enter()+rot_enter()*vec3(126,0,435), emitter(vec3(0,0,50))),  // engine 1
+    object(1, 5, rot_enter(), vec3(1.), 15, pos_enter()+rot_enter()*vec3(-126,0,435), emitter(vec3(0,0,50))),  // engine 2
 
     object(2, eps_fractal(), rot_fractal()*mat3(1,0,0,0,0,-1,0,1,0), vec3(1,1,1), 2000, pos_fractal(), lambertian(vec3(.5))),  //fractal
 
-    object(1, 1, ref_rot*inverse(mat3(cos(earth_year),0,-sin(earth_year),0,1,0,sin(earth_year),0,cos(earth_year)))*
+    object(1, 10000, ref_rot*inverse(mat3(cos(earth_year),0,-sin(earth_year),0,1,0,sin(earth_year),0,cos(earth_year)))*
         mat3(cos(23*pi/180),-sin(23*pi/180),0,sin(23*pi/180),cos(23*pi/180),0,0,0,1)*
         mat3(cos(earth_day),0,-sin(earth_day),0,1,0,sin(earth_day),0,cos(earth_day))
         , vec3(1,1,1), 6371000, ref_earth, custom(1)), //earth
-    object(11, (preview)?1:.005,
+    object(11, 50,//(preview)?1000:100,
         ref_rot*mat3(cos(pi/200),-sin(pi/200),0,sin(pi/200),cos(pi/200),0,0,0,1)*
         mat3(cos(-pi/25),0,-sin(-pi/25),0,1,0,sin(-pi/25),0,cos(-pi/25)), vec3(1,1,1), 1737400, ref_moon, custom(3)),  //moon orbit
 //    object(1, 1, ref_rot*inverse(mat3(cos(jupiter_year),0,-sin(jupiter_year),0,1,0,sin(jupiter_year),0,cos(jupiter_year)))*
 //        mat3(cos(3.13*pi/180),-sin(3.13*pi/180),0,sin(3.13*pi/180),cos(3.13*pi/180),0,0,0,1)*
 //        mat3(cos(jupiter_day),0,-sin(jupiter_day),0,1,0,sin(jupiter_day),0,cos(jupiter_day)),
 //        vec3(1,1,1), 69911000., ref_jupiter, custom(4)),  //jupiter
-    object(1, 1, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 696342000., ref_sun, emitter(vec3(50000)))  //sun
+    object(1, 10000000, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 696342000., ref_sun, emitter(vec3(50000)))  //sun
 
-//    ,object(1, .01, rot_enter(), vec3(1.), 15, pos_enter()+rot_enter()*vec3(0,200,0), emitter(vec3(0,0,50)))
+//    ,object(1, .01, rot_enter(), vec3(1.), 2000*1.25, pos_fractal(), emitter(vec3(0,0,50)))
 );
 //assumes that the lasers are at the begin of world[]
-const uint num_lasers = 2;
+const uint num_lasers = 0;
 uint first_usable_laser = 0;
 
+int index_fractal = 3, index_moon = 5;
+
 int num_lights = 1;
-//bool active_lights[] = bool[](true, false,false,false,false,false);
-bool active_lights[] = bool[](true, false, false);
-//int lights[] = int[](num_obj-1,num_lasers+1,num_lasers+3,num_lasers+5,num_lasers+7,num_lasers+9);
-int lights[] = int[](num_obj-1,num_lasers+1,num_lasers+3);
+//bool active_lights[] = bool[](true, false, false);
+bool active_lights[] = bool[](true);
+//int lights[] = int[](num_obj-1,num_lasers+1,num_lasers+3);
+int lights[] = int[](num_obj-1);
 
 float atan2(float y, float x){
     if (x > 0) return atan(y/x);
@@ -490,36 +493,78 @@ float deManySpheres(vec3 pos){
 //    }
 //    return 0.5*log(r)*r/dr;
 //}
-float deJulia(vec3 p, int Iterations, float Bailout) {
-    vec3 c = vec3(0.4,-0.4,0.6);
-//    vec3 c = julia_c;
-//    float maxp = 8;
-//    float t = fract(0.01*((time * 30)+15.));
-//    float power = -2*maxp*abs(t-0.5)+maxp;
+//float deJulia(vec3 p, int Iterations, float Bailout) {
+////    vec3 c = vec3(0.4,-0.4,0.6);
+//    vec3 c = vec3(-0.5,0.,0);
+//    Iterations = 10;
+//    Bailout = 10;
+////    vec3 c = julia_c;
+////    float maxp = 8;
+////    float t = fract(0.01*((time * 30)+15.));
+////    float power = -2*maxp*abs(t-0.5)+maxp;
+////    float power = exp_fractal();
+//    float power = 4;
+//
+//    vec3 orbit = p;
+//    float dz = 1.0;
+//
+//    for (int i=0; i<Iterations; i++) {
+//
+//        float r = length(orbit);
+//        float o = acos(orbit.z/r);
+//        float p = atan(orbit.y/orbit.x);
+//
+//        dz = power*pow(r,power-1)*dz;
+//
+//        r = pow(r,power);
+//        o = power*o;
+//        p = power*p;
+//
+//        orbit = vec3( r*sin(o)*cos(p), r*sin(o)*sin(p), r*cos(o) ) + c;
+//
+//        if (dot(orbit,orbit) > Bailout) break;
+//    }
+//    float z = length(orbit);
+//    return 0.5*z*log(z)/dz;
+//}
+float deJulia(vec3 p){
+//    vec3 c = vec3(-.5, 0, 0);
+    vec3 c = julia_c;
     float power = exp_fractal();
+    vec3 z = p;
+    float m = dot(z,z);
+    int iterations = 10;
+    float bailout = 2.;
 
-    vec3 orbit = p;
+    vec4 trap = vec4(abs(z),m);
     float dz = 1.0;
 
-    for (int i=0; i<Iterations; i++) {
+    for( int i=0; i<iterations; i++ )
+    {
+        // size of the derivative of z (comp through the chain rule)
+        // dz = 8*z^7*dz
+        dz = power*pow(m,power/2.)*dz;
 
-        float r = length(orbit);
-        float o = acos(orbit.z/r);
-        float p = atan(orbit.y/orbit.x);
+        // z = z^8+z
+        float r = length(z);
+        float b = power*acos( clamp(z.y/r, -1.0, 1.0));
+        float a = power*atan( z.x, z.z );
+        z = c + pow(r,power) * vec3( sin(b)*sin(a), cos(b), sin(b)*cos(a) );
 
-        dz = power*pow(r,power-1)*dz;
+        // orbit trapping
+        trap = min( trap, vec4(abs(z),m) );
 
-        r = pow(r,power);
-        o = power*o;
-        p = power*p;
-
-        orbit = vec3( r*sin(o)*cos(p), r*sin(o)*sin(p), r*cos(o) ) + c;
-
-        if (dot(orbit,orbit) > Bailout) break;
+        m = dot(z,z);
+        if( m > bailout )
+        break;
     }
-    float z = length(orbit);
-    return 0.5*z*log(z)/dz;
+
+//    resColor = trap;
+
+    // distance estimation (through the Hubbard-Douady potential)
+    return 0.25*log(m)*sqrt(m)/dz;
 }
+
 float sdEnterprise(vec3 pos){
 //    return sdEllipsoid(pos, vec3(2,0.1, 1));
     return sbU(sbU(sbU(sbU(sbU(sbU(sbU(oBevel(sdCappedCylinder(pos, 1, 0.04), 0.02),sdEllipsoid(pos, vec3(0.7,0.2, 0.7)), 0.1),
@@ -576,13 +621,16 @@ float distObj(object obj, vec3 pos){
     vec3 map = texcoord_sphereProj(pos);
     float height;
     switch(obj.obj_index){
+        case 50:
+            return 1./0.;
         case 0:
             return sdBox(pos,  vec3(obj.scale));
         case 1:
             return sdSphere(pos,  obj.scale);
         case 2:
 //            return deJulia(pos/obj.scale, 10, 1000)*obj.scale;
-            return deJulia(pos/obj.scale, 10, 5)*obj.scale;
+//            return deJulia(pos/obj.scale, 10, 10)*obj.scale;
+            return deJulia(pos/obj.scale)*obj.scale;
 //            return deKaliRemix(pos, 10);
         case 3:
             return sdEnterprise(pos/obj.scale)*obj.scale;
@@ -599,7 +647,7 @@ float distObj(object obj, vec3 pos){
 //            height = height * 2 - 1;
 //            return oDisp(sdSphere(pos,  obj.scale), height*obj.scale*0.0025);
         case 11: // moon
-            if (preview) return sdSphere(pos, obj.scale);
+//            if (preview) return sdSphere(pos, obj.scale);
 //            height = texture(moon_height, map.xy).x;
             height = textureBicubic(moon_height, map.xy).x;
             height = height * 2 - 1;
@@ -613,9 +661,11 @@ float distObj(object obj, vec3 pos){
     }
 }
 
-hit map(vec3 pos){
+hit map(vec3 pos, bool visual_fractal, bool visual_moon){
     hit h = hit(false, 1.0/0.0, 0, 0);
     for (int i = 0; i < num_obj; ++i){
+        if (!visual_fractal && i == index_fractal) continue;
+        if (!visual_moon && i == index_moon) continue;
         float dist = oScale(distObj(world[i], iScale(inverse(world[i].rotation) * (pos - world[i].position), world[i].scaling)), world[i].scaling);
         if (dist < h.dist){
             h = hit(false, dist, 0, i);
@@ -624,10 +674,21 @@ hit map(vec3 pos){
     return h;
 }
 
-hit map_shell(vec3 pos, uint exclude, float eps){
+hit map_obj(vec3 pos, object obj){
+    hit h = hit(false, 1.0/0.0, 0, 0);
+    float dist = oScale(distObj(obj, iScale(inverse(obj.rotation) * (pos - obj.position), obj.scaling)), obj.scaling);
+    if (dist < h.dist){
+        h = hit(false, dist, 0, -1);
+    }
+    return h;
+}
+
+hit map_shell(vec3 pos, uint exclude, float eps, bool visual_fractal, bool visual_moon){
     hit h = hit(false, 1.0/0.0, 0, 0);
 //    for (int i = 0; i < num_obj; ++i){
     for (int i = int(num_lasers+2*num_lasers); i < num_obj; ++i){
+        if (!visual_fractal && i == index_fractal) continue;
+        if (!visual_moon && i == index_moon) continue;
         if (i != exclude){
             float dist = max(0, abs(oScale(distObj(world[i], iScale(inverse(world[i].rotation) * (pos - world[i].position), world[i].scaling)), world[i].scaling))-eps);
 //            float dist = oScale(distObj(world[i], iScale(inverse(world[i].rotation) * (pos - world[i].position), world[i].scaling)), world[i].scaling);
@@ -639,16 +700,36 @@ hit map_shell(vec3 pos, uint exclude, float eps){
     return h;
 }
 
+// https://iquilezles.org/articles/intersectors
+vec2 isphere( in vec4 sph, in vec3 ro, in vec3 rd ){
+    vec3 oc = ro - sph.xyz;
+
+    float b = dot(oc,rd);
+    float c = dot(oc,oc) - sph.w*sph.w;
+    float h = b*b - c;
+    if( h<0.0 ) return vec2(-1.0);
+    h = sqrt( h );
+    return -b + vec2(-h,h);
+}
+
 hit ray(vec3 ro, vec3 rd){
     hit h = hit(false, 0., 0, -1);
+    vec2 dis_f = isphere( vec4(world[index_fractal].position, world[index_fractal].scale*1.25), ro, rd);
+    vec2 dis_m = isphere( vec4(world[index_moon].position, world[index_moon].scale*1.25), ro, rd);
     for (; h.steps < steps; ++h.steps){
         vec3 rayEnd = ro + h.dist * rd;
 
-        hit d = map(rayEnd);
-        h.dist += d.dist;
+        hit d = map(rayEnd, dis_f.x <= h.dist && h.dist <= dis_f.y, dis_m.x <= h.dist && h.dist <= dis_m.y);
+
+        // will prioritize rendering the fractal over the moon if the fractal is behind the moon and h.dist is high enough
+        if (h.dist < dis_f.x && h.dist+d.dist >= dis_f.x) h.dist = dis_f.x;
+        else if (h.dist < dis_m.x && h.dist+d.dist >= dis_m.x) h.dist = dis_m.x;
+        else h.dist += d.dist;
+
         h.index = d.index;
 
-        if (d.dist < epsilon(rayEnd) * world[d.index].epsilonFactor) {
+//        if (d.dist < epsilon(rayEnd) * world[d.index].epsilonFactor) {
+        if (d.dist < world[d.index].epsilonFactor) {
             h.hit = true;
             return h;
         }
@@ -662,14 +743,20 @@ hit ray(vec3 ro, vec3 rd){
 
 hit ray_shell(vec3 ro, vec3 rd, uint exclude, float eps){
     hit h = hit(false, 0., 0, -1);
+    vec2 dis_f = isphere( vec4(world[index_fractal].position, world[index_fractal].scale*1.25), ro, rd);
+    vec2 dis_m = isphere( vec4(world[index_moon].position, world[index_moon].scale*1.25), ro, rd);
     for (; h.steps < steps; ++h.steps){
         vec3 rayEnd = ro + h.dist * rd;
 
-        hit d = map_shell(rayEnd, exclude, eps);
-        h.dist += d.dist;
+        hit d = map_shell(rayEnd, exclude, eps, dis_f.x < h.dist && h.dist < dis_f.y, dis_m.x < h.dist && h.dist < dis_m.y);
+        // will prioritize rendering the fractal over the moon if the fractal is behind the moon and h.dist is high enough
+        if (h.dist < dis_f.x && h.dist+d.dist >= dis_f.x) h.dist = dis_f.x;
+        else if (h.dist < dis_m.x && h.dist+d.dist >= dis_m.x) h.dist = dis_m.x;
+        else h.dist += d.dist;
         h.index = d.index;
 
-        if (d.dist < epsilon(rayEnd) * world[d.index].epsilonFactor) {
+//        if (d.dist < epsilon(rayEnd) * world[d.index].epsilonFactor) {
+        if (d.dist < world[d.index].epsilonFactor) {
 //        if (d.dist < eps) {
             h.hit = true;
             return h;
@@ -682,25 +769,27 @@ hit ray_shell(vec3 ro, vec3 rd, uint exclude, float eps){
     return h;
 }
 
-vec3 numDiff(vec3 p, float e){
-    vec2 h = vec2(e,min(int(passSeed),0));
-    return normalize(vec3(map(p+h.xyy).dist - map(p-h.xyy).dist, map(p+h.yxy).dist - map(p-h.yxy).dist, map(p+h.yyx).dist - map(p-h.yyx).dist));
-}
-vec3 tetraNormUnfix(vec3 p, float h){ // for function f(p){
-    //    const float h = eps; // replace by an appropriate value
-    const vec2 k = vec2(1,-1);
-    return normalize( k.xyy*map( p + k.xyy*h ).dist +
-    k.yyx*map( p + k.yyx*h ).dist +
-    k.yxy*map( p + k.yxy*h ).dist +
-    k.xxx*map( p + k.xxx*h ).dist );
-}
-vec3 tetraNorm(vec3 pos, float epsilonFactor){
-    float h = epsilon(pos) * epsilonFactor;
+//vec3 numDiff(vec3 p, float e){
+//    vec2 h = vec2(e,min(int(passSeed),0));
+//    return normalize(vec3(map(p+h.xyy).dist - map(p-h.xyy).dist, map(p+h.yxy).dist - map(p-h.yxy).dist, map(p+h.yyx).dist - map(p-h.yyx).dist));
+//}
+//vec3 tetraNormUnfix(vec3 p, float h){ // for function f(p){
+//    //    const float h = eps; // replace by an appropriate value
+//    const vec2 k = vec2(1,-1);
+//    return normalize( k.xyy*map( p + k.xyy*h ).dist +
+//    k.yyx*map( p + k.yyx*h ).dist +
+//    k.yxy*map( p + k.yxy*h ).dist +
+//    k.xxx*map( p + k.xxx*h ).dist );
+//}
+vec3 tetraNorm(vec3 pos, object obj){
+//    float h = epsilon(pos) * epsilonFactor;
+    float h = obj.epsilonFactor;
     int ZERO = min(int(passSeed),0); // non-constant zero
     vec3 n = vec3(0.0);
     for( int i=ZERO; i<4; i++) {
         vec3 e = 0.5773*(2.0*vec3((((i+3)>>1)&1),((i>>1)&1),(i&1))-1.0);
-        n += e*map(pos+e*h).dist;//.x;
+//        n += e*map(pos+e*h).dist;//.x;
+        n += e*map_obj(pos+e*h, obj).dist;//.x;
     }
     return normalize(n);
 }
@@ -711,7 +800,7 @@ vec3 calcNormal(vec3 p, object obj){
     //        nor += tetraNorm(p, eps*rand(i*2565));
     //    }
     //    return nor/n;
-    return tetraNorm(p, obj.epsilonFactor);
+    return tetraNorm(p, obj);
 //    return normalize(p-obj.position);
     //    return numDiff(p,obj.eps);
     //    return numDiff(p);
@@ -1100,7 +1189,8 @@ vec3 pathtracing(vec3 origin, vec3 direction){
             trace = path(new_trace.stop, //||light_trace.stop,
             trace.attenuation*new_trace.attenuation*scattering_pdf(material, r.index, p, origin, normal, scattered, trace.direction, new_trace.specular)/pdf_val,
             scattered, trace.emmission+new_trace.emmission*trace.attenuation, false/*, trace.inverted*/);
-            float eps = epsilon(p) * obj.epsilonFactor;
+//            float eps = epsilon(p) * obj.epsilonFactor;
+            float eps = obj.epsilonFactor;
             origin = p+2*eps*normalize(trace.direction+normal);
         }
         else {

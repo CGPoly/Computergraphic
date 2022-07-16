@@ -194,6 +194,8 @@ glm::mat3 motion_control::get_fractal_rot(float t) {
 }
 
 glm::vec3 motion_control::get_julia_c(float t) {
+    if (t < 21.6) return {-.5, 0, 0};
+    t -= 21.6;
     return {this->julia_c[0].get_point(t),
             this->julia_c[1].get_point(t),
             this->julia_c[2].get_point(t)};
