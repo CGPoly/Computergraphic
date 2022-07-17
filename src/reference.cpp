@@ -16,7 +16,19 @@ int main() {
 
     //position
     //pos_enter()+rot_enter()*vec3(0,200,1500)
-    std::cout << std::endl;
+
+    float moon_year = .6*pi;
+    float earth_year = 0*pi;
+    glm::vec3 earth_moon_pos1 = glm::mat3(cos(5.14*pi/180),-sin(5.14*pi/180),0,sin(5.14*pi/180),cos(5.14*pi/180),0,0,0,1)*
+            glm::mat3(cos(moon_year),0,-sin(moon_year),0,1,0,sin(moon_year),0,cos(moon_year))*glm::vec3(384400000.,0,0);
+    glm::vec3 sun_earth_pos1 = glm::mat3(cos(7.155*pi/180),-sin(7.155*pi/180),0,sin(7.155*pi/180),cos(7.155*pi/180),0,0,0,1)*
+            glm::mat3(cos(earth_year),0,-sin(earth_year),0,1,0,sin(earth_year),0,cos(earth_year))*glm::vec3(149600000000.,0,0);
+    glm::vec3 sun_moon_pos1 = sun_earth_pos1+earth_moon_pos1;
+    glm::mat3 ref_rot1 = glm::mat3(0,1,0,-1,0,0,0,0,1)*glm::mat3(-1,0,0,0,1,0,0,0,1);
+    glm::vec3 moon_earth1 = ref_rot1*(-sun_moon_pos1+sun_earth_pos1);
+    glm::vec3 tmp = moon_earth1 + glm::vec3(0,1+30000000.,0);
+
+    std::cout << tmp << std::endl;
 //    std::cout << 0.9f*glm::vec3(1757471.250,627787.812,-140000.000)+.1f*motionControl.get_enterprise_pos(11);
 //    std::cout << motionControl.get_enterprise_pos(11)+motionControl.get_enterprise_rot(11)*glm::vec3(0,200,1500);
 //

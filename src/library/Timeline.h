@@ -30,5 +30,5 @@ private:
 //	unsigned int gasgiantResolution = 1025 * 4;
     unsigned int earthResolution = 512;
     unsigned int moonResolution = 1024;
-    unsigned int gasgiantResolution = 2;
+    unsigned int gasgiantResolution = 1;
 };

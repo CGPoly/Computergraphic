@@ -161,7 +161,7 @@ void LiveRenderer::drawTimeControl() {
 
 	ImGui::PushItemWidth(-1);
 	float timeFloat = time.count();
-	if (ImGui::SliderFloat("##Time", &timeFloat, 0, 60)) {
+	if (ImGui::SliderFloat("##Time", &timeFloat, 0, 26)) {
 		time = std::chrono::duration<float>(timeFloat);
 		timeChanged = true;
 	}

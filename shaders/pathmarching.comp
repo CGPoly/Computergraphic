@@ -38,7 +38,7 @@ const float FAR_PLANE = 149597870700.+696342000.*10000;
 
 const float steps = 250;
 
-const bool preview = true;
+const bool preview = false;
 const int max_bounce = 4;  // maximal number of Light bounces
 
 const float focal_length = 50;  // focal length in mm
@@ -131,9 +131,7 @@ mat3 rot_fractal(){
 }
 
 vec3 pos_enter(){
-//    return vec3(0,10000000.,0);
     return enterprise_pos;
-
 }
 mat3 rot_enter(){
     return enterprise_rot;
@@ -167,7 +165,8 @@ vec3 ref_sun = moon_sun-pos_cam();
 vec3 ref_fractal = pos_fractal()-pos_cam();
 vec3 ref_enter = pos_enter()-pos_cam();
 
-/*TODO: update num_lasers, light importance sampling, update index fractal*/ const int num_obj = 13;
+const uint num_lasers = 2;
+/*TODO: update num_lasers, light importance sampling, update index fractal*/ const int num_obj = 7+int(num_lasers+2*num_lasers);
 object world[num_obj] = object[num_obj](
     //lasers
     object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
@@ -193,7 +192,7 @@ object world[num_obj] = object[num_obj](
     object(1, 5, rot_enter(), vec3(1.), 15, ref_enter+rot_enter()*vec3(126,0,435), emitter(vec3(0,0,50))),  // engine 1
     object(1, 5, rot_enter(), vec3(1.), 15, ref_enter+rot_enter()*vec3(-126,0,435), emitter(vec3(0,0,50))),  // engine 2
 
-    object(2, eps_fractal(), rot_fractal(), vec3(1,1,1), 2000, ref_fractal, lambertian(vec3(.5))),  //fractal
+    object(2, eps_fractal(), rot_fractal(), vec3(1,1,1), 10000, ref_fractal, lambertian(vec3(.5))),  //fractal
 
     object(1, 10000, ref_rot*inverse(mat3(cos(earth_year),0,-sin(earth_year),0,1,0,sin(earth_year),0,cos(earth_year)))*
         mat3(cos(23*pi/180),-sin(23*pi/180),0,sin(23*pi/180),cos(23*pi/180),0,0,0,1)*
@@ -202,7 +201,7 @@ object world[num_obj] = object[num_obj](
     object(11, 100,//(preview)?1000:100,
         ref_rot*mat3(cos(pi/200),-sin(pi/200),0,sin(pi/200),cos(pi/200),0,0,0,1)*
         mat3(cos(-pi/25),0,-sin(-pi/25),0,1,0,sin(-pi/25),0,cos(-pi/25)), vec3(1,1,1), 1737400, ref_moon, custom(3)),  //moon orbit
-//    object(1, 1, ref_rot*inverse(mat3(cos(jupiter_year),0,-sin(jupiter_year),0,1,0,sin(jupiter_year),0,cos(jupiter_year)))*
+//    object(1, 10000, ref_rot*inverse(mat3(cos(jupiter_year),0,-sin(jupiter_year),0,1,0,sin(jupiter_year),0,cos(jupiter_year)))*
 //        mat3(cos(3.13*pi/180),-sin(3.13*pi/180),0,sin(3.13*pi/180),cos(3.13*pi/180),0,0,0,1)*
 //        mat3(cos(jupiter_day),0,-sin(jupiter_day),0,1,0,sin(jupiter_day),0,cos(jupiter_day)),
 //        vec3(1,1,1), 69911000., ref_jupiter, custom(4)),  //jupiter
@@ -211,16 +210,15 @@ object world[num_obj] = object[num_obj](
 //    ,object(1, .01, rot_enter(), vec3(1.), 2000*1.25, pos_fractal(), emitter(vec3(0,0,50)))
 );
 //assumes that the lasers are at the begin of world[]
-const uint num_lasers = 2;
 uint first_usable_laser = 0;
 
-int index_fractal = 9, index_moon = 11;
+int index_fractal = num_obj-4, index_moon = num_obj-2;
 
 int num_lights = 1;
 //bool active_lights[] = bool[](true, false, false);
-bool active_lights[] = bool[](true);
+bool active_lights[] = bool[](true, false);
 //int lights[] = int[](num_obj-1,num_lasers+1,num_lasers+3);
-int lights[] = int[](num_obj-1);
+int lights[] = int[](num_obj-1, num_lasers+1);
 
 float atan2(float y, float x){
     if (x > 0) return atan(y/x);
@@ -534,8 +532,12 @@ float deManySpheres(vec3 pos){
 //    return 0.5*z*log(z)/dz;
 //}
 float deJulia(vec3 p){
-//    vec3 c = vec3(-.5, 0, 0);
-    vec3 c = julia_c;
+    vec3 c;
+    if (time < 18.5) c = vec3(-.7, .3, 0);
+    else c = vec3(4.7/3*(time-18.5)-.7, 1.7/3*(time-18.5)+.3, 0);
+//    else if (time < 19.29) c = vec3(1,.5,0);
+//    else c = vec3(4, 2, 0);
+//    vec3 c = julia_c;
     float power = exp_fractal();
     vec3 z = p;
     float m = dot(z,z);
@@ -669,7 +671,22 @@ float distObj(object obj, vec3 pos){
 
 hit map(vec3 pos, bool visual_fractal, bool visual_moon){
     hit h = hit(false, 1.0/0.0, 0, 0);
-    for (int i = 0; i < num_obj; ++i){
+    // looks at all lasers
+    for (int i = 0; i < first_usable_laser; ++i){
+        float dist = oScale(distObj(world[i], iScale(inverse(world[i].rotation) * (pos - world[i].position), world[i].scaling)), world[i].scaling);
+        if (dist < h.dist){
+            h = hit(false, dist, 0, i);
+        }
+    }
+    // looks at all laser guns and targets
+    for (int i = int(num_lasers); i < int(num_lasers+2*first_usable_laser); ++i){
+        float dist = oScale(distObj(world[i], iScale(inverse(world[i].rotation) * (pos - world[i].position), world[i].scaling)), world[i].scaling);
+        if (dist < h.dist){
+            h = hit(false, dist, 0, i);
+        }
+    }
+    // looks at all non laser objects
+    for (int i = int(num_lasers+2*num_lasers); i < num_obj; ++i){
         if (!visual_fractal && i == index_fractal) continue;
         if (!visual_moon && i == index_moon) continue;
         float dist = oScale(distObj(world[i], iScale(inverse(world[i].rotation) * (pos - world[i].position), world[i].scaling)), world[i].scaling);
@@ -691,19 +708,34 @@ hit map_obj(vec3 pos, object obj){
 
 hit map_shell(vec3 pos, uint exclude, float eps, bool visual_fractal, bool visual_moon){
     hit h = hit(false, 1.0/0.0, 0, 0);
-//    for (int i = 0; i < num_obj; ++i){
     for (int i = int(num_lasers+2*num_lasers); i < num_obj; ++i){
         if (!visual_fractal && i == index_fractal) continue;
         if (!visual_moon && i == index_moon) continue;
         if (i != exclude){
-            float dist = max(0, abs(oScale(distObj(world[i], iScale(inverse(world[i].rotation) * (pos - world[i].position), world[i].scaling)), world[i].scaling))-eps);
-//            float dist = oScale(distObj(world[i], iScale(inverse(world[i].rotation) * (pos - world[i].position), world[i].scaling)), world[i].scaling);
+            float dist;
+            if (i == -1)
+                dist = max(0, abs(oScale(distObj(world[i], iScale(inverse(world[i].rotation) * (pos - world[i].position), world[i].scaling)), world[i].scaling))-eps);
+            else dist = oScale(distObj(world[i], iScale(inverse(world[i].rotation) * (pos - world[i].position), world[i].scaling)), world[i].scaling);
             if (dist < h.dist){
                 h = hit(false, dist, 0, i);
             }
         }
     }
     return h;
+//    hit h = hit(false, 1.0/0.0, 0, 0);
+////    for (int i = 0; i < num_obj; ++i){
+//    for (int i = int(num_lasers+2*num_lasers); i < num_obj; ++i){
+//        if (!visual_fractal && i == index_fractal) continue;
+//        if (!visual_moon && i == index_moon) continue;
+//        if (i != exclude){
+//            float dist = max(0, abs(oScale(distObj(world[i], iScale(inverse(world[i].rotation) * (pos - world[i].position), world[i].scaling)), world[i].scaling))-eps);
+////            float dist = oScale(distObj(world[i], iScale(inverse(world[i].rotation) * (pos - world[i].position), world[i].scaling)), world[i].scaling);
+//            if (dist < h.dist){
+//                h = hit(false, dist, 0, i);
+//            }
+//        }
+//    }
+//    return h;
 }
 
 // https://iquilezles.org/articles/intersectors
@@ -754,11 +786,15 @@ hit ray_shell(vec3 ro, vec3 rd, uint exclude, float eps){
     for (; h.steps < steps; ++h.steps){
         vec3 rayEnd = ro + h.dist * rd;
 
-        hit d = map_shell(rayEnd, exclude, eps, dis_f.x < h.dist && h.dist < dis_f.y, dis_m.x < h.dist && h.dist < dis_m.y);
+        //map_shell(vec3 pos, uint exclude, float eps, bool visual_fractal, bool visual_moon)
+//        hit d = map(rayEnd, dis_f.x <= h.dist && h.dist <= dis_f.y, dis_m.x <= h.dist && h.dist <= dis_m.y);
+        hit d = map_shell(rayEnd, exclude, eps, dis_f.x <= h.dist && h.dist <= dis_f.y, dis_m.x <= h.dist && h.dist <= dis_m.y);
+//        hit d = map_shell(rayEnd, exclude, eps, true, true);
         // will prioritize rendering the fractal over the moon if the fractal is behind the moon and h.dist is high enough
         if (h.dist < dis_f.x && h.dist+d.dist >= dis_f.x) h.dist = dis_f.x;
         else if (h.dist < dis_m.x && h.dist+d.dist >= dis_m.x) h.dist = dis_m.x;
         else h.dist += d.dist;
+//        h.dist += d.dist;
         h.index = d.index;
 
 //        if (d.dist < epsilon(rayEnd) * world[d.index].epsilonFactor) {
@@ -1106,20 +1142,20 @@ vec3 polar_to_cartisan(vec2 p){
     return vec3(cos(p.x)*sin(p.y), sin(p.x)*sin(p.y), cos(p.y));
 }
 
-mat planet(object obj, inout vec3 p, inout vec3 normal){
+mat planet(object obj, vec3 p){
     vec3 localPos = iScale(inverse(obj.rotation) * (p - obj.position), obj.scaling);
     vec3 map = texcoord_sphereProj(localPos);
     vec3 col = texture(earth_albedo_plus_height, map.xy).xyz;
     col = mix(col,vec3(1),texture(earth_albedo_plus_height,map.xy).w);
     return lambertian(col);
 }
-mat moon(object obj, inout vec3 p, inout vec3 normal){
+mat moon(object obj, vec3 p){
     vec3 localPos = iScale(inverse(obj.rotation) * (p - obj.position), obj.scaling);
     vec3 map = texcoord_sphereProj(localPos);
     vec3 col = texture(moon_albedo, map.xy).rrr;
     return lambertian(col);
 }
-mat gasagiant(object obj, inout vec3 p, inout vec3 normal){
+mat gasagiant(object obj, vec3 p){
     vec3 localPos = iScale(inverse(obj.rotation) * (p - obj.position), obj.scaling);
     vec3 map = texcoord_sphereProj(localPos);
     vec3 col = texture(gasgiant_albedo, map.xy).xyz;
@@ -1137,16 +1173,16 @@ mat gasagiant(object obj, inout vec3 p, inout vec3 normal){
 //    return transmission_emm(vec3(1), 0.5, vec3(1));
 //}
 
-mat cust_mat(object obj, vec3 p, inout vec3 normal){
+mat cust_mat(object obj, vec3 p){
     switch(obj.material.custom){
         case 1:  // planet
-            return planet(obj, p, normal);
+            return planet(obj, p);
 //        case 2:  // low clouds
 //            return clouds_low(obj, p, normal);
         case 3: // moon
-            return moon(obj, p, normal);
+            return moon(obj, p);
         case 4: // gas Giant
-            return gasagiant(obj, p, normal);
+            return gasagiant(obj, p);
         case 5:
             return lambertian(texcoord_nor(p, obj));
         case 0:
@@ -1163,13 +1199,13 @@ vec3 pathtracing(vec3 origin, vec3 direction){
         if (r.hit){
             object obj = world[r.index];
             vec3 p = origin + r.dist*trace.direction;
-            vec3 normal = calcNormal(p, obj);
-            ONB onb = built_onb(normal);
             // sends last ray directly to light source. Not physical accurrate but reduces noise by a huge factor without getting to inacurat
             vec3 scattered;
             float pdf_val;
             path new_trace;
-            mat material = cust_mat(obj, p, normal);
+            mat material = cust_mat(obj, p);
+            vec3 normal = calcNormal(p, obj);
+            ONB onb = built_onb(normal);
             if (i == max_bounce-1){
                 float pdf_material = 0;
                 new_trace = scatter(material, r.index, p, origin, normal, trace.direction, onb, pdf_material);
@@ -1229,7 +1265,7 @@ void add_laser(vec3 position, mat3 rotation, float thickness, vec3 color, float 
         if (gun_size + target_size != 0){
             uint gun_index = 2*first_usable_laser+num_lasers;
             vec3 dir = rotation*vec3(0, -1, 0);
-            float eps = 0.001;
+            float eps = 1;
             hit t = ray_shell(position, dir, -1, eps);
             if (t.hit){
                 if (gun_size != 0){
@@ -1250,6 +1286,7 @@ void add_laser(vec3 position, mat3 rotation, float thickness, vec3 color, float 
                             num_lights++;
                             active_lights[first_usable_laser+1] = true;
                         }
+//                        world[first_usable_laser].material = emitter(vec3(1,0,1));
                     }
                 }
             }
@@ -1280,9 +1317,10 @@ void main(){
 //    add_laser(frac_rot*vec3(0,100000+1737400,0), frac_rot*fractal_rot, 50, 50*vec3(1,0,0), 0, 1000);
 
 //    if (time > .5 && time < 16) add_laser(rot_fractal()*vec3(0,100000+1737400,0), rot_fractal(), 50, 50*vec3(1,0,0), 0, 4000, 20);
-    if (time > .5 && time < 16) add_laser(ref_fractal, rot_fractal(), 50, 500*vec3(1,0,0), 0, 4000, 2, (time > 7.5 && time < 10.2));
-    if (time > 15.5 && time < 15.9) add_laser(ref_enter, lookAt(ref_enter, ref_fractal+vec3(700,200,0), vec3(0,1,0)),
-        1, 200*vec3(0.45, 0.75, 0.96), 10, 250, 1, false);
+//    if (time > .5 && time < 16) add_laser(ref_fractal, rot_fractal(), 100, 500*vec3(1,0,0), 0, 4000, 2, (time > 7.5 && time < 10.2));
+    if (time > .5 && time < 16) add_laser(ref_fractal, rot_fractal(), 100, 500*vec3(1,0,0), 0, 4000, 2, true);
+    if (time > 15.5 && time < 15.9) add_laser(ref_enter, lookAt(ref_enter, ref_fractal+vec3(700,-3500,0), vec3(0,1,0)),
+        1, 200*vec3(0.45, 0.75, 0.96), 10, 350, 1, false);
 
     // for noise testing
     //    col = vec4(0,0,0,1);
@@ -1315,7 +1353,7 @@ void main(){
             object obj = world[r.index];
             vec3 pos = ro + t*rd;
             vec3 nor = calcNormal(pos, obj);
-            mat material = cust_mat(obj, pos, nor);
+            mat material = cust_mat(obj, pos);
             float diffuseTerm = cdot(nor, interp_light_dir);
             diffuseTerm = orennayarTerm(diffuseTerm, nor, interp_light_dir, material.roughness);
             diffuseTerm = max(diffuseTerm, 0.1);
