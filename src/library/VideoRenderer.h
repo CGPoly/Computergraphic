@@ -71,5 +71,6 @@ private:
 	void renderPathmarcher(std::chrono::duration<float> time);
 	void renderBloom();
 	void renderToFramebuffer();
-	int writeImage(std::chrono::duration<float, std::milli> time);
+//	int writeImage(std::chrono::duration<float, std::milli> time);
+	int writeImage(int time);
 };

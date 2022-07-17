@@ -38,7 +38,7 @@ const float FAR_PLANE = 149597870700.+696342000.*10000;
 
 const float steps = 250;
 
-const bool preview = false;
+const bool preview = true;
 const int max_bounce = 4;  // maximal number of Light bounces
 
 const float focal_length = 50;  // focal length in mm
@@ -111,15 +111,6 @@ vec3 sun_jupiter_pos = mat3(cos(6.09*pi/180),-sin(6.09*pi/180),0,sin(6.09*pi/180
 
 mat3 ref_rot = mat3(0,1,0,-1,0,0,0,0,1)*mat3(-1,0,0,0,1,0,0,0,1);  // rotation, sun right
 
-
-vec3 ref_sunsys = -sun_moon_pos;  // moon ref
-//vec3 ref_sunsys = -sun_jupiter_pos;  //jupiter ref
-vec3 ref_earth = ref_rot*(ref_sunsys+sun_earth_pos);
-vec3 ref_moon = ref_rot*(ref_sunsys+sun_moon_pos);
-vec3 ref_jupiter = ref_rot*(ref_sunsys+sun_jupiter_pos);
-vec3 ref_sun = ref_rot*ref_sunsys;
-
-
 float eps_fractal(){
     return 1;
 }
@@ -132,13 +123,15 @@ float exp_fractal(){
 }
 
 vec3 pos_fractal(){
-    return mat3(cos(2*pi/5),-sin(2*pi/5),0,sin(2*pi/5),cos(2*pi/5),0,0,0,1)*vec3(0,100000+1737400,0);
+//    return mat3(cos(2*pi/5),-sin(2*pi/5),0,sin(2*pi/5),cos(2*pi/5),0,0,0,1)*vec3(0,100000+1737400,0);
+    return fractal_pos;
 }
 mat3 rot_fractal(){
     return mat3(cos(2*pi/5),-sin(2*pi/5),0,sin(2*pi/5),cos(2*pi/5),0,0,0,1);
 }
 
 vec3 pos_enter(){
+//    return vec3(0,10000000.,0);
     return enterprise_pos;
 
 }
@@ -147,6 +140,7 @@ mat3 rot_enter(){
 }
 mat3 rot_cam(){//return camera_rot;
     if (time < 11) return camera_rot;
+//    return rot_enter()*mat3(viewMat);
     return rot_enter();
 }
 vec3 pos_cam(){//return camera_pos;
@@ -155,22 +149,38 @@ vec3 pos_cam(){//return camera_pos;
 }
 
 mat3 cam_rot = rot_cam();
-vec3 cam_pos = pos_cam();
+vec3 cam_pos = vec3(0);
 
-/*TODO: update num_lasers, light importance sampling, update index fractal*/ const int num_obj = 7;
+//vec3 ref_sunsys = -sun_moon_pos;  // moon ref
+//vec3 ref_sunsys = -sun_earth_pos;  // earth ref
+//vec3 ref_sunsys = -sun_jupiter_pos;  //jupiter ref
+//vec3 ref_sunsys = -pos_enter()+sun_moon_pos;  //enter ref
+vec3 moon_earth = ref_rot*(-sun_moon_pos+sun_earth_pos);
+vec3 moon_moon = ref_rot*(-sun_moon_pos+sun_moon_pos);
+vec3 moon_jupiter = ref_rot*(-sun_moon_pos+sun_jupiter_pos);
+vec3 moon_sun = ref_rot*(-sun_moon_pos);
+
+vec3 ref_earth = moon_earth-pos_cam();
+vec3 ref_moon = -pos_cam();
+vec3 ref_jupiter = moon_jupiter-pos_cam();
+vec3 ref_sun = moon_sun-pos_cam();
+vec3 ref_fractal = pos_fractal()-pos_cam();
+vec3 ref_enter = pos_enter()-pos_cam();
+
+/*TODO: update num_lasers, light importance sampling, update index fractal*/ const int num_obj = 13;
 object world[num_obj] = object[num_obj](
     //lasers
-//    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
-//    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 
     //laser guns/targets
-//    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))), //gun 1
-//    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))), //target 1
-//    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
-//    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))), //gun 1
+    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))), //target 1
+    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
@@ -179,17 +189,17 @@ object world[num_obj] = object[num_obj](
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 
     //solar system
-    object(3, 1, rot_enter()*mat3(0,0,1,0,1,0,-1,0,0), vec3(1,1,1), 157, pos_enter(), lambertian(vec3(.8))),  //enterprise
-    object(1, 5, rot_enter(), vec3(1.), 15, pos_enter()+rot_enter()*vec3(126,0,435), emitter(vec3(0,0,50))),  // engine 1
-    object(1, 5, rot_enter(), vec3(1.), 15, pos_enter()+rot_enter()*vec3(-126,0,435), emitter(vec3(0,0,50))),  // engine 2
+    object(3, 1, rot_enter()*mat3(0,0,1,0,1,0,-1,0,0), vec3(1,1,1), 157, ref_enter, lambertian(vec3(.8))),  //enterprise
+    object(1, 5, rot_enter(), vec3(1.), 15, ref_enter+rot_enter()*vec3(126,0,435), emitter(vec3(0,0,50))),  // engine 1
+    object(1, 5, rot_enter(), vec3(1.), 15, ref_enter+rot_enter()*vec3(-126,0,435), emitter(vec3(0,0,50))),  // engine 2
 
-    object(2, eps_fractal(), rot_fractal()*mat3(1,0,0,0,0,-1,0,1,0), vec3(1,1,1), 2000, pos_fractal(), lambertian(vec3(.5))),  //fractal
+    object(2, eps_fractal(), rot_fractal(), vec3(1,1,1), 2000, ref_fractal, lambertian(vec3(.5))),  //fractal
 
     object(1, 10000, ref_rot*inverse(mat3(cos(earth_year),0,-sin(earth_year),0,1,0,sin(earth_year),0,cos(earth_year)))*
         mat3(cos(23*pi/180),-sin(23*pi/180),0,sin(23*pi/180),cos(23*pi/180),0,0,0,1)*
         mat3(cos(earth_day),0,-sin(earth_day),0,1,0,sin(earth_day),0,cos(earth_day))
         , vec3(1,1,1), 6371000, ref_earth, custom(1)), //earth
-    object(11, 50,//(preview)?1000:100,
+    object(11, 100,//(preview)?1000:100,
         ref_rot*mat3(cos(pi/200),-sin(pi/200),0,sin(pi/200),cos(pi/200),0,0,0,1)*
         mat3(cos(-pi/25),0,-sin(-pi/25),0,1,0,sin(-pi/25),0,cos(-pi/25)), vec3(1,1,1), 1737400, ref_moon, custom(3)),  //moon orbit
 //    object(1, 1, ref_rot*inverse(mat3(cos(jupiter_year),0,-sin(jupiter_year),0,1,0,sin(jupiter_year),0,cos(jupiter_year)))*
@@ -201,10 +211,10 @@ object world[num_obj] = object[num_obj](
 //    ,object(1, .01, rot_enter(), vec3(1.), 2000*1.25, pos_fractal(), emitter(vec3(0,0,50)))
 );
 //assumes that the lasers are at the begin of world[]
-const uint num_lasers = 0;
+const uint num_lasers = 2;
 uint first_usable_laser = 0;
 
-int index_fractal = 3, index_moon = 5;
+int index_fractal = 9, index_moon = 11;
 
 int num_lights = 1;
 //bool active_lights[] = bool[](true, false, false);
@@ -1270,8 +1280,8 @@ void main(){
 //    add_laser(frac_rot*vec3(0,100000+1737400,0), frac_rot*fractal_rot, 50, 50*vec3(1,0,0), 0, 1000);
 
 //    if (time > .5 && time < 16) add_laser(rot_fractal()*vec3(0,100000+1737400,0), rot_fractal(), 50, 50*vec3(1,0,0), 0, 4000, 20);
-    if (time > .5 && time < 16) add_laser(pos_fractal(), rot_fractal(), 50, 500*vec3(1,0,0), 0, 4000, 2, (time > 7.5 && time < 10.2));
-    if (time > 15.5 && time < 15.9) add_laser(pos_enter(), lookAt(pos_enter(), pos_fractal()+vec3(700,200,0), vec3(0,1,0)),
+    if (time > .5 && time < 16) add_laser(ref_fractal, rot_fractal(), 50, 500*vec3(1,0,0), 0, 4000, 2, (time > 7.5 && time < 10.2));
+    if (time > 15.5 && time < 15.9) add_laser(ref_enter, lookAt(ref_enter, ref_fractal+vec3(700,200,0), vec3(0,1,0)),
         1, 200*vec3(0.45, 0.75, 0.96), 10, 250, 1, false);
 
     // for noise testing

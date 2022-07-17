@@ -182,6 +182,7 @@ glm::vec3 motion_control::get_fractal_pos(float t) {
 //    std::cout << glm::vec3({this->fractal_pos[0].get_point(t),
 //                            this->fractal_pos[1].get_point(t),
 //                            this->fractal_pos[2].get_point(t)}) << std::endl;
+    if (t < 16.) return {1747471.250, 567787.812, 0};
     return {this->fractal_pos[0].get_point(t),
             this->fractal_pos[1].get_point(t),
             this->fractal_pos[2].get_point(t)};

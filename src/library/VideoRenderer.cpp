@@ -39,7 +39,9 @@ void VideoRenderer::run(
 		std::chrono::duration<float> endTime,
 		std::chrono::duration<float> frameTime
 ) {
+    int num_image = 0;
 	for (std::chrono::duration<float> time = startTime; time < endTime; time += frameTime) {
+        ++num_image;
 		glfwPollEvents();
 		if (glfwWindowShouldClose(window))
 			return;
@@ -54,7 +56,7 @@ void VideoRenderer::run(
 		renderPathmarcher(time);
 		renderBloom();
 		renderToFramebuffer();
-		int result = writeImage(time);
+		int result = writeImage(num_image);
 
 		if (result) {
 			std::cout << "Successfully wrote frame " << time.count() << "s" << std::endl;
@@ -156,7 +158,8 @@ void VideoRenderer::renderToFramebuffer() {
 	profiler.commit(ProfilerType::tonemap);
 }
 
-int VideoRenderer::writeImage(std::chrono::duration<float, std::milli> time) {
+//int VideoRenderer::writeImage(std::chrono::duration<float, std::milli> time) {
+int VideoRenderer::writeImage(int time) {
 	profiler.begin(ProfilerType::write);
 
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, renderFbo);
@@ -172,7 +175,8 @@ int VideoRenderer::writeImage(std::chrono::duration<float, std::milli> time) {
 	glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer.data());
 
 	std::stringstream filename;
-	filename << "f" << (int)(time.count()*100) << ".png";
+//	filename << "f" << (int)(time.count()*100) << ".png";
+	filename << time+450 << ".png";
 
 	stbi_flip_vertically_on_write(true);
 	int result = stbi_write_png(
