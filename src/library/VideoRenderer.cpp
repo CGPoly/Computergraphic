@@ -107,6 +107,7 @@ void VideoRenderer::renderPathmarcher(std::chrono::duration<float> time) {
 	pathMarchingProgram.setVec3("julia_c", timeline.motionControl.get_julia_c(time.count()));
 
 	glBindImageTexture(0, hdrColoTexture.getId(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+	glBindTextureUnit(0, environmentMap.getTexture().getId());
 	glBindTextureUnit(1, texturesRenderer.getEarthAlbedoPlusHeight().getId());
 	glBindTextureUnit(2, texturesRenderer.getMoonAlbedo().getId());
 	glBindTextureUnit(3, texturesRenderer.getMoonHeight().getId());

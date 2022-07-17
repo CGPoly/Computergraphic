@@ -11,6 +11,7 @@
 #include "TonemapProcessor.h"
 #include "motion_control.h"
 #include "Timeline.h"
+#include "EnvironmentMap.h"
 
 class LiveRenderer {
 public:
@@ -50,6 +51,8 @@ private:
 	}};
 
 	Texture hdrColoTexture = Texture::immutable(1, GL_RGBA32F, windowWidth, windowHeight);
+
+	EnvironmentMap environmentMap{};
 
 	struct State {
 		glm::uvec2 currentRenderingTile{};

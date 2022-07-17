@@ -10,6 +10,7 @@ mat3 lookAt(vec3 eye, vec3 at, vec3 up);
 
 layout(local_size_x = 32, local_size_y = 32) in;
 layout(binding = 0, rgba32f) uniform image2D hdrOut;
+layout(binding = 0) uniform sampler2D environmentMap;
 layout(binding = 1) uniform sampler2D earth_albedo_plus_height;
 layout(binding = 2) uniform sampler2D moon_albedo;
 layout(binding = 3) uniform sampler2D moon_height;
@@ -942,6 +943,8 @@ float orennayarTerm(float lambert, vec3 n, vec3 l, float roughness) {
 }
 
 vec3 sky(vec3 direction){
+    return texture(environmentMap, texcoord_sphereProj(direction).xy).xyz * 0.3;
+
 //    float t = 0.75*(direction.x + 1.0);
 //    return vec3(1.-t) + t*vec3(0.5, 0.7, 1.0);
 //    return vec3(1.-t) + t*vec3(0.);

@@ -11,6 +11,7 @@
 #include "Camera.h"
 #include "motion_control.h"
 #include "Timeline.h"
+#include "EnvironmentMap.h"
 
 class VideoRenderer {
 public:
@@ -63,6 +64,8 @@ private:
 	}};
 
 	Texture hdrColoTexture = Texture::immutable(1, GL_RGBA32F, width, height);
+
+	EnvironmentMap environmentMap{};
 
 	unsigned int renderFbo = 0;
 	unsigned int renderRbo = 0;
