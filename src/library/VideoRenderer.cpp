@@ -56,7 +56,8 @@ void VideoRenderer::run(
 		renderPathmarcher(time);
 		renderBloom();
 		renderToFramebuffer();
-		int result = writeImage(num_image);
+//		int result = writeImage(num_image);
+		int result = writeImage(time);
 
 		if (result) {
 			std::cout << "Successfully wrote frame " << time.count() << "s" << std::endl;
@@ -158,8 +159,8 @@ void VideoRenderer::renderToFramebuffer() {
 	profiler.commit(ProfilerType::tonemap);
 }
 
-//int VideoRenderer::writeImage(std::chrono::duration<float, std::milli> time) {
-int VideoRenderer::writeImage(int time) {
+int VideoRenderer::writeImage(std::chrono::duration<float, std::milli> time) {
+//int VideoRenderer::writeImage(int time) {
 	profiler.begin(ProfilerType::write);
 
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, renderFbo);
@@ -175,8 +176,8 @@ int VideoRenderer::writeImage(int time) {
 	glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer.data());
 
 	std::stringstream filename;
-//	filename << "f" << (int)(time.count()*100) << ".png";
-	filename << time+450 << ".png";
+	filename << "f" << (int)(time.count()*100) << ".png";
+//	filename << time+450 << ".png";
 
 	stbi_flip_vertically_on_write(true);
 	int result = stbi_write_png(

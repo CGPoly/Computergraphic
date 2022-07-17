@@ -29,6 +29,6 @@ private:
 //	unsigned int moonResolution = 1024 * 4;
 //	unsigned int gasgiantResolution = 1025 * 4;
     unsigned int earthResolution = 512;
-    unsigned int moonResolution = 1024;
+    unsigned int moonResolution = 1024*16;
     unsigned int gasgiantResolution = 1;
 };

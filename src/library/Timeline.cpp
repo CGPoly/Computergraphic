@@ -30,8 +30,7 @@ float Timeline::spline_time(float time) {
     // docking
     + constant_time(time, 15, 17.5, .65) + ease(time, 17.5, 18, .65, 1) + constant_time(time, 18, 24.2, 1)
     //near fractal
-    ease()
-    ;
+    + ease(time, 24.2, 25, 1, 0.2) + constant_time(time, 25, 100, 0.2);
 }
 
 float Timeline::constant_time(float t, float start_t, float end_t, float speed) {
