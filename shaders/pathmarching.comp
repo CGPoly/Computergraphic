@@ -39,7 +39,7 @@ const float FAR_PLANE = 149597870700.+696342000.*10000;
 
 const float steps = 250;
 
-const bool preview = false;
+const bool preview = true;
 const int max_bounce = 4;  // maximal number of Light bounces
 
 const float focal_length = 50;  // focal length in mm
@@ -190,8 +190,8 @@ object world[num_obj] = object[num_obj](
 
     //solar system
     object(3, 1, rot_enter()*mat3(0,0,1,0,1,0,-1,0,0), vec3(1,1,1), 157, ref_enter, lambertian(vec3(.8))),  //enterprise
-    object(1, 5, rot_enter(), vec3(1.), 15, ref_enter+rot_enter()*vec3(126,0,435), emitter(vec3(0,0,50))),  // engine 1
-    object(1, 5, rot_enter(), vec3(1.), 15, ref_enter+rot_enter()*vec3(-126,0,435), emitter(vec3(0,0,50))),  // engine 2
+    object(1, 5, rot_enter(), vec3(1.), 15, ref_enter+rot_enter()*vec3(126,0,435), emitter(vec3(0.5,0.5,50))),  // engine 1
+    object(1, 5, rot_enter(), vec3(1.), 15, ref_enter+rot_enter()*vec3(-126,0,435), emitter(vec3(0.5,0.5,50))),  // engine 2
 
     object(2, eps_fractal(), rot_fractal(), vec3(1,1,1), 10000, ref_fractal, lambertian(vec3(.5))),  //fractal
 
@@ -213,7 +213,7 @@ object world[num_obj] = object[num_obj](
 //assumes that the lasers are at the begin of world[]
 uint first_usable_laser = 0;
 
-int index_fractal = num_obj-4, index_moon = num_obj-2;
+int index_fractal = num_obj-4, index_moon = num_obj-2, index_enterprise = num_obj-7;
 
 int num_lights = 1;
 //bool active_lights[] = bool[](true, false, false);
@@ -785,7 +785,7 @@ hit ray_shell(vec3 ro, vec3 rd, uint exclude, float eps){
     vec2 dis_f = isphere( vec4(world[index_fractal].position, world[index_fractal].scale*1.25), ro, rd);
     vec2 dis_m = isphere( vec4(world[index_moon].position, world[index_moon].scale*1.25), ro, rd);
     for (; h.steps < steps; ++h.steps){
-        vec3 rayEnd = ro + h.dist * rd;
+        vec3 rayEnd = ro + abs(h.dist) * rd;
 
         //map_shell(vec3 pos, uint exclude, float eps, bool visual_fractal, bool visual_moon)
 //        hit d = map(rayEnd, dis_f.x <= h.dist && h.dist <= dis_f.y, dis_m.x <= h.dist && h.dist <= dis_m.y);
@@ -799,7 +799,7 @@ hit ray_shell(vec3 ro, vec3 rd, uint exclude, float eps){
         h.index = d.index;
 
 //        if (d.dist < epsilon(rayEnd) * world[d.index].epsilonFactor) {
-        if (d.dist < world[d.index].epsilonFactor) {
+        if (d.dist < max(world[d.index].epsilonFactor, eps)) {
 //        if (d.dist < eps) {
             h.hit = true;
             return h;
@@ -1257,7 +1257,7 @@ vec3 getRayDir(vec2 p, float aspect){
     return normalize(vec3(p.xy,-z0));
 }
 
-void add_laser(vec3 position, mat3 rotation, float thickness, vec3 color, float gun_size, float target_size, float target_bright, bool importance_sampling){
+void add_laser(uint index, vec3 position, mat3 rotation, float thickness, vec3 color, float gun_size, float target_size, float target_bright, bool importance_sampling){
     if (first_usable_laser < num_lasers){
         world[first_usable_laser].obj_index = 5;
         world[first_usable_laser].rotation = rotation;
@@ -1266,30 +1266,30 @@ void add_laser(vec3 position, mat3 rotation, float thickness, vec3 color, float 
         world[first_usable_laser].material = emitter(color);
 
         if (gun_size + target_size != 0){
-            uint gun_index = 2*first_usable_laser+num_lasers;
-            vec3 dir = rotation*vec3(0, -1, 0);
+            uint gun_index = 2 * first_usable_laser+num_lasers;
+            vec3 dir = rotation * vec3(0, -1, 0);
             float eps = 1;
-            hit t = ray_shell(position, dir, -1, eps);
-            if (t.hit){
-                if (gun_size != 0){
-                    world[gun_index].obj_index = 1;
-                    world[gun_index].position = position+dir*(t.dist+eps);
-                    world[gun_index].scale = gun_size;
-                    world[gun_index].material = emitter(color);
+
+            hit destHit = ray_shell(position + dir * 2000, dir, index, 10);
+            if (destHit.hit) {
+                vec3 destPosition = position + dir * abs(destHit.dist) + dir * 2000;
+
+                world[gun_index+1].obj_index = 1;
+                world[gun_index+1].position = destPosition;
+                world[gun_index+1].scale = target_size;
+                world[gun_index+1].material = emitter(color * target_bright);
+                if (importance_sampling) {
+                    num_lights++;
+                    active_lights[first_usable_laser + 1] = true;
                 }
-                //target
-                if (target_size != 0) {
-                    hit t1 = ray_shell(position, dir, t.index, eps);
-                    if (t1.hit){
-                        world[gun_index+1].obj_index = 1;
-                        world[gun_index+1].position = position+dir*t1.dist;
-                        world[gun_index+1].scale = target_size;
-                        world[gun_index+1].material = emitter(color*target_bright);
-                        if (importance_sampling) {
-                            num_lights++;
-                            active_lights[first_usable_laser+1] = true;
-                        }
-//                        world[first_usable_laser].material = emitter(vec3(1,0,1));
+
+                if (gun_size != 0) {
+                    hit sourceHit = ray_shell(destPosition, dir * -1, destHit.index, eps);
+                    if (sourceHit.hit) {
+                        world[gun_index].obj_index = 1;
+                        world[gun_index].position = destPosition + dir * -1 * (sourceHit.dist + eps);
+                        world[gun_index].scale = gun_size;
+                        world[gun_index].material = emitter(color);
                     }
                 }
             }
@@ -1321,9 +1321,24 @@ void main(){
 
 //    if (time > .5 && time < 16) add_laser(rot_fractal()*vec3(0,100000+1737400,0), rot_fractal(), 50, 50*vec3(1,0,0), 0, 4000, 20);
 //    if (time > .5 && time < 16) add_laser(ref_fractal, rot_fractal(), 100, 500*vec3(1,0,0), 0, 4000, 2, (time > 7.5 && time < 10.2));
-    if (time > .5 && time < 16) add_laser(ref_fractal, rot_fractal(), 100, 500*vec3(1,0,0), 0, 4000, 2, true);
-    if (time > 15.5 && time < 15.9) add_laser(ref_enter, lookAt(ref_enter, ref_fractal+vec3(700,-3500,0), vec3(0,1,0)),
-        1, 200*vec3(0.45, 0.75, 0.96), 10, 350, 1, false);
+    if (time > .5 && time < 16) {
+        add_laser(index_fractal, ref_fractal, rot_fractal(), 100, 500 * vec3(1, 0, 0), 0, 8000, 2, true);
+    }
+    if (time > 15.5 && time < 15.9) {
+        add_laser(index_enterprise, ref_enter, lookAt(ref_enter, ref_fractal + vec3(700, -3500, 0), vec3(0, 1, 0)), 1, 200 * vec3(0.45, 0.75, 0.96), 10, 350, 1, false);
+    }
+    if (time > 17 && time < 17.4) {
+        add_laser(index_enterprise, ref_enter, lookAt(ref_enter, ref_fractal + vec3(3673, -1626, 0), vec3(0, 1, 0)), 1, 200 * vec3(0.45, 0.75, 0.96), 10, 350, 1, true);
+    }
+    if (time > 18 && time < 18.4) {
+        add_laser(index_enterprise, ref_enter, lookAt(ref_enter, ref_fractal + vec3(-3497, 2322, 0), vec3(0, 1, 0)), 1, 200 * vec3(0.45, 0.75, 0.96), 10, 350, 1, true);
+    }
+    if (time > 19 && time < 19.5) {
+        add_laser(index_enterprise, ref_enter, lookAt(ref_enter, ref_fractal + vec3(100, -500, 0), vec3(0, 1, 0)), 1, 200 * vec3(0.45, 0.75, 0.96), 10, 100, 1, true);
+    }
+//    if (time > 20 && time < 19.7 - 0.7) {
+//        add_laser(index_enterprise, ref_enter, ref_fractal + vec3(400, -1000, 0), 1, 200 * vec3(0.45, 0.75, 0.96), 10, 350, 1, false);
+//    }
 
     // for noise testing
     //    col = vec4(0,0,0,1);
