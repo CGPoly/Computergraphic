@@ -37,12 +37,13 @@ void VideoRenderer::run(
 		std::chrono::duration<float> endTime,
 		std::chrono::duration<float> frameTime
 ) {
-    int num_image = 0;
-	for (std::chrono::duration<float> time = startTime; time < endTime; time += frameTime) {
-        ++num_image;
+	unsigned int frameCount = static_cast<unsigned int>((endTime - startTime) / frameTime);
+	for (unsigned int frame = 0; frame < frameCount; frame++) {
 		glfwPollEvents();
 		if (glfwWindowShouldClose(window))
 			return;
+
+		std::chrono::duration<float> time = startTime + frameTime * frame;
 
 		pathMarchingProgram.compile();
 		if (!pathMarchingProgram.isValid())
@@ -54,7 +55,7 @@ void VideoRenderer::run(
 		renderPathmarcher(time);
 		renderBloom();
 		renderToFramebuffer();
-//		int result = writeImage(num_image);
+//		int result = writeImage(frame);
 		int result = writeImage(time);
 
 		if (result) {
