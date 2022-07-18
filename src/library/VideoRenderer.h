@@ -18,7 +18,6 @@ public:
 	VideoRenderer(
 			unsigned int width,
 			unsigned int height,
-			unsigned int passesPerFrame,
 			std::filesystem::path outputDir
 	) noexcept;
 	VideoRenderer(VideoRenderer const&) = delete;
@@ -39,7 +38,6 @@ private:
 
 	unsigned int width;
 	unsigned int height;
-	unsigned int passesPerFrame;
 
 	unsigned int passSeed = 0;
 
@@ -82,6 +80,8 @@ private:
 
 	unsigned int renderFbo = 0;
 	unsigned int renderRbo = 0;
+
+	[[nodiscard]] static unsigned int passesPerFrame(std::chrono::duration<float> time);
 
 	void renderTextures(std::chrono::duration<float> time);
 	void renderPathmarcher(std::chrono::duration<float> time);

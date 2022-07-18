@@ -7,13 +7,11 @@
 VideoRenderer::VideoRenderer(
 		unsigned int width,
 		unsigned int height,
-		unsigned int passesPerFrame,
 		std::filesystem::path outputDir
 ) noexcept:
 		outputDir(std::move(outputDir)),
 		width(width),
-		height(height),
-		passesPerFrame(passesPerFrame) {
+		height(height) {
 
 	glGenRenderbuffers(1, &renderRbo);
 	glBindRenderbuffer(GL_RENDERBUFFER, renderRbo);
@@ -76,6 +74,11 @@ void VideoRenderer::run(
 	}
 }
 
+unsigned int VideoRenderer::passesPerFrame(std::chrono::duration<float> time) {
+	float t = time.count();
+	return ((t > 3 && t < 22) || (t > 22.6 && t < 23.1) || (t > 23.6 && t < 24.1) || (t > 24.7 && t < 27.2)) ? 30 : 15;
+}
+
 void VideoRenderer::renderTextures(std::chrono::duration<float> time) {
 	texturesRenderer.setEarthResolution(timeline.getEarthResolution());
 	texturesRenderer.setMoonResolution(timeline.getMoonResolution());
@@ -89,7 +92,7 @@ void VideoRenderer::renderPathmarcher(std::chrono::duration<float> time) {
 	profiler.begin(ProfilerType::pathmarcher);
 
 	const glm::uvec2 workGroupSize{32};
-	const glm::uvec2 workGroupCount{4};
+	const glm::uvec2 workGroupCount{8};
 	const unsigned int samplesPerPass = 1;
 
 	pathMarchingProgram.use();
@@ -116,7 +119,7 @@ void VideoRenderer::renderPathmarcher(std::chrono::duration<float> time) {
 	glBindTextureUnit(3, texturesRenderer.getMoonHeight().getId());
 	glBindTextureUnit(4, texturesRenderer.getGasgiantAlbedo().getId());
 
-	for (int i = 0; i < passesPerFrame; ++i) {
+	for (int i = 0; i < passesPerFrame(time); ++i) {
 		pathMarchingProgram.set1ui("currentSample", i * samplesPerPass);
 		pathMarchingProgram.set1ui("passSeed", passSeed++);
 		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
@@ -124,7 +127,7 @@ void VideoRenderer::renderPathmarcher(std::chrono::duration<float> time) {
 			for (int x = 0; x < divCeil(width, workGroupSize.y * workGroupCount.y); ++x) {
 				pathMarchingProgram.set2ui("tileOffset", x, y);
 				glDispatchCompute(workGroupCount.x, workGroupCount.y, 1);
-				glFlush();
+				glFinish();
 			}
 		}
 	}
