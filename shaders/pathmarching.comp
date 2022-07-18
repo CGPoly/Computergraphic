@@ -169,12 +169,12 @@ vec3 ref_sun = moon_sun-pos_cam();
 vec3 ref_fractal = pos_fractal()-pos_cam();
 vec3 ref_enter = pos_enter()-pos_cam();
 
-const uint num_lasers = 2;
+const uint num_lasers = 1;
 /*TODO: update num_lasers, light importance sampling, update index fractal*/ const int num_obj = 7+int(num_lasers+2*num_lasers);
 object world[num_obj] = object[num_obj](
     //lasers
     object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
-    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
@@ -182,8 +182,8 @@ object world[num_obj] = object[num_obj](
     //laser guns/targets
     object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))), //gun 1
     object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))), //target 1
-    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
-    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
+//    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
 //    object(50, .01, mat3(1,0,0,0,1,0,0,0,1), vec3(1,1,1), 1000, vec3(0), emitter(vec3(50,0,0))),
