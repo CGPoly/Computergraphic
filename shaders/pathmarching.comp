@@ -39,7 +39,7 @@ const float FAR_PLANE = 149597870700.+696342000.*10000;
 
 const float steps = 250;
 
-const bool preview = true;
+const bool preview = false;
 const int max_bounce = 4;  // maximal number of Light bounces
 
 const float focal_length = 50;  // focal length in mm
