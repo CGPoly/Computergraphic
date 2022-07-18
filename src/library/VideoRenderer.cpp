@@ -76,7 +76,7 @@ void VideoRenderer::run(
 
 unsigned int VideoRenderer::passesPerFrame(std::chrono::duration<float> time) {
 	float t = time.count();
-	return ((t > 3 && t < 22) || (t > 22.6 && t < 23.1) || (t > 23.6 && t < 24.1) || (t > 24.7 && t < 27.2)) ? 30 : 15;
+	return ((t > 3 && t < 22) || (t > 22.6 && t < 23.1) || (t > 23.6 && t < 24.1) || (t > 24.7 && t < 27.2)) ? 60 : 30;
 }
 
 void VideoRenderer::renderTextures(std::chrono::duration<float> time) {
