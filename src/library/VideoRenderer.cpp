@@ -106,6 +106,9 @@ void VideoRenderer::renderPathmarcher(std::chrono::duration<float> time) {
 	pathMarchingProgram.setMat3("fractal_rot", timeline.motionControl.get_fractal_rot(timeline.spline_time(time.count())));
 	pathMarchingProgram.setVec3("julia_c", timeline.motionControl.get_julia_c(time.count()));
 
+	pathMarchingProgram.set1ui("fractalColorCount", fractalColors.size());
+	pathMarchingProgram.setVec4v("fractalColors", fractalColors);
+
 	glBindImageTexture(0, hdrColoTexture.getId(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 	glBindTextureUnit(0, environmentMap.getTexture().getId());
 	glBindTextureUnit(1, texturesRenderer.getEarthAlbedoPlusHeight().getId());

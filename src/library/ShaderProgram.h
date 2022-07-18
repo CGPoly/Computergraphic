@@ -46,6 +46,7 @@ public:
 	void set1f(std::string const& uniformName, float value);
 	void set3f(std::string const& uniformName, float v0, float v1, float v2);
 	void setVec3(std::string const& uniformName, glm::vec3 const& vec);
+	void setVec4v(std::string const& uniformName, std::vector<glm::vec4> const& values);
 	void setMat3(std::string const& string, glm::mat3 const& mat);
 	void setMat4(std::string const& string, glm::mat4 const& mat);
 };

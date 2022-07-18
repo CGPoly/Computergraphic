@@ -33,6 +33,9 @@ uniform vec3 fractal_pos;
 uniform mat3 fractal_rot;
 uniform vec3 julia_c;
 
+uniform uint fractalColorCount;
+uniform vec4 fractalColors[10];
+
 const float world_scale = 1000;  //how big one unit in metern is (this is for easier camera control)
 
 const float FAR_PLANE = 149597870700.+696342000.*10000;
@@ -193,7 +196,7 @@ object world[num_obj] = object[num_obj](
     object(1, 5, rot_enter(), vec3(1.), 15, ref_enter+rot_enter()*vec3(126,0,435), emitter(vec3(0.5,0.5,50))),  // engine 1
     object(1, 5, rot_enter(), vec3(1.), 15, ref_enter+rot_enter()*vec3(-126,0,435), emitter(vec3(0.5,0.5,50))),  // engine 2
 
-    object(2, eps_fractal(), rot_fractal(), vec3(1,1,1), 10000, ref_fractal, lambertian(vec3(.5))),  //fractal
+    object(2, eps_fractal(), rot_fractal(), vec3(1,1,1), 10000, ref_fractal, custom(6)),  //fractal
 
     object(1, 10000, ref_rot*inverse(mat3(cos(earth_year),0,-sin(earth_year),0,1,0,sin(earth_year),0,cos(earth_year)))*
         mat3(cos(23*pi/180),-sin(23*pi/180),0,sin(23*pi/180),cos(23*pi/180),0,0,0,1)*
@@ -1175,6 +1178,27 @@ mat gasagiant(object obj, vec3 p){
 ////    return transmission_emm(vec3(1), cloads, vec3(1));
 //    return transmission_emm(vec3(1), 0.5, vec3(1));
 //}
+mat fractalMaterial(vec3 p) {
+    float colorIndex = length(p);
+    int j;
+    for (j = 0; j < fractalColorCount; j++) {
+        if (fractalColors[j].w >= colorIndex)
+        break;
+    }
+
+    vec3 col;
+    if (j == 0) {
+        col = fractalColors[0].xyz;
+    } else {
+        col = mix(
+            fractalColors[j - 1].xyz,
+            fractalColors[j].xyz,
+            clamp((colorIndex - fractalColors[j - 1].w) / (fractalColors[j].w - fractalColors[j - 1].w), 0, 1)
+        );
+    }
+
+    return lambertian(col);
+}
 
 mat cust_mat(object obj, vec3 p){
     switch(obj.material.custom){
@@ -1188,6 +1212,8 @@ mat cust_mat(object obj, vec3 p){
             return gasagiant(obj, p);
         case 5:
             return lambertian(texcoord_nor(p, obj));
+        case 6:
+            return fractalMaterial(iScale(inverse(obj.rotation) * (p - obj.position), obj.scaling) / obj.scale);
         case 0:
         default:
             return obj.material;

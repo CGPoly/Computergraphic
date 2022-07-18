@@ -135,6 +135,9 @@ void ShaderProgram::set3f(std::string const& uniformName, float v0, float v1, fl
 void ShaderProgram::setVec3(std::string const& uniformName, glm::vec3 const& vec) {
 	set3f(uniformName, vec.x, vec.y, vec.z);
 }
+void ShaderProgram::setVec4v(std::string const& uniformName, std::vector<glm::vec4> const& values) {
+	setGeneric(uniformName, [&values](auto location) { glUniform4fv(location, values.size(), reinterpret_cast<const GLfloat *>(values.data())); });
+}
 void ShaderProgram::setMat3(const std::string& uniformName, glm::mat3 const& mat) {
 	setGeneric(uniformName, [&mat](auto location) { glUniformMatrix3fv(location, 1, GL_FALSE, &mat[0][0]); });
 }

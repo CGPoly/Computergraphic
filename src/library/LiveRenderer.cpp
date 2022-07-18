@@ -28,6 +28,14 @@ LiveRenderer::LiveRenderer() noexcept {
 	ImGui::CreateContext();
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 460 core");
+
+	gradient.getMarks().clear();
+	gradient.getMarks().push_back(new ImGradientMark{{0.410, 0.080, 0.141, 1}, 0.000});
+	gradient.getMarks().push_back(new ImGradientMark{{0.436, 0.120, 0.178, 1}, 0.542});
+	gradient.getMarks().push_back(new ImGradientMark{{0.749, 0.000, 0.599, 1}, 0.691});
+	gradient.getMarks().push_back(new ImGradientMark{{0.682, 0.000, 0.357, 1}, 0.850});
+	gradient.getMarks().push_back(new ImGradientMark{{0.176, 0.000, 0.221, 1}, 0.947});
+	gradient.getMarks().push_back(new ImGradientMark{{0.108, 0.108, 0.108, 1}, 1.000});
 }
 
 LiveRenderer::~LiveRenderer() noexcept {
@@ -49,6 +57,7 @@ void LiveRenderer::run() {
 		bool changedSamplesPerPass = drawGuiRender();
 		drawStatistic();
 		drawTimeControl();
+		drawFractalColor();
 
 		if (timeChanged) {
 			timeline.update(time);
@@ -170,6 +179,19 @@ void LiveRenderer::drawTimeControl() {
 	ImGui::End();
 };
 
+void LiveRenderer::drawFractalColor() {
+	ImGui::Begin("Fractal color");
+	if (ImGui::GradientEditor(&gradient, draggingMark, selectedMark)) {
+		timeChanged = true;
+
+		std::cout << "fractal colors:" << std::endl;
+		for (const auto &item: gradient.getMarks()) {
+			std::cout << glm::vec4{item->color[0], item->color[1], item->color[2], item->position} << std::endl;
+		}
+	}
+	ImGui::End();
+}
+
 void LiveRenderer::renderTextures() {
 	auto profiling = std::tuple<Profiler<ProfilerType> &, ProfilerType>(profiler, ProfilerType::texture);
 	texturesRenderer.render<ProfilerType>(time.count(), profiling);
@@ -199,6 +221,15 @@ void LiveRenderer::renderPathmarcher() {
 	pathMarchingProgram.setVec3("fractal_pos", timeline.motionControl.get_fractal_pos(timeline.spline_time(time.count())));
 	pathMarchingProgram.setMat3("fractal_rot", timeline.motionControl.get_fractal_rot(timeline.spline_time(time.count())));
 	pathMarchingProgram.setVec3("julia_c", timeline.motionControl.get_julia_c(time.count()));
+
+	std::vector<glm::vec4> colors{};
+	for (const auto &item: gradient.getMarks()) {
+		colors.emplace_back(item->color[0], item->color[1], item->color[2], item->position);
+	}
+	colors.resize(10);
+
+	pathMarchingProgram.set1ui("fractalColorCount", gradient.getMarks().size());
+	pathMarchingProgram.setVec4v("fractalColors", colors);
 
 	glBindImageTexture(0, hdrColoTexture.getId(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 	glBindTextureUnit(0, environmentMap.getTexture().getId());

@@ -12,6 +12,7 @@
 #include "motion_control.h"
 #include "Timeline.h"
 #include "EnvironmentMap.h"
+#include "../../vendor/imgui/imgui_color_gradient.h"
 
 class LiveRenderer {
 public:
@@ -53,6 +54,10 @@ private:
 	Texture hdrColoTexture = Texture::immutable(1, GL_RGBA32F, windowWidth, windowHeight);
 
 	EnvironmentMap environmentMap{};
+
+	ImGradient gradient{};
+	ImGradientMark* draggingMark = nullptr;
+	ImGradientMark* selectedMark = nullptr;
 
 	struct State {
 		glm::uvec2 currentRenderingTile{};
@@ -103,6 +108,7 @@ private:
 	bool drawGuiRender();
 	void drawStatistic();
 	void drawTimeControl();
+	void drawFractalColor();
 
 	void renderTextures();
 	void renderPathmarcher();

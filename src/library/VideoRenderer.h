@@ -67,6 +67,15 @@ private:
 
 	EnvironmentMap environmentMap{};
 
+	std::vector<glm::vec4> fractalColors = {
+			{0.410, 0.080, 0.141, 0.000},
+			{0.436, 0.120, 0.178, 0.542},
+			{0.749, 0.000, 0.599, 0.691},
+			{0.682, 0.000, 0.357, 0.850},
+			{0.176, 0.000, 0.221, 0.947},
+			{0.108, 0.108, 0.108, 1.000},
+	};
+
 	unsigned int renderFbo = 0;
 	unsigned int renderRbo = 0;
 
