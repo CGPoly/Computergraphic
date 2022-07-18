@@ -193,8 +193,8 @@ object world[num_obj] = object[num_obj](
 
     //solar system
     object(3, 1, rot_enter()*mat3(0,0,1,0,1,0,-1,0,0), vec3(1,1,1), 157, ref_enter, lambertian(vec3(.8))),  //enterprise
-    object(1, 5, rot_enter(), vec3(1.), 15, ref_enter+rot_enter()*vec3(126,0,435), emitter(vec3(0.5,0.5,50))),  // engine 1
-    object(1, 5, rot_enter(), vec3(1.), 15, ref_enter+rot_enter()*vec3(-126,0,435), emitter(vec3(0.5,0.5,50))),  // engine 2
+    object(1, 5, rot_enter(), vec3(1.), 15, ref_enter+rot_enter()*vec3(126,0,435), emitter(vec3(0.05,0.05,50))),  // engine 1
+    object(1, 5, rot_enter(), vec3(1.), 15, ref_enter+rot_enter()*vec3(-126,0,435), emitter(vec3(0.05,0.05,50))),  // engine 2
 
     object(2, eps_fractal(), rot_fractal(), vec3(1,1,1), 10000, ref_fractal, custom(6)),  //fractal
 
@@ -946,7 +946,7 @@ float orennayarTerm(float lambert, vec3 n, vec3 l, float roughness) {
 }
 
 vec3 sky(vec3 direction){
-    return texture(environmentMap, texcoord_sphereProj(direction).xy).xyz * 0.3;
+    return texture(environmentMap, texcoord_sphereProj(direction).xy).xyz * 0.2;
 
 //    float t = 0.75*(direction.x + 1.0);
 //    return vec3(1.-t) + t*vec3(0.5, 0.7, 1.0);

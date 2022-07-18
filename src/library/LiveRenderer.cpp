@@ -30,12 +30,21 @@ LiveRenderer::LiveRenderer() noexcept {
 	ImGui_ImplOpenGL3_Init("#version 460 core");
 
 	gradient.getMarks().clear();
-	gradient.getMarks().push_back(new ImGradientMark{{0.410, 0.080, 0.141, 1}, 0.000});
-	gradient.getMarks().push_back(new ImGradientMark{{0.436, 0.120, 0.178, 1}, 0.542});
-	gradient.getMarks().push_back(new ImGradientMark{{0.749, 0.000, 0.599, 1}, 0.691});
-	gradient.getMarks().push_back(new ImGradientMark{{0.682, 0.000, 0.357, 1}, 0.850});
-	gradient.getMarks().push_back(new ImGradientMark{{0.176, 0.000, 0.221, 1}, 0.947});
-	gradient.getMarks().push_back(new ImGradientMark{{0.108, 0.108, 0.108, 1}, 1.000});
+
+//    {0.955, 1.000, 0.000, 0.382},
+//    {0.197, 0.794, 0.815, 0.607},
+//    {0.616, 0.850, 0.000, 0.811},
+//    {0.399, 0.000, 0.000, 1.000}
+	gradient.getMarks().push_back(new ImGradientMark{{0.955, 1.000, 0.000, 1}, 0.382});
+	gradient.getMarks().push_back(new ImGradientMark{{0.197, 0.794, 0.815, 1}, 0.607});
+	gradient.getMarks().push_back(new ImGradientMark{{0.616, 0.850, 0.000, 1}, 0.811});
+	gradient.getMarks().push_back(new ImGradientMark{{0.399, 0.000, 0.000, 1}, 1.000});
+//	gradient.getMarks().push_back(new ImGradientMark{{0.410, 0.080, 0.141, 1}, 0.000});
+//	gradient.getMarks().push_back(new ImGradientMark{{0.436, 0.120, 0.178, 1}, 0.542});
+//	gradient.getMarks().push_back(new ImGradientMark{{0.749, 0.000, 0.599, 1}, 0.691});
+//	gradient.getMarks().push_back(new ImGradientMark{{0.682, 0.000, 0.357, 1}, 0.850});
+//	gradient.getMarks().push_back(new ImGradientMark{{0.176, 0.000, 0.221, 1}, 0.947});
+//	gradient.getMarks().push_back(new ImGradientMark{{0.108, 0.108, 0.108, 1}, 1.000});
 }
 
 LiveRenderer::~LiveRenderer() noexcept {
