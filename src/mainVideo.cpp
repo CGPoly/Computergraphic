@@ -15,7 +15,7 @@ int main() {
 
 	static VideoRenderer videoRenderer{1920, 1080, outputDir};
 	videoRenderer.run(
-			std::chrono::duration<float>(20.f),
+			std::chrono::duration<float>(22.f),
 	        std::chrono::duration<float>(29.f),
 			std::chrono::duration<float>(1.0f / 30)
 	);
