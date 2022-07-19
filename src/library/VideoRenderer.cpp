@@ -37,7 +37,7 @@ void VideoRenderer::run(
 		std::chrono::duration<float> endTime,
 		std::chrono::duration<float> frameTime
 ) {
-	unsigned int frameCount = static_cast<unsigned int>((endTime - startTime) / frameTime);
+	unsigned int frameCount = static_cast<unsigned int>(std::ceil((endTime - startTime) / frameTime));
 	for (unsigned int frame = 0; frame < frameCount; frame++) {
 		glfwPollEvents();
 		if (glfwWindowShouldClose(window))
