@@ -6,11 +6,6 @@ option(GLFW_BUILD_EXAMPLES OFF)
 option(GLFW_BUILD_TESTS OFF)
 add_subdirectory(vendor/glfw)
 
-option(ASSIMP_BUILD_ASSIMP_TOOLS OFF)
-option(ASSIMP_BUILD_SAMPLES OFF)
-option(ASSIMP_BUILD_TESTS OFF)
-add_subdirectory(vendor/assimp)
-
 set (CMAKE_CXX_STANDARD 20)
 if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
@@ -28,7 +23,6 @@ configure_file (
 
 include_directories(
         generated/
-        vendor/assimp/include/
         vendor/glad/include/
         vendor/glfw/include/
         vendor/glm/
@@ -76,7 +70,7 @@ add_definitions(-DGLFW_INCLUDE_NONE -DPROJECT_SOURCE_DIR=\"${PROJECT_SOURCE_DIR}
 #        ${VENDORS_SOURCES}
 #        ${VENDORS_HEADERS}
 #)
-#target_link_libraries(${PROJECT_NAME} assimp glfw ${GLFW_LIBRARIES} ${GLAD_LIBRARIES})
+#target_link_libraries(${PROJECT_NAME} glfw ${GLFW_LIBRARIES} ${GLAD_LIBRARIES})
 foreach(PROJECT_SOURCE_FILE ${PROJECT_SOURCES})
     get_filename_component(SRC_NAME ${PROJECT_SOURCE_FILE} NAME_WE)
     add_executable(
@@ -90,7 +84,7 @@ foreach(PROJECT_SOURCE_FILE ${PROJECT_SOURCES})
             ${VENDORS_SOURCES}
             ${VENDORS_HEADERS}
     )
-    target_link_libraries(${SRC_NAME} assimp glfw ${GLFW_LIBRARIES} ${GLAD_LIBRARIES})
+    target_link_libraries(${SRC_NAME} glfw ${GLFW_LIBRARIES} ${GLAD_LIBRARIES})
     #set_target_properties(${SRC_NAME} PROPERTIES
     #RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${PROJECT_NAME})
 endforeach(PROJECT_SOURCE_FILE)
